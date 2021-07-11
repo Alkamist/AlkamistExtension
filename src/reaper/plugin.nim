@@ -3,14 +3,14 @@ import header, winapi
 export winapi
 
 type
-  ReaperPluginInfo* {.importc: "struct reaper_plugin_info_t", header: ReaperHeader.} = object
+  reaper_plugin_info_t* {.importc, header: ReaperHeader.} = object
     caller_version*: cint
     hwnd_main*: HWND
     Register*: proc(name: cstring, infostruct: pointer): cint {.cdecl.}
     GetFunc*: proc(name: cstring): pointer {.cdecl.}
 
-  AcceleratorRegister* {.importc: "struct accelerator_register_t", header: ReaperHeader.} = object
-    translateAccel*: proc(msg: ptr MSG, ctx: ptr AcceleratorRegister): cint {.cdecl.}
+  accelerator_register_t* {.importc, header: ReaperHeader.} = object
+    translateAccel*: proc(msg: ptr MSG, ctx: ptr accelerator_register_t): cint {.cdecl.}
     isLocal*: bool
     user*: pointer
 
