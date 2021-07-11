@@ -1,1 +1,0 @@
-const ReaperHeader* = "reaper/reaper_cpp/reaper_plugin_functions.h"
