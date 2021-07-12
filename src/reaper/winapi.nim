@@ -1,5 +1,7 @@
 # const winUnicode* = not (defined(useWinAnsi) or defined(winansi))
 
+{.passL:"user32.lib".}
+
 when defined(cpu64):
   type
     INT_PTR* {.importc.} = clonglong
