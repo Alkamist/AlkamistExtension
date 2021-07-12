@@ -1,37 +1,37 @@
 import winapi
 
-{.pragma: ReaperAPI, importc, header: ReaperHeader.}
-
-const ReaperHeader* = "reaper/reaper_cpp/reaper_plugin_functions.h"
+const
+  ReaperPluginHeader* = "reaper/reaper_cpp/reaper_plugin.h"
+  ReaperPluginFunctionsHeader* = "reaper/reaper_cpp/reaper_plugin_functions.h"
 
 type
   LICE_pixel* = cuint
   LICE_pixel_chan* = cuchar
-  LICE_IBitmap* = object
-  LICE_IFont* = object
 
-  ReaProject* = object
-  MediaTrack* = object
-  MediaItem* = object
-  MediaItem_Take* = object
-  TrackEnvelope* = object
-  AudioAccessor* = object
+  ReaProject* {.importc, header: ReaperPluginHeader.} = object
+  MediaTrack* {.importc, header: ReaperPluginHeader.} = object
+  MediaItem* {.importc, header: ReaperPluginHeader.} = object
+  MediaItem_Take* {.importc, header: ReaperPluginHeader.} = object
+  TrackEnvelope* {.importc, header: ReaperPluginHeader.} = object
 
-  WDL_VirtualWnd_BGCfg* = object
-  joystick_device* = object
+  AudioAccessor* {.importc, header: ReaperPluginFunctionsHeader.} = object
+  LICE_IBitmap* {.importc, header: ReaperPluginFunctionsHeader.} = object
+  LICE_IFont* {.importc, header: ReaperPluginFunctionsHeader.} = object
+  WDL_VirtualWnd_BGCfg* {.importc, header: ReaperPluginFunctionsHeader.} = object
+  joystick_device* {.importc, header: ReaperPluginFunctionsHeader.} = object
 
-  reaper_plugin_info_t* {.ReaperAPI.} = object
+  reaper_plugin_info_t* {.importc, header: ReaperPluginFunctionsHeader.} = object
     caller_version*: cint
     hwnd_main*: HWND
-    Register*: proc (name: cstring; infostruct: pointer): cint {.cdecl.}
-    GetFunc*: proc (name: cstring): pointer {.cdecl.}
+    Register*: proc(name: cstring; infostruct: pointer): cint {.cdecl.}
+    GetFunc*: proc(name: cstring): pointer {.cdecl.}
 
-  MIDI_event_t* {.ReaperAPI.} = object
+  MIDI_event_t* {.importc, header: ReaperPluginFunctionsHeader.} = object
     frame_offset*: cint
     size*: cint
     midi_message*: array[4, cuchar]
 
-  MIDI_eventprops* {.ReaperAPI.} = object
+  MIDI_eventprops* {.importc, header: ReaperPluginFunctionsHeader.} = object
     ppqpos*: cdouble
     ppqpos_end_or_bezier_tension*: cdouble
     flag*: char
@@ -40,7 +40,7 @@ type
     varmsglen*: cint
     setflag*: cint
 
-  REAPER_cue* {.ReaperAPI.} = object
+  REAPER_cue* {.importc, header: ReaperPluginFunctionsHeader.} = object
     m_id*: cint
     m_time*: cdouble
     m_endtime*: cdouble
@@ -49,7 +49,7 @@ type
     m_flags*: cint
     resvd*: array[124, char]
 
-  REAPER_inline_positioninfo* {.ReaperAPI.} = object
+  REAPER_inline_positioninfo* {.importc, header: ReaperPluginFunctionsHeader.} = object
     draw_start_time*: cdouble
     draw_start_y*: cint
     pixels_per_second*: cdouble
@@ -59,7 +59,7 @@ type
     mouse_y*: cint
     extraParms*: array[8, pointer]
 
-  midi_quantize_mode_t* {.ReaperAPI.} = object
+  midi_quantize_mode_t* {.importc, header: ReaperPluginFunctionsHeader.} = object
     doquant*: bool
     movemode*: char
     sizemode*: char
@@ -69,33 +69,33 @@ type
     range_min*: char
     range_max*: char
 
-  accelerator_register_t* {.ReaperAPI.} = object
+  accelerator_register_t* {.importc, header: ReaperPluginFunctionsHeader.} = object
     translateAccel*: proc(msg: ptr MSG, ctx: ptr accelerator_register_t): cint {.cdecl.}
     isLocal*: bool
     user*: pointer
 
-  custom_action_register_t* {.ReaperAPI.} = object
+  custom_action_register_t* {.importc, header: ReaperPluginFunctionsHeader.} = object
     uniqueSectionId*: cint
     idStr*: cstring
     name*: cstring
     extra*: pointer
 
-  # gaccel_register_t* {.ReaperAPI.} = object
+  # gaccel_register_t* {.importc, header: ReaperPluginFunctionsHeader.} = object
   #   accel*: ACCEL
   #   desc*: cstring
 
-  action_help_t* {.ReaperAPI.} = object
+  action_help_t* {.importc, header: ReaperPluginFunctionsHeader.} = object
     action_desc*: cstring
     action_help*: cstring
 
-  editor_register_t* {.ReaperAPI.} = object
+  editor_register_t* {.importc, header: ReaperPluginFunctionsHeader.} = object
     editFile*: proc(filename: cstring; parent: HWND; trackidx: cint): cint {.cdecl.}
     wouldHandle*: proc(filename: cstring): cstring {.cdecl.}
 
-  prefs_page_register_t* {.ReaperAPI.} = object
+  prefs_page_register_t* {.importc, header: ReaperPluginFunctionsHeader.} = object
     idstr*: cstring
     displayname*: cstring
-    create*: proc (par: HWND): HWND {.cdecl.}
+    create*: proc(par: HWND): HWND {.cdecl.}
     par_id*: cint
     par_idstr*: cstring
     childrenFlag*: cint
@@ -103,23 +103,23 @@ type
     hwndCache*: HWND
     extra*: array[64, char]
 
-  KbdCmd* {.ReaperAPI.} = object
+  KbdCmd* {.importc, header: ReaperPluginFunctionsHeader.} = object
     cmd*: DWORD
     text*: cstring
 
-  KbdKeyBindingInfo* {.ReaperAPI.} = object
+  KbdKeyBindingInfo* {.importc, header: ReaperPluginFunctionsHeader.} = object
     key*: cint
     cmd*: cint
     flags*: cint
 
-  KbdSectionInfo* {.ReaperAPI.} = object
+  KbdSectionInfo* {.importc, header: ReaperPluginFunctionsHeader.} = object
     uniqueID*: cint
     name*: cstring
     action_list*: ptr KbdCmd
     action_list_cnt*: cint
     def_keys*: ptr KbdKeyBindingInfo
     def_keys_cnt*: cint
-    onAction*: proc (cmd: cint; val: cint; valhw: cint; relmode: cint; hwnd: HWND): bool {.cdecl.}
+    onAction*: proc(cmd: cint; val: cint; valhw: cint; relmode: cint; hwnd: HWND): bool {.cdecl.}
     accels*: pointer
     recent_cmds*: pointer
     extended_data*: array[32, pointer]

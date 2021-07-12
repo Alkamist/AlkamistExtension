@@ -1,6 +1,6 @@
 import types, winapi
 
-{.pragma: ReaperAPI, importc, header: ReaperHeader.}
+{.pragma: ReaperAPI, importc, header: ReaperPluginFunctionsHeader.}
 
 proc REAPERAPI_LoadAPI*(getAPI: proc(name: cstring): pointer {.cdecl.}): cint {.ReaperAPI.}
 
