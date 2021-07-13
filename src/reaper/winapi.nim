@@ -1,60 +1,62 @@
-# const winUnicode* = not (defined(useWinAnsi) or defined(winansi))
+{.passL: "user32.lib".}
 
-{.passL:"user32.lib".}
+{.pragma: WindowsType, importc, header: "<windows.h>".}
+{.pragma: WindowsFunction, stdcall, importc, header: "<windows.h>".}
 
 when defined(cpu64):
   type
-    INT_PTR* {.importc.} = clonglong
-    UINT_PTR* {.importc.} = culonglong
-    LONG_PTR* {.importc.} = clonglong
-    ULONG_PTR* {.importc.} = culonglong
+    INT_PTR* {.WindowsType.} = clonglong
+    UINT_PTR* {.WindowsType.} = culonglong
+    LONG_PTR* {.WindowsType.} = clonglong
+    ULONG_PTR* {.WindowsType.} = culonglong
 else:
   type
-    INT_PTR* {.importc.} = cint
-    UINT_PTR* {.importc.} = cuint
-    LONG_PTR* {.importc.} = clong
-    ULONG_PTR* {.importc.} = culong
+    INT_PTR* {.WindowsType.} = cint
+    UINT_PTR* {.WindowsType.} = cuint
+    LONG_PTR* {.WindowsType.} = clong
+    ULONG_PTR* {.WindowsType.} = culong
 
 type
-  BOOL* {.importc.} = cint
-  CHAR* {.importc.} = cchar
-  WORD* {.importc.} = cshort
-  INT* {.importc.} = cint
-  LONG* {.importc.} = clong
-  BYTE* {.importc.} = cuchar
-  UCHAR* {.importc.} = cuchar
-  USHORT* {.importc.} = cushort
-  WCHAR* {.importc.} = cuint
-  UINT* {.importc.} = cuint
-  ULONG* {.importc.} = culong
-  DWORD* {.importc.} = culong
-  FLOAT* {.importc.} = cfloat
-  WPARAM* {.importc.} = UINT_PTR
-  LPARAM* {.importc.} = LONG_PTR
-  LRESULT* {.importc.} = LONG_PTR
-  LPSTR* {.importc.} = cstring
-  LPCSTR* {.importc.} = cstring
-  LPWSTR* {.importc.} = cstring
-  LPCWSTR* {.importc.} = cstring
+  BOOL* {.WindowsType.} = cint
+  CHAR* {.WindowsType.} = cchar
+  WORD* {.WindowsType.} = cshort
+  INT* {.WindowsType.} = cint
+  LONG* {.WindowsType.} = clong
+  BYTE* {.WindowsType.} = cuchar
+  UCHAR* {.WindowsType.} = cuchar
+  USHORT* {.WindowsType.} = cushort
+  WCHAR* {.WindowsType.} = cuint
+  UINT* {.WindowsType.} = cuint
+  ULONG* {.WindowsType.} = culong
+  DWORD* {.WindowsType.} = culong
+  FLOAT* {.WindowsType.} = cfloat
+  WPARAM* {.WindowsType.} = UINT_PTR
+  LPARAM* {.WindowsType.} = LONG_PTR
+  LRESULT* {.WindowsType.} = LONG_PTR
+  LPSTR* {.WindowsType.} = cstring
+  LPCSTR* {.WindowsType.} = cstring
+  LPWSTR* {.WindowsType.} = cstring
+  LPCWSTR* {.WindowsType.} = cstring
+  LPCTSTR* {.WindowsType.} = cstring
 
 type
-  HANDLE* {.importc.} = pointer
-  HINSTANCE* {.importc.} = HANDLE
-  HWND* {.importc.} = HANDLE
-  HMENU* {.importc.} = HANDLE
+  HANDLE* {.WindowsType.} = pointer
+  HINSTANCE* {.WindowsType.} = HANDLE
+  HWND* {.WindowsType.} = HANDLE
+  HMENU* {.WindowsType.} = HANDLE
 
 type
-  POINT* {.importc.} = object
+  POINT* {.WindowsType.} = object
     x*: LONG
     y*: LONG
 
-  RECT* {.importc.} = object
+  RECT* {.WindowsType.} = object
     left*: LONG
     top*: LONG
     right*: LONG
     bottom*: LONG
 
-  MSG* {.importc.} = object
+  MSG* {.WindowsType.} = object
     hwnd*: HWND
     message*: UINT
     wParam*: WPARAM
@@ -62,31 +64,35 @@ type
     time*: DWORD
     pt*: POINT
 
-  GUID* {.importc.} = object
+  GUID* {.WindowsType.} = object
     Data1*: culong
     Data2*: cushort
     Data3*: cushort
     Data4*: array[8, cuchar]
 
 type
-  DLGPROC* {.importc.} = proc(unnamedParam1: HWND, unnamedParam2: UINT, unnamedParam3: WPARAM, unnamedParam4: LPARAM): INT_PTR {.stdcall.}
+  DLGPROC* {.WindowsType.} = proc(unnamedParam1: HWND, unnamedParam2: UINT, unnamedParam3: WPARAM, unnamedParam4: LPARAM): INT_PTR {.stdcall.}
 
 const
   WM_KEYDOWN*: UINT = 0x0100
   WM_KEYUP*: UINT = 0x0101
   WM_SYSKEYDOWN*: UINT = 0x0104
   WM_SYSKEYUP*: UINT = 0x0105
+  SW_HIDE*: cint = 0
+  SW_SHOWNORMAL*: cint = 1
+  SW_NORMAL*: cint = 1
+  SW_SHOWMINIMIZED*: cint = 2
+  SW_SHOWMAXIMIZED*: cint = 3
+  SW_MAXIMIZE*: cint = 3
+  SW_SHOWNOACTIVATE*: cint = 4
+  SW_SHOW*: cint = 5
+  SW_MINIMIZE*: cint = 6
+  SW_SHOWMINNOACTIVE*: cint = 7
+  SW_SHOWNA*: cint = 8
+  SW_RESTORE*: cint = 9
+  SW_SHOWDEFAULT*: cint = 10
+  SW_FORCEMINIMIZE*: cint = 11
 
-# type LPTSTR* {.importc.} = LPWSTR
-
-proc DialogBoxParamW*(hInstance: HINSTANCE, lpTemplateName: LPCWSTR, hWndParent: HWND, lpDialogFunc: DLGPROC, dwInitParam: LPARAM): INT_PTR {.stdcall, importc.}
-# proc DialogBoxParam*(hInstance: HINSTANCE, lpTemplateName: LPCWSTR, hWndParent: HWND, lpDialogFunc: DLGPROC, dwInitParam: LPARAM): INT_PTR {.stdcall, dynlib: "user32", importc: "DialogBoxParamW".}
-# proc DialogBox*(hInstance: HINSTANCE, lpTemplate: LPCWSTR, hWndParent: HWND, lpDialogFunc: DLGPROC): INT_PTR {.inline.} = DialogBoxParamW(hInstance, lpTemplate, hWndParent, lpDialogFunc, 0)
-
-# type LPTSTR* {.importc.} = LPSTR
-
-# proc DialogBoxParamA*(hInstance: HINSTANCE, lpTemplateName: LPCSTR, hWndParent: HWND, lpDialogFunc: DLGPROC, dwInitParam: LPARAM): INT_PTR {.stdcall, dynlib: "user32", importc.}
-# proc DialogBoxParam*(hInstance: HINSTANCE, lpTemplateName: LPCSTR, hWndParent: HWND, lpDialogFunc: DLGPROC, dwInitParam: LPARAM): INT_PTR {.stdcall, dynlib: "user32", importc: "DialogBoxParamA".}
-# proc DialogBox*(hInstance: HINSTANCE, lpTemplate: LPCSTR, hWndParent: HWND, lpDialogFunc: DLGPROC): INT_PTR {.inline.} = DialogBoxParamA(hInstance, lpTemplate, hWndParent, lpDialogFunc, 0)
-
-# template MAKEINTRESOURCE*(i: untyped): untyped = cast[LPTSTR](i and 0xffff)
+proc MAKEINTRESOURCE*(i: cint): LPCTSTR {.WindowsFunction.}
+proc CreateDialog*(hInstance: HINSTANCE, lpName: LPCTSTR, hWndParent: HWND, lpDialogFunc: DLGPROC): HWND {.WindowsFunction.}
+proc ShowWindow*(hWnd: HINSTANCE, nCmdShow: cint): BOOL {.WindowsFunction.}

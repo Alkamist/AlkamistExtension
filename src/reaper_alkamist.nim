@@ -1,5 +1,7 @@
 import reaper
 
+{.link: "resource/resource.res".}
+
 {.emit: """/*INCLUDESECTION*/
 #define REAPERAPI_IMPLEMENT
 """.}
@@ -28,7 +30,9 @@ proc REAPER_PLUGIN_ENTRYPOINT(hInstance: HINSTANCE, rec: ptr reaper_plugin_info_
 
     # discard rec.Register("accelerator", addr accelerator)
 
-    discard DialogBoxParamW(hInstance, cast[LPCWSTR](100), nil, nil, 0)
+    let testWindow = CreateDialog(hInstance, MAKEINTRESOURCE(100), nil, nil)
+    if testWindow != nil:
+      discard ShowWindow(testWindow, SW_SHOW)
 
     # ShowConsoleMsg("Alkamist Extension initialized.\n")
 
