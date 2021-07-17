@@ -1,49 +1,23 @@
-import alkamist_extension/[reaper]
+import alkamist_extension/reaper
 
-{.link: "../resource/resource.res".}
+# proc windowProc(hWnd: HWND, msg: UINT, wParam: WPARAM, lParam: LPARAM): INT_PTR {.stdcall.} =
+#   case msg:
+#   of WM_MOUSEMOVE:
+#     case LOWORD(wParam):
+#     of MK_LBUTTON:
+#       ShowConsoleMsg($GET_X_LPARAM(lParam))
+#     else:
+#       discard
+#   else:
+#     discard
 
-{.emit: """/*INCLUDESECTION*/
-#define REAPERAPI_IMPLEMENT
-""".}
+# let testWindow = CreateDialog(hInstance, MAKEINTRESOURCE(100), nil, windowProc)
+# if testWindow != nil:
+#   discard ShowWindow(testWindow, SW_SHOW)
 
-# proc handleEvents(msg: ptr MSG, ctx: ptr accelerator_register_t): cint {.cdecl.} =
-#   if msg.message in [WM_KEYDOWN, WM_SYSKEYDOWN, WM_KEYUP, WM_SYSKEYUP]:
-#     let
-#       keyCode = msg.wParam.int
-#       key = CodeToKey[keyCode]
+proc testActionFn() =
+  ShowConsoleMsg("Test Action executed.\n")
 
-#     if msg.message in [WM_KEYDOWN, WM_SYSKEYDOWN]:
-#       ShowConsoleMsg($key)
-
-#     elif msg.message in [WM_KEYUP, WM_SYSKEYUP]:
-#       ShowConsoleMsg($key)
-
-# var accelerator = accelerator_register_t(translateAccel: handleEvents, isLocal: true)
-
-proc windowProc(hWnd: HWND, msg: UINT, wParam: WPARAM, lParam: LPARAM): INT_PTR {.stdcall.} =
-  case msg:
-  of WM_MOUSEMOVE:
-    case LOWORD(wParam):
-    of MK_LBUTTON:
-      ShowConsoleMsg($GET_X_LPARAM(lParam))
-    else:
-      discard
-  else:
-    discard
-
-proc REAPER_PLUGIN_ENTRYPOINT(hInstance: HINSTANCE, rec: ptr reaper_plugin_info_t): cint {.codegenDecl: "REAPER_PLUGIN_DLL_EXPORT $# $#$#", exportc, dynlib.} =
-  if rec != nil:
-    if REAPERAPI_LoadAPI(rec.GetFunc) != 0:
-      return 0
-
-    # discard rec.Register("accelerator", addr accelerator)
-
-    let testWindow = CreateDialog(hInstance, MAKEINTRESOURCE(100), nil, windowProc)
-    if testWindow != nil:
-      discard ShowWindow(testWindow, SW_SHOW)
-
-    # ShowConsoleMsg("Alkamist Extension initialized.\n")
-
-    return 1
-
-  # discard rec.Register("-accelerator", addr accelerator)
+createReaperExtension:
+  addAction("Alkamist: Test Action", "ALKAMIST_TEST_ACTION", testActionFn)
+  ShowConsoleMsg("Alkamist Extension initialized.\n")

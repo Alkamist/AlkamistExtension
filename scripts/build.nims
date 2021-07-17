@@ -45,4 +45,4 @@ proc launchReaper =
 
 buildDll()
 removeExtraFiles()
-# launchReaper()
+launchReaper()

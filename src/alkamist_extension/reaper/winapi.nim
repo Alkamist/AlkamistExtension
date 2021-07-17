@@ -2,31 +2,31 @@
 
 when defined(cpu64):
   type
-    INT_PTR* {.importc, header: "<windows.h>".} = clonglong
-    UINT_PTR* {.importc, header: "<windows.h>".} = culonglong
-    LONG_PTR* {.importc, header: "<windows.h>".} = clonglong
-    ULONG_PTR* {.importc, header: "<windows.h>".} = culonglong
+    INT_PTR* {.importc, header: "<windows.h>".} = int64
+    UINT_PTR* {.importc, header: "<windows.h>".} = int64
+    LONG_PTR* {.importc, header: "<windows.h>".} = int64
+    ULONG_PTR* {.importc, header: "<windows.h>".} = int64
 else:
   type
-    INT_PTR* {.importc, header: "<windows.h>".} = cint
-    UINT_PTR* {.importc, header: "<windows.h>".} = cuint
-    LONG_PTR* {.importc, header: "<windows.h>".} = clong
-    ULONG_PTR* {.importc, header: "<windows.h>".} = culong
+    INT_PTR* {.importc, header: "<windows.h>".} = int32
+    UINT_PTR* {.importc, header: "<windows.h>".} = int32
+    LONG_PTR* {.importc, header: "<windows.h>".} = int32
+    ULONG_PTR* {.importc, header: "<windows.h>".} = int32
 
 type
-  BOOL* {.importc, header: "<windows.h>".} = cint
-  CHAR* {.importc, header: "<windows.h>".} = cchar
-  WORD* {.importc, header: "<windows.h>".} = cshort
-  INT* {.importc, header: "<windows.h>".} = cint
-  LONG* {.importc, header: "<windows.h>".} = clong
-  BYTE* {.importc, header: "<windows.h>".} = cuchar
-  UCHAR* {.importc, header: "<windows.h>".} = cuchar
-  USHORT* {.importc, header: "<windows.h>".} = cushort
-  WCHAR* {.importc, header: "<windows.h>".} = cuint
-  UINT* {.importc, header: "<windows.h>".} = cuint
-  ULONG* {.importc, header: "<windows.h>".} = culong
-  DWORD* {.importc, header: "<windows.h>".} = culong
-  FLOAT* {.importc, header: "<windows.h>".} = cfloat
+  BOOL* {.importc, header: "<windows.h>".} = int32
+  CHAR* {.importc, header: "<windows.h>".} = char
+  WORD* {.importc, header: "<windows.h>".} = uint16
+  INT* {.importc, header: "<windows.h>".} = int32
+  LONG* {.importc, header: "<windows.h>".} = int32
+  BYTE* {.importc, header: "<windows.h>".} = uint8
+  UCHAR* {.importc, header: "<windows.h>".} = uint8
+  USHORT* {.importc, header: "<windows.h>".} = uint16
+  WCHAR* {.importc, header: "<windows.h>".} = uint16
+  UINT* {.importc, header: "<windows.h>".} = int32
+  ULONG* {.importc, header: "<windows.h>".} = int32
+  DWORD* {.importc, header: "<windows.h>".} = int32
+  FLOAT* {.importc, header: "<windows.h>".} = float32
   WPARAM* {.importc, header: "<windows.h>".} = UINT_PTR
   LPARAM* {.importc, header: "<windows.h>".} = LONG_PTR
   LRESULT* {.importc, header: "<windows.h>".} = LONG_PTR
@@ -36,13 +36,11 @@ type
   LPCWSTR* {.importc, header: "<windows.h>".} = cstring
   LPCTSTR* {.importc, header: "<windows.h>".} = cstring
 
-type
   HANDLE* {.importc, header: "<windows.h>".} = pointer
   HINSTANCE* {.importc, header: "<windows.h>".} = HANDLE
   HWND* {.importc, header: "<windows.h>".} = HANDLE
   HMENU* {.importc, header: "<windows.h>".} = HANDLE
 
-type
   POINT* {.importc, header: "<windows.h>".} = object
     x*: LONG
     y*: LONG
@@ -62,12 +60,16 @@ type
     pt*: POINT
 
   GUID* {.importc, header: "<windows.h>".} = object
-    Data1*: culong
-    Data2*: cushort
-    Data3*: cushort
-    Data4*: array[8, cuchar]
+    Data1*: int32
+    Data2*: uint16
+    Data3*: uint16
+    Data4*: array[8, uint8]
 
-type
+  ACCEL* {.importc, header: "<windows.h>".} = object
+    fVirt*: BYTE
+    key*: WORD
+    cmd*: WORD
+
   DLGPROC* {.importc, header: "<windows.h>".} = proc(hWnd: HWND, msg: UINT, wParam: WPARAM, lParam: LPARAM): INT_PTR {.stdcall.}
 
 const
@@ -98,11 +100,11 @@ const
   SW_SHOWDEFAULT* = 10
   SW_FORCEMINIMIZE* = 11
 
-proc LOWORD*(value: WPARAM): cint {.stdcall, importc, header: "<windowsx.h>".}
-proc HIWORD*(value: WPARAM): cint {.stdcall, importc, header: "<windowsx.h>".}
-proc GET_X_LPARAM*(lParam: LPARAM): cint {.stdcall, importc, header: "<windowsx.h>".}
-proc GET_Y_LPARAM*(lParam: LPARAM): cint {.stdcall, importc, header: "<windowsx.h>".}
-proc MAKEINTRESOURCE*(i: cint): LPCTSTR {.stdcall, importc, header: "<windows.h>".}
+proc LOWORD*(value: WPARAM): int {.stdcall, importc, header: "<windowsx.h>".}
+proc HIWORD*(value: WPARAM): int {.stdcall, importc, header: "<windowsx.h>".}
+proc GET_X_LPARAM*(lParam: LPARAM): int {.stdcall, importc, header: "<windowsx.h>".}
+proc GET_Y_LPARAM*(lParam: LPARAM): int {.stdcall, importc, header: "<windowsx.h>".}
+proc MAKEINTRESOURCE*(i: int): LPCTSTR {.stdcall, importc, header: "<windows.h>".}
 
 proc CreateDialog*(hInstance: HINSTANCE, lpName: LPCTSTR, hWndParent: HWND, lpDialogFunc: DLGPROC): HWND {.stdcall, importc, header: "<windows.h>".}
-proc ShowWindow*(hWnd: HINSTANCE, nCmdShow: cint): BOOL {.stdcall, importc, header: "<windows.h>".}
+proc ShowWindow*(hWnd: HINSTANCE, nCmdShow: int32): BOOL {.stdcall, importc, header: "<windows.h>".}
