@@ -7,7 +7,7 @@ proc REAPERAPI_LoadAPI*(getAPI: proc(name: cstring): pointer {.cdecl.}): cint {.
 proc AddCustomizableMenu*(menuidstr: cstring; menuname: cstring; kbdsecname: cstring; addtomainmenu: bool): bool {.ReaperAPI.}
 proc AddExtensionsMainMenu*(): bool {.ReaperAPI.}
 proc AddMediaItemToTrack*(tr: ptr MediaTrack): ptr MediaItem {.ReaperAPI.}
-proc AddProjectMarker*(proj: ptr ReaProject; isrgn: bool; pos: cdouble; rgnend: cdouble;name: cstring; wantidx: cint): cint {.ReaperAPI.}
+proc AddProjectMarker*(proj: ptr ReaProject; isrgn: bool; pos: cdouble; rgnend: cdouble; name: cstring; wantidx: cint): cint {.ReaperAPI.}
 proc AddProjectMarker2*(proj: ptr ReaProject; isrgn: bool; pos: cdouble; rgnend: cdouble; name: cstring; wantidx: cint; color: cint): cint {.ReaperAPI.}
 proc AddRemoveReaScript*(add: bool; sectionID: cint; scriptfn: cstring; commit: bool): cint {.ReaperAPI.}
 proc AddTakeToMediaItem*(item: ptr MediaItem): ptr MediaItem_Take {.ReaperAPI.}

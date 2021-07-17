@@ -1,8 +1,8 @@
 import winapi
 
 const
-  ReaperPluginHeader* = "reaper/reaper_cpp/reaper_plugin.h"
-  ReaperPluginFunctionsHeader* = "reaper/reaper_cpp/reaper_plugin_functions.h"
+  ReaperPluginHeader* = "../reapersdk/reaper_plugin.h"
+  ReaperPluginFunctionsHeader* = "../reapersdk/reaper_plugin_functions.h"
 
 type
   LICE_pixel* = cuint

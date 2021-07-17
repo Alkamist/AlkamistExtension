@@ -5,7 +5,6 @@ author = "Corey Lehman"
 description = "A new awesome nimble package"
 license = "MIT"
 srcDir = "src"
-# bin = @["main"]
 
 backend = "cpp"
 
