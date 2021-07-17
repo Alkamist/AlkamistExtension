@@ -27,22 +27,6 @@ proc addAction*(name, id: cstring, fn: proc()) =
   discard pluginInfo.Register("gaccel", addr accelReg)
   actionProcs[commandId] = fn
 
-# proc createWindow*() =
-#   proc windowProc(hWnd: HWND, msg: UINT, wParam: WPARAM, lParam: LPARAM): INT_PTR {.stdcall.} =
-#     case msg:
-#     of WM_MOUSEMOVE:
-#       case LOWORD(wParam):
-#       of MK_LBUTTON:
-#         ShowConsoleMsg($GET_X_LPARAM(lParam))
-#       else:
-#         discard
-#     else:
-#       discard
-
-#   let testWindow = CreateDialog(hInstance, MAKEINTRESOURCE(100), nil, windowProc)
-#   if testWindow != nil:
-#     discard ShowWindow(testWindow, SW_SHOW)
-
 template createExtension*(initCode: untyped): untyped =
   {.link: "resource/resource.res".}
 

@@ -1,6 +1,7 @@
-{.passL: "user32.lib".}
+when defined windows:
+  {.passL: "user32.lib".}
 
-when defined(cpu64):
+when defined cpu64:
   type
     INT_PTR* {.importc, header: "<windows.h>".} = int64
     UINT_PTR* {.importc, header: "<windows.h>".} = int64
@@ -70,6 +71,7 @@ type
     key*: WORD
     cmd*: WORD
 
+  WNDPROC* {.importc, header: "<windows.h>".} = proc (hWnd: HWND, msg: UINT, wParam: WPARAM, lParam: LPARAM): LRESULT {.stdcall.}
   DLGPROC* {.importc, header: "<windows.h>".} = proc(hWnd: HWND, msg: UINT, wParam: WPARAM, lParam: LPARAM): INT_PTR {.stdcall.}
 
 const
