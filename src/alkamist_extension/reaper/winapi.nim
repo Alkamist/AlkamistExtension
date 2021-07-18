@@ -49,6 +49,7 @@ type
   HMENU* {.windowsHeader.} = HANDLE
   HDC* {.windowsHeader.} = HANDLE
   HPEN* {.windowsHeader.} = HANDLE
+  HBRUSH* {.windowsHeader.} = HANDLE
   HGDIOBJ* {.windowsHeader.} = HANDLE
 
   POINT* {.windowsHeader.} = object
@@ -101,6 +102,7 @@ const
   WM_SYSKEYUP* = 0x0105
   WM_MOUSEMOVE* = 0x0200
   WM_PAINT* = 0x000f
+  WM_ERASEBKGND* = 0x0014
   WM_CLOSE* = 0x0010
   MK_CONTROL* = 0x0008
   MK_LBUTTON* = 0x0001
@@ -150,11 +152,14 @@ proc MAKEINTRESOURCE*(i: int): LPCTSTR {.stdcall, windowsHeader.}
 proc CreateDialog*(hInstance: HINSTANCE, lpName: LPCTSTR, hWndParent: HWND, lpDialogFunc: DLGPROC): HWND {.stdcall, windowsHeader.}
 proc ShowWindow*(hWnd: HINSTANCE, nCmdShow: int32): BOOL {.stdcall, windowsHeader.}
 proc DestroyWindow*(hWnd: HWND): BOOL {.stdcall, windowsHeader.}
+proc GetWindowRect*(hWnd: HWND, lpRect: ptr Rect): BOOL {.stdcall, windowsHeader.}
 
 proc BeginPaint*(hWnd: HWND, lpPaint: LPPAINTSTRUCT): HDC {.stdcall, windowsHeader.}
 proc EndPaint*(hWnd: HWND, lpPaint: ptr PAINTSTRUCT): BOOL {.stdcall, windowsHeader.}
 proc RGB*(r, g, b: int): COLORREF {.stdcall, windowsHeader.}
+proc SetBkColor*(hdc: HDC, color: COLORREF): COLORREF {.stdcall, windowsHeader.}
 proc CreatePen*(iStyle, cWidth: int, color: COLORREF): HPEN {.stdcall, windowsHeader.}
+proc CreateSolidBrush*(color: COLORREF): HBRUSH {.stdcall, windowsHeader.}
 proc DeleteObject*(ho: HGDIOBJ): BOOL {.stdcall, windowsHeader.}
 proc SelectObject*(hdc: HDC, h: HGDIOBJ): HGDIOBJ {.stdcall, windowsHeader.}
 proc Rectangle*(ctx: HDC; l, t, r, b: int): BOOL {.stdcall, windowsHeader.}
