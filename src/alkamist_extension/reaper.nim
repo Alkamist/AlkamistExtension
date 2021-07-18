@@ -1,10 +1,10 @@
 import
   std/tables,
-  reaper/[winapi, types, functions]
+  reaper/[winapi, types, functions, window]
 
 export
   tables,
-  winapi, types, functions
+  winapi, types, functions, window
 
 var
   hInstance*: HINSTANCE
