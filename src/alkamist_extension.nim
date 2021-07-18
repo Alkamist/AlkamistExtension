@@ -10,7 +10,15 @@ createExtension:
   # addAction("Alkamist: Test Action", "ALKAMIST_TEST_ACTION", testActionFn)
 
   var window = newWindow()
+
+  window.title = "Test Window"
+  window.setBounds(400, 300, 800, 500)
+
   window.draw = proc(self: var Window) =
     self.backgroundColor = initColor(16, 16, 16)
     self.fillBackground()
-    # self.rect(20, 20, 50, 50)
+    self.penColor = initColor(200, 200, 200)
+    self.brushColor = initColor(60, 60, 60)
+    self.updatePen()
+    self.updateBrush()
+    self.rect(20, 20, 50, 50)

@@ -17,6 +17,8 @@ type
     parent: HWND
     pen: HPEN
     brush: HBRUSH
+    bounds: RECT
+    p_title: string
 
   Color* = object
     r*, g*, b*: int
@@ -65,6 +67,34 @@ proc toInt*(ps: PenStyle): int =
   of JoinMiter: PS_JOIN_MITER
   of Geometric: PS_GEOMETRIC
 
+proc setBounds*(window: var Window, x, y, width, height: int) =
+  discard SetWindowPos(window.hWnd, HWND_TOP, x, y, width, height, SWP_NOZORDER)
+
+proc `title`*(window: Window): string =
+  window.p_title
+
+proc `title=`*(window: var Window, value: string) =
+  window.p_title = value
+  discard SetWindowText(window.hWnd, value)
+
+proc `left`*(window: Window): int =
+  window.bounds.left
+
+proc `right`*(window: Window): int =
+  window.bounds.right
+
+proc `top`*(window: Window): int =
+  window.bounds.top
+
+proc `bottom`*(window: Window): int =
+  window.bounds.bottom
+
+proc `width`*(window: Window): int =
+  abs(window.right - window.left)
+
+proc `height`*(window: Window): int =
+  abs(window.bottom - window.top)
+
 proc updatePen*(window: var Window) =
   discard DeleteObject(window.pen)
   window.pen = CreatePen(
@@ -81,8 +111,8 @@ proc updateBrush*(window: var Window) =
   )
   discard window.ctx.SelectObject(window.brush)
 
-proc rect*(window: Window; x, y, w, h: int) =
-  discard window.ctx.Rectangle(x, y, w, h)
+proc rect*(window: Window, x, y, width, height: int) =
+  discard window.ctx.Rectangle(x, y, width, height)
 
 proc fillBackground*(window: var Window) =
   let
@@ -94,35 +124,32 @@ proc fillBackground*(window: var Window) =
   window.updatePen()
   window.updateBrush()
 
-  var windowRect: RECT
-  discard GetWindowRect(window.hWnd, addr windowRect)
-
-  window.rect(0, 0, windowRect.right, windowRect.bottom)
+  window.rect(0, 0, window.width, window.height)
 
   window.penColor = penColorPrevious
   window.brushColor = brushColorPrevious
   window.updatePen()
   window.updateBrush()
 
+proc updateBounds(window: var Window) =
+  discard GetWindowRect(window.hWnd, addr window.bounds)
+
 proc windowProc(hWnd: HWND, msg: UINT, wParam: WPARAM, lParam: LPARAM): INT_PTR {.stdcall.} =
   case msg:
 
-  # of WM_ERASEBKGND:
-  #   if hWndWindows.contains(hWnd):
-  #     var window = hWndWindows[hWnd]
-  #     window.paintStruct = PAINTSTRUCT()
-  #     window.ctx = window.hWnd.BeginPaint(addr window.paintStruct)
-  #     window.fillBackground()
-  #     discard window.hWnd.EndPaint(addr window.paintStruct)
+  of WM_SIZE, WM_MOVE:
+    if not hWndWindows.contains(hWnd): return 0
+    var window = hWndWindows[hWnd]
+    window.updateBounds()
 
   of WM_PAINT:
-    if hWndWindows.contains(hWnd):
-      var window = hWndWindows[hWnd]
-      window.paintStruct = PAINTSTRUCT()
-      window.ctx = window.hWnd.BeginPaint(addr window.paintStruct)
-      discard window.ctx.SelectObject(window.pen)
-      window.draw(window)
-      discard window.hWnd.EndPaint(addr window.paintStruct)
+    if not hWndWindows.contains(hWnd): return 0
+    var window = hWndWindows[hWnd]
+    window.paintStruct = PAINTSTRUCT()
+    window.ctx = window.hWnd.BeginPaint(addr window.paintStruct)
+    discard window.ctx.SelectObject(window.pen)
+    window.draw(window)
+    discard window.hWnd.EndPaint(addr window.paintStruct)
 
   of WM_CLOSE:
     discard DestroyWindow(hWnd)
@@ -143,6 +170,8 @@ proc newWindow*(hInstance: HINSTANCE, parent: HWND): Window =
   result = Window(hWnd: CreateDialog(hInstance, MAKEINTRESOURCE(100), parent, windowProc))
 
   if result.hWnd != nil:
+    result.p_title = "Unnamed Window"
+    result.updateBounds()
     result.backgroundColor = initColor(0, 0, 0)
     result.penColor = initColor(0, 0, 0)
     result.penThickness = 1

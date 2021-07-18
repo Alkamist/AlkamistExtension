@@ -96,52 +96,73 @@ type
   COLORREF* {.windowsHeader.} = DWORD
 
 const
-  WM_KEYDOWN* = 0x0100
-  WM_KEYUP* = 0x0101
-  WM_SYSKEYDOWN* = 0x0104
-  WM_SYSKEYUP* = 0x0105
-  WM_MOUSEMOVE* = 0x0200
-  WM_PAINT* = 0x000f
-  WM_ERASEBKGND* = 0x0014
-  WM_CLOSE* = 0x0010
-  MK_CONTROL* = 0x0008
-  MK_LBUTTON* = 0x0001
-  MK_MBUTTON* = 0x0010
-  MK_RBUTTON* = 0x0002
-  MK_SHIFT* = 0x0004
-  MK_XBUTTON1* = 0x0020
-  MK_XBUTTON2* = 0x0040
-  SW_HIDE* = 0
-  SW_SHOWNORMAL* = 1
-  SW_NORMAL* = 1
-  SW_SHOWMINIMIZED* = 2
-  SW_SHOWMAXIMIZED* = 3
-  SW_MAXIMIZE* = 3
-  SW_SHOWNOACTIVATE* = 4
-  SW_SHOW* = 5
-  SW_MINIMIZE* = 6
-  SW_SHOWMINNOACTIVE* = 7
-  SW_SHOWNA* = 8
-  SW_RESTORE* = 9
-  SW_SHOWDEFAULT* = 10
-  SW_FORCEMINIMIZE* = 11
-  PS_COSMETIC* = 0x00000000
-  PS_ENDCAP_ROUND* = 0x00000000
-  PS_JOIN_ROUND* = 0x00000000
-  PS_SOLID* = 0x00000000
-  PS_DASH* = 0x00000001
-  PS_DOT* = 0x00000002
-  PS_DASHDOT* = 0x00000003
-  PS_DASHDOTDOT* = 0x00000004
-  PS_NULL* = 0x00000005
-  PS_INSIDEFRAME* = 0x00000006
-  PS_USERSTYLE* = 0x00000007
-  PS_ALTERNATE* = 0x00000008
-  PS_ENDCAP_SQUARE* = 0x00000100
-  PS_ENDCAP_FLAT* = 0x00000200
-  PS_JOIN_BEVEL* = 0x00001000
-  PS_JOIN_MITER* = 0x00002000
-  PS_GEOMETRIC* = 0x00010000
+  HWND_TOP* {.windowsHeader.} = nil
+  HWND_BOTTOM* {.windowsHeader.} = nil
+  HWND_TOPMOST* {.windowsHeader.} = nil
+  HWND_NOTOPMOST* {.windowsHeader.} = nil
+  WM_KEYDOWN* {.windowsHeader.} = 0x0100
+  WM_KEYUP* {.windowsHeader.} = 0x0101
+  WM_SYSKEYDOWN* {.windowsHeader.} = 0x0104
+  WM_SYSKEYUP* {.windowsHeader.} = 0x0105
+  WM_MOUSEMOVE* {.windowsHeader.} = 0x0200
+  WM_PAINT* {.windowsHeader.} = 0x000f
+  WM_ERASEBKGND* {.windowsHeader.} = 0x0014
+  WM_CLOSE* {.windowsHeader.} = 0x0010
+  WM_SIZE* {.windowsHeader.} = 0x0005
+  WM_MOVE* {.windowsHeader.} = 0x0003
+  MK_CONTROL* {.windowsHeader.} = 0x0008
+  MK_LBUTTON* {.windowsHeader.} = 0x0001
+  MK_MBUTTON* {.windowsHeader.} = 0x0010
+  MK_RBUTTON* {.windowsHeader.} = 0x0002
+  MK_SHIFT* {.windowsHeader.} = 0x0004
+  MK_XBUTTON1* {.windowsHeader.} = 0x0020
+  MK_XBUTTON2* {.windowsHeader.} = 0x0040
+  SW_HIDE* {.windowsHeader.} = 0
+  SW_SHOWNORMAL* {.windowsHeader.} = 1
+  SW_NORMAL* {.windowsHeader.} = 1
+  SW_SHOWMINIMIZED* {.windowsHeader.} = 2
+  SW_SHOWMAXIMIZED* {.windowsHeader.} = 3
+  SW_MAXIMIZE* {.windowsHeader.} = 3
+  SW_SHOWNOACTIVATE* {.windowsHeader.} = 4
+  SW_SHOW* {.windowsHeader.} = 5
+  SW_MINIMIZE* {.windowsHeader.} = 6
+  SW_SHOWMINNOACTIVE* {.windowsHeader.} = 7
+  SW_SHOWNA* {.windowsHeader.} = 8
+  SW_RESTORE* {.windowsHeader.} = 9
+  SW_SHOWDEFAULT* {.windowsHeader.} = 10
+  SW_FORCEMINIMIZE* {.windowsHeader.} = 11
+  PS_COSMETIC* {.windowsHeader.} = 0x00000000
+  PS_ENDCAP_ROUND* {.windowsHeader.} = 0x00000000
+  PS_JOIN_ROUND* {.windowsHeader.} = 0x00000000
+  PS_SOLID* {.windowsHeader.} = 0x00000000
+  PS_DASH* {.windowsHeader.} = 0x00000001
+  PS_DOT* {.windowsHeader.} = 0x00000002
+  PS_DASHDOT* {.windowsHeader.} = 0x00000003
+  PS_DASHDOTDOT* {.windowsHeader.} = 0x00000004
+  PS_NULL* {.windowsHeader.} = 0x00000005
+  PS_INSIDEFRAME* {.windowsHeader.} = 0x00000006
+  PS_USERSTYLE* {.windowsHeader.} = 0x00000007
+  PS_ALTERNATE* {.windowsHeader.} = 0x00000008
+  PS_ENDCAP_SQUARE* {.windowsHeader.} = 0x00000100
+  PS_ENDCAP_FLAT* {.windowsHeader.} = 0x00000200
+  PS_JOIN_BEVEL* {.windowsHeader.} = 0x00001000
+  PS_JOIN_MITER* {.windowsHeader.} = 0x00002000
+  PS_GEOMETRIC* {.windowsHeader.} = 0x00010000
+  SWP_ASYNCWINDOWPOS* {.windowsHeader.} = 0x4000
+  SWP_DEFERERASE* {.windowsHeader.} = 0x2000
+  SWP_DRAWFRAME* {.windowsHeader.} = 0x0020
+  SWP_FRAMECHANGED* {.windowsHeader.} = 0x0020
+  SWP_HIDEWINDOW* {.windowsHeader.} = 0x0080
+  SWP_NOACTIVATE* {.windowsHeader.} = 0x0010
+  SWP_NOCOPYBITS* {.windowsHeader.} = 0x0100
+  SWP_NOMOVE* {.windowsHeader.} = 0x0002
+  SWP_NOOWNERZORDER* {.windowsHeader.} = 0x0200
+  SWP_NOREDRAW* {.windowsHeader.} = 0x0008
+  SWP_NOREPOSITION* {.windowsHeader.} = 0x0200
+  SWP_NOSENDCHANGING* {.windowsHeader.} = 0x0400
+  SWP_NOSIZE* {.windowsHeader.} = 0x0001
+  SWP_NOZORDER* {.windowsHeader.} = 0x0004
+  SWP_SHOWWINDOW* {.windowsHeader.} = 0x0040
 
 proc LOWORD*(value: WPARAM): int {.stdcall, windowsXHeader.}
 proc HIWORD*(value: WPARAM): int {.stdcall, windowsXHeader.}
@@ -153,6 +174,8 @@ proc CreateDialog*(hInstance: HINSTANCE, lpName: LPCTSTR, hWndParent: HWND, lpDi
 proc ShowWindow*(hWnd: HINSTANCE, nCmdShow: int32): BOOL {.stdcall, windowsHeader.}
 proc DestroyWindow*(hWnd: HWND): BOOL {.stdcall, windowsHeader.}
 proc GetWindowRect*(hWnd: HWND, lpRect: ptr Rect): BOOL {.stdcall, windowsHeader.}
+proc SetWindowText*(hWnd: HWND, lpString: LPCSTR): BOOL {.stdcall, windowsHeader.}
+proc SetWindowPos*(hWnd, hWndInsertAfter: HWND; X, Y, cx, cy: int; uFlags: UINT): BOOL {.stdcall, windowsHeader.}
 
 proc BeginPaint*(hWnd: HWND, lpPaint: LPPAINTSTRUCT): HDC {.stdcall, windowsHeader.}
 proc EndPaint*(hWnd: HWND, lpPaint: ptr PAINTSTRUCT): BOOL {.stdcall, windowsHeader.}
