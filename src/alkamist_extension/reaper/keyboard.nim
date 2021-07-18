@@ -161,7 +161,7 @@ proc toBiTable[K, V](entries: openArray[(K, V)]): (Table[K, V], Table[V, K]) =
   let reverseEntries = entries.mapIt((it[1], it[0]))
   result = (entries.toTable(), reverseEntries.toTable())
 
-const (KeyToCode*, CodeToKey*) = {
+const (keyCodes*, codeKeys*) = {
   Key.ControlBreak: 3,
   Key.Backspace: 8,
   Key.Tab: 9,
