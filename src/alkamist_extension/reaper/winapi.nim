@@ -21,6 +21,7 @@ else:
     ULONG_PTR* {.windowsHeader.} = int32
 
 type
+  VOID* {.windowsHeader.} = pointer
   BOOL* {.windowsHeader.} = int32
   CHAR* {.windowsHeader.} = char
   WORD* {.windowsHeader.} = uint16
@@ -92,6 +93,7 @@ type
 
   WNDPROC* {.windowsHeader.} = proc (hWnd: HWND, msg: UINT, wParam: WPARAM, lParam: LPARAM): LRESULT {.stdcall.}
   DLGPROC* {.windowsHeader.} = proc(hWnd: HWND, msg: UINT, wParam: WPARAM, lParam: LPARAM): INT_PTR {.stdcall.}
+  TIMERPROC* {.windowsHeader.} = proc (P1: HWND, P2: UINT, P3: UINT_PTR, P4: DWORD): VOID {.stdcall.}
 
   COLORREF* {.windowsHeader.} = DWORD
 
@@ -110,6 +112,7 @@ const
   WM_CLOSE* {.windowsHeader.} = 0x0010
   WM_SIZE* {.windowsHeader.} = 0x0005
   WM_MOVE* {.windowsHeader.} = 0x0003
+  WM_TIMER* {.windowsHeader.} =  0x0113
   MK_CONTROL* {.windowsHeader.} = 0x0008
   MK_LBUTTON* {.windowsHeader.} = 0x0001
   MK_MBUTTON* {.windowsHeader.} = 0x0010
@@ -176,6 +179,8 @@ proc DestroyWindow*(hWnd: HWND): BOOL {.stdcall, windowsHeader.}
 proc GetWindowRect*(hWnd: HWND, lpRect: ptr Rect): BOOL {.stdcall, windowsHeader.}
 proc SetWindowText*(hWnd: HWND, lpString: LPCSTR): BOOL {.stdcall, windowsHeader.}
 proc SetWindowPos*(hWnd, hWndInsertAfter: HWND; X, Y, cx, cy: int; uFlags: UINT): BOOL {.stdcall, windowsHeader.}
+proc SetTimer*(hWnd: HWND, nIDEvent: UINT_PTR, uElapse: UINT, lpTimerFunc: TIMERPROC): UINT_PTR {.stdcall, windowsHeader.}
+proc KillTimer*(hWnd: HWND, uIDEvent: UINT_PTR): BOOL {.stdcall, windowsHeader.}
 
 proc BeginPaint*(hWnd: HWND, lpPaint: LPPAINTSTRUCT): HDC {.stdcall, windowsHeader.}
 proc EndPaint*(hWnd: HWND, lpPaint: ptr PAINTSTRUCT): BOOL {.stdcall, windowsHeader.}

@@ -4,12 +4,14 @@ import
 
 type
   Window* = ref object
+    update*: proc(self: var Window)
     draw*: proc(self: var Window)
     penColor*: Color
     penThickness*: int
     penStyle*: PenStyle
     brushColor*: Color
     backgroundColor*: Color
+    hasEventLoop*: bool
     ctx: HDC
     paintStruct: PAINTSTRUCT
     hInstance: HINSTANCE
@@ -137,6 +139,12 @@ proc updateBounds(window: var Window) =
 proc windowProc(hWnd: HWND, msg: UINT, wParam: WPARAM, lParam: LPARAM): INT_PTR {.stdcall.} =
   case msg:
 
+  of WM_TIMER:
+    if not hWndWindows.contains(hWnd): return 0
+    var window = hWndWindows[hWnd]
+    if window.update == nil: return 0
+    window.update(window)
+
   of WM_SIZE, WM_MOVE:
     if not hWndWindows.contains(hWnd): return 0
     var window = hWndWindows[hWnd]
@@ -145,6 +153,7 @@ proc windowProc(hWnd: HWND, msg: UINT, wParam: WPARAM, lParam: LPARAM): INT_PTR 
   of WM_PAINT:
     if not hWndWindows.contains(hWnd): return 0
     var window = hWndWindows[hWnd]
+    if window.draw == nil: return 0
     window.paintStruct = PAINTSTRUCT()
     window.ctx = window.hWnd.BeginPaint(addr window.paintStruct)
     discard window.ctx.SelectObject(window.pen)
@@ -165,6 +174,15 @@ proc windowProc(hWnd: HWND, msg: UINT, wParam: WPARAM, lParam: LPARAM): INT_PTR 
 
   else:
     discard
+
+proc enableEventLoop*(window: var Window, loopEvery: UINT) =
+  discard SetTimer(window.hWnd, 1, loopEvery, nil)
+  window.hasEventLoop = true
+
+proc disableEventLoop*(window: var Window) =
+  if window.hasEventLoop:
+    discard KillTimer(window.hWnd, 1)
+    window.hasEventLoop = false
 
 proc newWindow*(hInstance: HINSTANCE, parent: HWND): Window =
   result = Window(hWnd: CreateDialog(hInstance, MAKEINTRESOURCE(100), parent, windowProc))
