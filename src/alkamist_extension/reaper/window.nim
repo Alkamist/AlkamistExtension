@@ -106,12 +106,20 @@ proc updatePen*(window: var Window) =
   )
   discard window.ctx.SelectObject(window.pen)
 
+proc updatePenColor*(window: var Window, color: Color) =
+  window.penColor = color
+  window.updatePen()
+
 proc updateBrush*(window: var Window) =
   discard DeleteObject(window.brush)
   window.brush = CreateSolidBrush(
     RGB(window.brushColor.r, window.brushColor.g, window.brushColor.b)
   )
   discard window.ctx.SelectObject(window.brush)
+
+proc updateBrushColor*(window: var Window, color: Color) =
+  window.brushColor = color
+  window.updateBrush()
 
 proc rect*(window: Window, x, y, width, height: int) =
   discard window.ctx.Rectangle(x, y, width, height)
@@ -121,17 +129,13 @@ proc fillBackground*(window: var Window) =
     penColorPrevious = window.penColor
     brushColorPrevious = window.brushColor
 
-  window.penColor = window.backgroundColor
-  window.brushColor = window.backgroundColor
-  window.updatePen()
-  window.updateBrush()
+  window.updatePenColor window.backgroundColor
+  window.updateBrushColor window.backgroundColor
 
   window.rect(0, 0, window.width, window.height)
 
-  window.penColor = penColorPrevious
-  window.brushColor = brushColorPrevious
-  window.updatePen()
-  window.updateBrush()
+  window.updatePenColor penColorPrevious
+  window.updateBrushColor brushColorPrevious
 
 proc updateBounds(window: var Window) =
   discard GetWindowRect(window.hWnd, addr window.bounds)

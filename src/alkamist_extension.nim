@@ -11,10 +11,8 @@ proc testActionFn() =
   window.draw = proc(self: var Window) =
     self.backgroundColor = initColor(16, 16, 16)
     self.fillBackground()
-    self.penColor = initColor(200, 200, 200)
-    self.brushColor = initColor(60, 60, 60)
-    self.updatePen()
-    self.updateBrush()
+    self.updatePenColor initColor(200, 200, 200)
+    self.updateBrushColor initColor(60, 60, 60)
     self.rect(20, 20, 50, 50)
     ShowConsoleMsg("Draw: " & $numDraws & "\n")
     inc numDraws
