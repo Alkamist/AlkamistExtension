@@ -1,17 +1,19 @@
 import
-  std/tables,
+  std/[tables, math],
   winapi, keyboard, functions
 
 type
   Window* = ref object
-    update*: proc(self: var Window)
-    draw*: proc(self: var Window)
+    update*: proc()
+    draw*: proc()
+    onResize*: proc()
+    onMove*: proc()
     penColor*: Color
     penThickness*: int
     penStyle*: PenStyle
     brushColor*: Color
     backgroundColor*: Color
-    hasEventLoop*: bool
+    hasUpdateLoop*: bool
     ctx: HDC
     paintStruct: PAINTSTRUCT
     hInstance: HINSTANCE
@@ -121,8 +123,11 @@ proc updateBrushColor*(window: var Window, color: Color) =
   window.brushColor = color
   window.updateBrush()
 
-proc rect*(window: Window, x, y, width, height: int) =
+proc drawRectangle*(window: Window, x, y, width, height: int) =
   discard window.ctx.Rectangle(x, y, width, height)
+
+proc drawRectangle*(window: Window, x, y, width, height: float) =
+  discard window.ctx.Rectangle(x.round.int, y.round.int, width.round.int, height.round.int)
 
 proc fillBackground*(window: var Window) =
   let
@@ -132,7 +137,7 @@ proc fillBackground*(window: var Window) =
   window.updatePenColor window.backgroundColor
   window.updateBrushColor window.backgroundColor
 
-  window.rect(0, 0, window.width, window.height)
+  window.drawRectangle(0, 0, window.width, window.height)
 
   window.updatePenColor penColorPrevious
   window.updateBrushColor brushColorPrevious
@@ -146,13 +151,22 @@ proc windowProc(hWnd: HWND, msg: UINT, wParam: WPARAM, lParam: LPARAM): INT_PTR 
   of WM_TIMER:
     if not hWndWindows.contains(hWnd): return 0
     var window = hWndWindows[hWnd]
-    if window.update == nil: return 0
-    window.update(window)
+    if window.update != nil:
+      window.update()
 
   of WM_SIZE, WM_MOVE:
     if not hWndWindows.contains(hWnd): return 0
     var window = hWndWindows[hWnd]
     window.updateBounds()
+
+    case msg:
+    of WM_SIZE:
+      if window.onResize != nil:
+        window.onResize()
+    of WM_MOVE:
+      if window.onMove != nil:
+        window.onMove()
+    else: discard
 
   of WM_PAINT:
     if not hWndWindows.contains(hWnd): return 0
@@ -161,7 +175,7 @@ proc windowProc(hWnd: HWND, msg: UINT, wParam: WPARAM, lParam: LPARAM): INT_PTR 
     window.paintStruct = PAINTSTRUCT()
     window.ctx = window.hWnd.BeginPaint(addr window.paintStruct)
     discard window.ctx.SelectObject(window.pen)
-    window.draw(window)
+    window.draw()
     discard window.hWnd.EndPaint(addr window.paintStruct)
 
   of WM_CLOSE:
@@ -179,14 +193,14 @@ proc windowProc(hWnd: HWND, msg: UINT, wParam: WPARAM, lParam: LPARAM): INT_PTR 
   else:
     discard
 
-proc enableEventLoop*(window: var Window, loopEvery: UINT) =
+proc enableUpdateLoop*(window: var Window, loopEvery: UINT) =
   discard SetTimer(window.hWnd, 1, loopEvery, nil)
-  window.hasEventLoop = true
+  window.hasUpdateLoop = true
 
-proc disableEventLoop*(window: var Window) =
-  if window.hasEventLoop:
+proc disableUpdateLoop*(window: var Window) =
+  if window.hasUpdateLoop:
     discard KillTimer(window.hWnd, 1)
-    window.hasEventLoop = false
+    window.hasUpdateLoop = false
 
 proc newWindow*(hInstance: HINSTANCE, parent: HWND): Window =
   result = Window(hWnd: CreateDialog(hInstance, MAKEINTRESOURCE(100), parent, windowProc))
