@@ -1,6 +1,4 @@
-import
-  std/[tables, math],
-  winapi, keyboard, functions
+import std/[tables, math], winapi, keyboard
 
 type
   Window* = ref object
@@ -8,6 +6,9 @@ type
     draw*: proc()
     onResize*: proc()
     onMove*: proc()
+    onKeyDown*: proc(key: Key)
+    onKeyUp*: proc(key: Key)
+    onMouseMove*: proc(x, y: int)
     penColor*: Color
     penThickness*: int
     penStyle*: PenStyle
@@ -184,11 +185,22 @@ proc windowProc(hWnd: HWND, msg: UINT, wParam: WPARAM, lParam: LPARAM): INT_PTR 
     return 0
 
   of WM_KEYDOWN, WM_SYSKEYDOWN:
-    case codeKeys[wParam.int]:
-    of Key.Space:
-      # Make the space bar play the project.
-      Main_OnCommandEx(40044, 0, nil)
-    else: discard
+    if not hWndWindows.contains(hWnd): return 0
+    var window = hWndWindows[hWnd]
+    if window.onKeyDown != nil:
+      window.onKeyDown(codeKeys[wParam.int])
+
+  of WM_KEYUP, WM_SYSKEYUP:
+    if not hWndWindows.contains(hWnd): return 0
+    var window = hWndWindows[hWnd]
+    if window.onKeyUp != nil:
+      window.onKeyUp(codeKeys[wParam.int])
+
+  of WM_MOUSEMOVE:
+    if not hWndWindows.contains(hWnd): return 0
+    var window = hWndWindows[hWnd]
+    if window.onMouseMove != nil:
+      window.onMouseMove(GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam))
 
   else:
     discard

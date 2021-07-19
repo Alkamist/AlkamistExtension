@@ -1,6 +1,4 @@
-import
-  std/math,
-  ../reaper
+import ../reaper, view_axis
 
 func getWhiteKeyNumbers(): seq[int] =
   const whiteKeyMultiples = [1, 3, 4, 6, 8, 9, 11]
@@ -11,43 +9,6 @@ func getWhiteKeyNumbers(): seq[int] =
 const
   numPitches = 128
   whiteKeyNumbers = getWhiteKeyNumbers()
-
-##########################################################
-# ViewAxis
-##########################################################
-
-type
-  ViewAxis* = object
-    scale*: float
-    zoom*: float
-    pan*: float
-    target*: float
-    sensitivity*: float
-
-proc initViewAxis*(): ViewAxis =
-  result.scale = 1.0
-  result.zoom = 1.0
-  result.pan = 0.0
-  result.target = 0.0
-  result.sensitivity = 0.01
-
-proc changePan*(axis: var ViewAxis, value: float) =
-  let change = value / axis.scale
-  axis.pan += change / axis.zoom
-
-proc changeZoom*(axis: var ViewAxis, value: float) =
-  let
-    target = axis.target / axis.scale
-    change = pow(2.0, axis.sensitivity * value)
-  axis.zoom *= change
-  axis.pan -= (change - 1.0) * target / axis.zoom
-
-proc transform*(axis: ViewAxis, value: float): float =
-  axis.scale * axis.zoom * (value + axis.pan)
-
-##########################################################
-# KeyEditor
-##########################################################
 
 type
   KeyEditor* = object
@@ -61,14 +22,14 @@ type
     blackKeyColor*: Color
     whiteKeyColor*: Color
 
-# proc editorXToTime(x: float, editor: KeyEditor, window: Window): float =
-#   editor.timeLength * (editor.xScroll + x / (editor.width * editor.xZoom))
+proc editorXToTime(x: float, editor: KeyEditor, window: Window): float =
+  editor.timeLength * (editor.xView.pan + x / (editor.width * editor.xView.zoom))
 
-# proc editorYToPitch(y: float, editor: KeyEditor, window: Window): float =
-#   numPitches.float * (1.0 - (editor.yScroll + y / (editor.height * editor.yZoom))) - 0.5
+proc editorYToPitch(y: float, editor: KeyEditor, window: Window): float =
+  numPitches.float * (1.0 - (editor.yView.pan + y / (editor.height * editor.yView.zoom))) - 0.5
 
-# proc timeToEditorX(time: float, editor: KeyEditor, window: Window): float =
-#   editor.xZoom * editor.width * (time / editor.timeLength - editor.xScroll)
+proc timeToEditorX(time: float, editor: KeyEditor, window: Window): float =
+  editor.xView.zoom * editor.width * (time / editor.timeLength - editor.xView.pan)
 
 proc pitchToEditorY(pitch: float, editor: KeyEditor, window: Window): float =
   editor.yView.zoom * editor.height * ((1.0 - (0.5 + pitch) / numPitches.float) - editor.yView.pan)

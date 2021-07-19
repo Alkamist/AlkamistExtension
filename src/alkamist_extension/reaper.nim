@@ -1,15 +1,39 @@
 import
   std/tables,
-  reaper/[winapi, types, functions, window]
+  reaper/[winapi, types, functions, window,
+          keyboard, mouse]
 
 export
   tables,
-  winapi, types, functions, window
+  winapi, types, functions, window,
+  keyboard, mouse
 
 var
   hInstance*: HINSTANCE
   pluginInfo*: ptr reaper_plugin_info_t
-  actionProcs* = initTable[int, proc()]()
+  actionProcs = initTable[int, proc()]()
+  keyListeners: seq[proc(key: Key, isDown: bool)]
+
+var accelReg = accelerator_register_t(isLocal: true, user: nil,
+  translateAccel: proc(msg: ptr MSG, ctx: ptr accelerator_register_t): cint {.cdecl.} =
+    case msg.message:
+
+    of WM_KEYDOWN, WM_SYSKEYDOWN:
+      let key = codeKeys[msg.wParam.int]
+      for listener in keyListeners:
+        listener(key, true)
+
+    of WM_KEYUP, WM_SYSKEYUP:
+      let key = codeKeys[msg.wParam.int]
+      for listener in keyListeners:
+        listener(key, false)
+
+    else:
+      discard
+)
+
+proc addKeyListener*(listener: proc(key: Key, isDown: bool)) =
+  keyListeners.add listener
 
 proc hookCommand(command: cint, flag: cint): bool =
   if command != 0 and actionProcs.contains(command):
@@ -45,8 +69,11 @@ template createExtension*(initCode: untyped): untyped =
       if REAPERAPI_LoadAPI(pluginInfo.GetFunc) != 0:
         return 0
 
+      discard rec.Register("accelerator", addr accelReg)
       discard pluginInfo.Register("hookcommand", hookCommand)
 
       initCode
 
       return 1
+
+    discard rec.Register("-accelerator", addr accelReg)
