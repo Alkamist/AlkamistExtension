@@ -196,6 +196,7 @@ proc KillTimer*(hWnd: HWND, uIDEvent: UINT_PTR): BOOL {.stdcall, windowsHeader.}
 proc SetCapture*(hWnd: HWND): HWND {.stdcall, windowsHeader.}
 proc ReleaseCapture*(): BOOL {.stdcall, windowsHeader.}
 proc GetCursorPos*(lpPoint: ptr POINT): BOOL {.stdcall, windowsHeader.}
+proc InvalidateRect*(hWnd: HWND, lpRect: ptr RECT, bErase: BOOL): BOOL {.stdcall, windowsHeader.}
 
 proc BeginPaint*(hWnd: HWND, lpPaint: LPPAINTSTRUCT): HDC {.stdcall, windowsHeader.}
 proc EndPaint*(hWnd: HWND, lpPaint: ptr PAINTSTRUCT): BOOL {.stdcall, windowsHeader.}

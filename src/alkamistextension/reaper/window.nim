@@ -6,8 +6,10 @@ import
 type
   Window* = ref object
     mouse*: Mouse
-    update*: proc()
-    draw*: proc()
+    keyboard*: Keyboard
+    onMouseMove*: proc()
+    onUpdate*: proc()
+    onDraw*: proc()
     onResize*: proc()
     onMove*: proc()
     penColor*: Color
@@ -125,11 +127,18 @@ func updateBrushColor*(window: var Window, color: Color) =
   window.brushColor = color
   window.updateBrush()
 
+func updateColor*(window: var Window, color: Color) =
+  window.updatePenColor(color)
+  window.updateBrushColor(color)
+
 func drawRectangle*(window: Window, x, y, width, height: int) =
-  discard window.ctx.Rectangle(x, y, width, height)
+  discard window.ctx.Rectangle(x, y, x + width, y + height)
 
 func drawRectangle*(window: Window, x, y, width, height: float) =
-  discard window.ctx.Rectangle(x.round.int, y.round.int, width.round.int, height.round.int)
+  let
+    xRound = x.round.int
+    yRound = y.round.int
+  discard window.ctx.Rectangle(xRound, yRound, xRound + width.round.int, yRound + height.round.int)
 
 func fillBackground*(window: var Window) =
   let
@@ -156,6 +165,17 @@ func disableUpdateLoop(window: var Window) =
     discard KillTimer(window.hWnd, 1)
     window.hasUpdateLoop = false
 
+proc repaint(window: var Window) =
+  if window.onDraw == nil: return
+  window.paintStruct = PAINTSTRUCT()
+  window.ctx = window.hWnd.BeginPaint(addr window.paintStruct)
+  discard window.ctx.SelectObject(window.pen)
+  window.onDraw()
+  discard window.hWnd.EndPaint(addr window.paintStruct)
+
+proc redraw*(window: var Window) =
+  discard InvalidateRect(window.hWnd, nil, 1)
+
 proc windowProc(hWnd: HWND, msg: UINT, wParam: WPARAM, lParam: LPARAM): INT_PTR {.stdcall.} =
   template ifWindow(code: untyped): untyped =
     if hWndWindows.contains(hWnd):
@@ -178,14 +198,22 @@ proc windowProc(hWnd: HWND, msg: UINT, wParam: WPARAM, lParam: LPARAM): INT_PTR 
 
   case msg:
 
+  of WM_MOUSEMOVE:
+    ifWindow:
+      window.mouse.update()
+      window.mouse.x = GET_X_LPARAM(lParam)
+      window.mouse.y = GET_Y_LPARAM(lParam)
+      window.onMouseMove()
+
   of WM_TIMER:
     ifWindow:
-      var mousePoint = POINT()
-      discard GetCursorPos(addr mousePoint)
-      window.mouse.x = mousePoint.x
-      window.mouse.y = mousePoint.y
-      callIfNotNil(window.update)
-      window.mouse.update()
+      # var mousePoint = POINT()
+      # discard GetCursorPos(addr mousePoint)
+      # window.mouse.x = mousePoint.x
+      # window.mouse.y = mousePoint.y
+      callIfNotNil(window.onUpdate)
+      # window.mouse.update()
+      window.keyboard.update()
 
   of WM_SIZE, WM_MOVE:
     ifWindow:
@@ -197,11 +225,7 @@ proc windowProc(hWnd: HWND, msg: UINT, wParam: WPARAM, lParam: LPARAM): INT_PTR 
 
   of WM_PAINT:
     ifWindow:
-      window.paintStruct = PAINTSTRUCT()
-      window.ctx = window.hWnd.BeginPaint(addr window.paintStruct)
-      discard window.ctx.SelectObject(window.pen)
-      callIfNotNil(window.draw)
-      discard window.hWnd.EndPaint(addr window.paintStruct)
+      window.repaint()
 
   of WM_CLOSE:
     ifWindow:
@@ -224,6 +248,18 @@ proc windowProc(hWnd: HWND, msg: UINT, wParam: WPARAM, lParam: LPARAM): INT_PTR 
       let buttonKind = getMouseButtonKind()
       if buttonKind.isSome:
         window.mouse[buttonKind.get].isPressed = false
+
+  of WM_KEYDOWN, WM_SYSKEYDOWN:
+    ifWindow:
+      let keyKind = wParam.int.toKeyKind
+      if keyKind.isSome:
+        window.keyboard[keyKind.get].isPressed = true
+
+  of WM_KEYUP, WM_SYSKEYUP:
+    ifWindow:
+      let keyKind = wParam.int.toKeyKind
+      if keyKind.isSome:
+        window.keyboard[keyKind.get].isPressed = false
 
   else:
     discard
@@ -252,4 +288,4 @@ proc newWindow*(hInstance: HINSTANCE, parent: HWND): Window =
     hWndWindows[result.hWnd] = result
 
     discard ShowWindow(result.hWnd, SW_SHOW)
-    result.enableUpdateLoop(6)
+    # result.enableUpdateLoop(6)

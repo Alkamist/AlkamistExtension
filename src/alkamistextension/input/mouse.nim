@@ -14,6 +14,12 @@ type
 
 {.push inline.}
 
+func xChange*(mouse: Mouse): int =
+  mouse.x - mouse.xPrevious
+
+func yChange*(mouse: Mouse): int =
+  mouse.y - mouse.yPrevious
+
 func xJustMoved*(mouse: Mouse): bool =
   mouse.x != mouse.xPrevious
 

@@ -1,4 +1,6 @@
-import ../reaper, view_axis
+import ../reaper, viewaxis
+
+export viewaxis
 
 func getWhiteKeyNumbers(): seq[int] =
   const whiteKeyMultiples = [1, 3, 4, 6, 8, 9, 11]

@@ -25,7 +25,7 @@ proc buildDll =
     optStr.add opt
     optStr.add " "
 
-  let mainFile = "src" / "alkamist_extension.nim"
+  let mainFile = "src" / "alkamistextension.nim"
 
   exec "nimble c " & optStr & mainFile
 
