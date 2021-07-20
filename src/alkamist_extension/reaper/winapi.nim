@@ -107,6 +107,18 @@ const
   WM_SYSKEYDOWN* {.windowsHeader.} = 0x0104
   WM_SYSKEYUP* {.windowsHeader.} = 0x0105
   WM_MOUSEMOVE* {.windowsHeader.} = 0x0200
+  WM_LBUTTONDOWN* {.windowsHeader.} = 0x0201
+  WM_LBUTTONUP* {.windowsHeader.} = 0x0202
+  WM_LBUTTONDBLCLK* {.windowsHeader.} = 0x0203
+  WM_MBUTTONDOWN* {.windowsHeader.} = 0x0207
+  WM_MBUTTONUP* {.windowsHeader.} = 0x0208
+  WM_MBUTTONDBLCLK* {.windowsHeader.} = 0x0209
+  WM_RBUTTONDOWN* {.windowsHeader.} = 0x0204
+  WM_RBUTTONUP* {.windowsHeader.} = 0x0205
+  WM_RBUTTONDBLCLK* {.windowsHeader.} = 0x0206
+  WM_XBUTTONDOWN* {.windowsHeader.} = 0x020b
+  WM_XBUTTONUP* {.windowsHeader.} = 0x020c
+  WM_XBUTTONDBLCLK* {.windowsHeader.} = 0x020d
   WM_PAINT* {.windowsHeader.} = 0x000f
   WM_ERASEBKGND* {.windowsHeader.} = 0x0014
   WM_CLOSE* {.windowsHeader.} = 0x0010
@@ -181,6 +193,9 @@ proc SetWindowText*(hWnd: HWND, lpString: LPCSTR): BOOL {.stdcall, windowsHeader
 proc SetWindowPos*(hWnd, hWndInsertAfter: HWND; X, Y, cx, cy: int; uFlags: UINT): BOOL {.stdcall, windowsHeader.}
 proc SetTimer*(hWnd: HWND, nIDEvent: UINT_PTR, uElapse: UINT, lpTimerFunc: TIMERPROC): UINT_PTR {.stdcall, windowsHeader.}
 proc KillTimer*(hWnd: HWND, uIDEvent: UINT_PTR): BOOL {.stdcall, windowsHeader.}
+proc SetCapture*(hWnd: HWND): HWND {.stdcall, windowsHeader.}
+proc ReleaseCapture*(): BOOL {.stdcall, windowsHeader.}
+proc GetCursorPos*(lpPoint: ptr POINT): BOOL {.stdcall, windowsHeader.}
 
 proc BeginPaint*(hWnd: HWND, lpPaint: LPPAINTSTRUCT): HDC {.stdcall, windowsHeader.}
 proc EndPaint*(hWnd: HWND, lpPaint: ptr PAINTSTRUCT): BOOL {.stdcall, windowsHeader.}

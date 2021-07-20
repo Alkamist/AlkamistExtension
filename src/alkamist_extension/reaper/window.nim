@@ -1,20 +1,21 @@
-import std/[tables, math], winapi, keyboard
+import
+  std/[tables, math, options],
+  ../input/[keyboard, mouse],
+  winapi
 
 type
   Window* = ref object
+    mouse*: Mouse
     update*: proc()
     draw*: proc()
     onResize*: proc()
     onMove*: proc()
-    onKeyDown*: proc(key: Key)
-    onKeyUp*: proc(key: Key)
-    onMouseMove*: proc(x, y: int)
     penColor*: Color
     penThickness*: int
     penStyle*: PenStyle
     brushColor*: Color
     backgroundColor*: Color
-    hasUpdateLoop*: bool
+    hasUpdateLoop: bool
     ctx: HDC
     paintStruct: PAINTSTRUCT
     hInstance: HINSTANCE
@@ -23,7 +24,7 @@ type
     pen: HPEN
     brush: HBRUSH
     bounds: RECT
-    p_title: string
+    title: string
 
   Color* = object
     r*, g*, b*: int
@@ -49,10 +50,10 @@ type
 
 var hWndWindows = initTable[HWND, Window]()
 
-proc initColor*(r, g, b: int): Color =
+func initColor*(r, g, b: int): Color =
   Color(r: r, g: g, b: b)
 
-proc toInt*(ps: PenStyle): int =
+func toInt*(ps: PenStyle): int =
   case ps:
   of Cosmetic: PS_COSMETIC
   of EndcapRound: PS_ENDCAP_ROUND
@@ -72,35 +73,35 @@ proc toInt*(ps: PenStyle): int =
   of JoinMiter: PS_JOIN_MITER
   of Geometric: PS_GEOMETRIC
 
-proc setBounds*(window: var Window, x, y, width, height: int) =
+func setBounds*(window: var Window, x, y, width, height: int) =
   discard SetWindowPos(window.hWnd, HWND_TOP, x, y, width, height, SWP_NOZORDER)
 
-proc `title`*(window: Window): string =
-  window.p_title
+func title*(window: Window): string =
+  window.title
 
-proc `title=`*(window: var Window, value: string) =
-  window.p_title = value
+func `title=`*(window: var Window, value: string) =
+  window.title = value
   discard SetWindowText(window.hWnd, value)
 
-proc `left`*(window: Window): int =
+func left*(window: Window): int =
   window.bounds.left
 
-proc `right`*(window: Window): int =
+func right*(window: Window): int =
   window.bounds.right
 
-proc `top`*(window: Window): int =
+func top*(window: Window): int =
   window.bounds.top
 
-proc `bottom`*(window: Window): int =
+func bottom*(window: Window): int =
   window.bounds.bottom
 
-proc `width`*(window: Window): int =
+func width*(window: Window): int =
   abs(window.right - window.left)
 
-proc `height`*(window: Window): int =
+func height*(window: Window): int =
   abs(window.bottom - window.top)
 
-proc updatePen*(window: var Window) =
+func updatePen*(window: var Window) =
   discard DeleteObject(window.pen)
   window.pen = CreatePen(
     window.penStyle.toInt,
@@ -109,28 +110,28 @@ proc updatePen*(window: var Window) =
   )
   discard window.ctx.SelectObject(window.pen)
 
-proc updatePenColor*(window: var Window, color: Color) =
+func updatePenColor*(window: var Window, color: Color) =
   window.penColor = color
   window.updatePen()
 
-proc updateBrush*(window: var Window) =
+func updateBrush*(window: var Window) =
   discard DeleteObject(window.brush)
   window.brush = CreateSolidBrush(
     RGB(window.brushColor.r, window.brushColor.g, window.brushColor.b)
   )
   discard window.ctx.SelectObject(window.brush)
 
-proc updateBrushColor*(window: var Window, color: Color) =
+func updateBrushColor*(window: var Window, color: Color) =
   window.brushColor = color
   window.updateBrush()
 
-proc drawRectangle*(window: Window, x, y, width, height: int) =
+func drawRectangle*(window: Window, x, y, width, height: int) =
   discard window.ctx.Rectangle(x, y, width, height)
 
-proc drawRectangle*(window: Window, x, y, width, height: float) =
+func drawRectangle*(window: Window, x, y, width, height: float) =
   discard window.ctx.Rectangle(x.round.int, y.round.int, width.round.int, height.round.int)
 
-proc fillBackground*(window: var Window) =
+func fillBackground*(window: var Window) =
   let
     penColorPrevious = window.penColor
     brushColorPrevious = window.brushColor
@@ -143,82 +144,95 @@ proc fillBackground*(window: var Window) =
   window.updatePenColor penColorPrevious
   window.updateBrushColor brushColorPrevious
 
-proc updateBounds(window: var Window) =
+func updateBounds(window: var Window) =
   discard GetWindowRect(window.hWnd, addr window.bounds)
 
+func enableUpdateLoop(window: var Window, loopEvery: UINT) =
+  discard SetTimer(window.hWnd, 1, loopEvery, nil)
+  window.hasUpdateLoop = true
+
+func disableUpdateLoop(window: var Window) =
+  if window.hasUpdateLoop:
+    discard KillTimer(window.hWnd, 1)
+    window.hasUpdateLoop = false
+
 proc windowProc(hWnd: HWND, msg: UINT, wParam: WPARAM, lParam: LPARAM): INT_PTR {.stdcall.} =
+  template ifWindow(code: untyped): untyped =
+    if hWndWindows.contains(hWnd):
+      var window {.inject.} = hWndWindows[hWnd]
+      code
+
+  template callIfNotNil(fn: untyped): untyped =
+    if fn != nil:
+      fn()
+
+  template getMouseButtonKind(): untyped =
+    case msg:
+    of WM_LBUTTONDOWN, WM_LBUTTONUP, WM_LBUTTONDBLCLK: some(Left)
+    of WM_MBUTTONDOWN, WM_MBUTTONUP, WM_MBUTTONDBLCLK: some(Middle)
+    of WM_RBUTTONDOWN, WM_RBUTTONUP, WM_RBUTTONDBLCLK: some(Right)
+    of WM_XBUTTONDOWN, WM_XBUTTONUP, WM_XBUTTONDBLCLK:
+      if HIWORD(wParam) == 1: some(Side1)
+      else: some(Side2)
+    else: none(MouseButtonKind)
+
   case msg:
 
   of WM_TIMER:
-    if not hWndWindows.contains(hWnd): return 0
-    var window = hWndWindows[hWnd]
-    if window.update != nil:
-      window.update()
+    ifWindow:
+      var mousePoint = POINT()
+      discard GetCursorPos(addr mousePoint)
+      window.mouse.x = mousePoint.x
+      window.mouse.y = mousePoint.y
+      callIfNotNil(window.update)
+      window.mouse.update()
 
   of WM_SIZE, WM_MOVE:
-    if not hWndWindows.contains(hWnd): return 0
-    var window = hWndWindows[hWnd]
-    window.updateBounds()
-
-    case msg:
-    of WM_SIZE:
-      if window.onResize != nil:
-        window.onResize()
-    of WM_MOVE:
-      if window.onMove != nil:
-        window.onMove()
-    else: discard
+    ifWindow:
+      window.updateBounds()
+      case msg:
+      of WM_SIZE: callIfNotNil(window.onResize)
+      of WM_MOVE: callIfNotNil(window.onMove)
+      else: discard
 
   of WM_PAINT:
-    if not hWndWindows.contains(hWnd): return 0
-    var window = hWndWindows[hWnd]
-    if window.draw == nil: return 0
-    window.paintStruct = PAINTSTRUCT()
-    window.ctx = window.hWnd.BeginPaint(addr window.paintStruct)
-    discard window.ctx.SelectObject(window.pen)
-    window.draw()
-    discard window.hWnd.EndPaint(addr window.paintStruct)
+    ifWindow:
+      window.paintStruct = PAINTSTRUCT()
+      window.ctx = window.hWnd.BeginPaint(addr window.paintStruct)
+      discard window.ctx.SelectObject(window.pen)
+      callIfNotNil(window.draw)
+      discard window.hWnd.EndPaint(addr window.paintStruct)
 
   of WM_CLOSE:
+    ifWindow:
+      window.disableUpdateLoop()
     discard DestroyWindow(hWnd)
     hWndWindows.del(hWnd)
     return 0
 
-  of WM_KEYDOWN, WM_SYSKEYDOWN:
-    if not hWndWindows.contains(hWnd): return 0
-    var window = hWndWindows[hWnd]
-    if window.onKeyDown != nil:
-      window.onKeyDown(codeKeys[wParam.int])
+  of WM_LBUTTONDOWN, WM_LBUTTONDBLCLK,
+     WM_MBUTTONDOWN, WM_MBUTTONDBLCLK,
+     WM_RBUTTONDOWN, WM_RBUTTONDBLCLK,
+     WM_XBUTTONDOWN, WM_XBUTTONDBLCLK:
+    ifWindow:
+      let buttonKind = getMouseButtonKind()
+      if buttonKind.isSome:
+        window.mouse[buttonKind.get].isPressed = true
 
-  of WM_KEYUP, WM_SYSKEYUP:
-    if not hWndWindows.contains(hWnd): return 0
-    var window = hWndWindows[hWnd]
-    if window.onKeyUp != nil:
-      window.onKeyUp(codeKeys[wParam.int])
-
-  of WM_MOUSEMOVE:
-    if not hWndWindows.contains(hWnd): return 0
-    var window = hWndWindows[hWnd]
-    if window.onMouseMove != nil:
-      window.onMouseMove(GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam))
+  of WM_LBUTTONUP, WM_MBUTTONUP, WM_RBUTTONUP, WM_XBUTTONUP:
+    ifWindow:
+      let buttonKind = getMouseButtonKind()
+      if buttonKind.isSome:
+        window.mouse[buttonKind.get].isPressed = false
 
   else:
     discard
-
-proc enableUpdateLoop*(window: var Window, loopEvery: UINT) =
-  discard SetTimer(window.hWnd, 1, loopEvery, nil)
-  window.hasUpdateLoop = true
-
-proc disableUpdateLoop*(window: var Window) =
-  if window.hasUpdateLoop:
-    discard KillTimer(window.hWnd, 1)
-    window.hasUpdateLoop = false
 
 proc newWindow*(hInstance: HINSTANCE, parent: HWND): Window =
   result = Window(hWnd: CreateDialog(hInstance, MAKEINTRESOURCE(100), parent, windowProc))
 
   if result.hWnd != nil:
-    result.p_title = "Unnamed Window"
+    result.title = "Unnamed Window"
     result.updateBounds()
     result.backgroundColor = initColor(0, 0, 0)
     result.penColor = initColor(0, 0, 0)
@@ -238,3 +252,4 @@ proc newWindow*(hInstance: HINSTANCE, parent: HWND): Window =
     hWndWindows[result.hWnd] = result
 
     discard ShowWindow(result.hWnd, SW_SHOW)
+    result.enableUpdateLoop(6)
