@@ -32,9 +32,11 @@ func justMoved*(mouse: Mouse): bool =
 func `[]`*(mouse: var Mouse, kind: MouseButtonKind): var Button =
   return mouse.buttons[kind]
 
-func update*(mouse: var Mouse) =
+func updatePosition*(mouse: var Mouse) =
   mouse.xPrevious = mouse.x
   mouse.yPrevious = mouse.y
+
+func updateButtons*(mouse: var Mouse) =
   for button in mouse.buttons.mitems:
     button.update()
 

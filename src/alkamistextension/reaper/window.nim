@@ -1,17 +1,17 @@
 import
   std/[tables, math, options],
-  ../input/[keyboard, mouse],
+  ../input/[keyboard, mouse, button],
   winapi
 
 type
   Window* = ref object
-    mouse*: Mouse
-    keyboard*: Keyboard
-    onMouseMove*: proc()
     onUpdate*: proc()
     onDraw*: proc()
     onResize*: proc()
     onMove*: proc()
+    onMouseMove*: proc()
+    mouse*: Mouse
+    keyboard*: Keyboard
     penColor*: Color
     penThickness*: int
     penStyle*: PenStyle
@@ -27,6 +27,7 @@ type
     brush: HBRUSH
     bounds: RECT
     title: string
+    redrawPending: bool
 
   Color* = object
     r*, g*, b*: int
@@ -140,7 +141,7 @@ func drawRectangle*(window: Window, x, y, width, height: float) =
     yRound = y.round.int
   discard window.ctx.Rectangle(xRound, yRound, xRound + width.round.int, yRound + height.round.int)
 
-func fillBackground*(window: var Window) =
+func fillBackground(window: var Window) =
   let
     penColorPrevious = window.penColor
     brushColorPrevious = window.brushColor
@@ -156,35 +157,31 @@ func fillBackground*(window: var Window) =
 func updateBounds(window: var Window) =
   discard GetWindowRect(window.hWnd, addr window.bounds)
 
-func enableUpdateLoop(window: var Window, loopEvery: UINT) =
+func enableUpdateLoop*(window: var Window, loopEvery: UINT) =
   discard SetTimer(window.hWnd, 1, loopEvery, nil)
   window.hasUpdateLoop = true
 
-func disableUpdateLoop(window: var Window) =
+func disableUpdateLoop*(window: var Window) =
   if window.hasUpdateLoop:
     discard KillTimer(window.hWnd, 1)
     window.hasUpdateLoop = false
 
-proc repaint(window: var Window) =
-  if window.onDraw == nil: return
-  window.paintStruct = PAINTSTRUCT()
-  window.ctx = window.hWnd.BeginPaint(addr window.paintStruct)
-  discard window.ctx.SelectObject(window.pen)
-  window.onDraw()
-  discard window.hWnd.EndPaint(addr window.paintStruct)
+proc captureMouse(window: var Window) =
+  discard SetCapture(window.hWnd)
+
+proc releaseMouse(window: var Window) =
+  discard ReleaseCapture()
 
 proc redraw*(window: var Window) =
-  discard InvalidateRect(window.hWnd, nil, 1)
+  if not window.redrawPending:
+    discard InvalidateRect(window.hWnd, nil, 0)
+    window.redrawPending = true
 
 proc windowProc(hWnd: HWND, msg: UINT, wParam: WPARAM, lParam: LPARAM): INT_PTR {.stdcall.} =
   template ifWindow(code: untyped): untyped =
     if hWndWindows.contains(hWnd):
       var window {.inject.} = hWndWindows[hWnd]
       code
-
-  template callIfNotNil(fn: untyped): untyped =
-    if fn != nil:
-      fn()
 
   template getMouseButtonKind(): untyped =
     case msg:
@@ -196,36 +193,53 @@ proc windowProc(hWnd: HWND, msg: UINT, wParam: WPARAM, lParam: LPARAM): INT_PTR 
       else: some(Side2)
     else: none(MouseButtonKind)
 
+  template paint(code: untyped): untyped =
+    window.paintStruct = PAINTSTRUCT()
+    window.ctx = window.hWnd.BeginPaint(addr window.paintStruct)
+    discard window.ctx.SelectObject(window.pen)
+    code
+    discard window.hWnd.EndPaint(addr window.paintStruct)
+
   case msg:
+
+  of WM_ERASEBKGND:
+    ifWindow:
+      window.updateBounds()
+      paint:
+        window.fillBackground()
+        return 1
 
   of WM_MOUSEMOVE:
     ifWindow:
-      window.mouse.update()
+      window.mouse.updatePosition()
       window.mouse.x = GET_X_LPARAM(lParam)
       window.mouse.y = GET_Y_LPARAM(lParam)
-      window.onMouseMove()
+      if window.onMouseMove != nil:
+        window.onMouseMove()
 
   of WM_TIMER:
     ifWindow:
-      # var mousePoint = POINT()
-      # discard GetCursorPos(addr mousePoint)
-      # window.mouse.x = mousePoint.x
-      # window.mouse.y = mousePoint.y
-      callIfNotNil(window.onUpdate)
-      # window.mouse.update()
-      window.keyboard.update()
+      if window.onUpdate != nil:
+        window.onUpdate()
 
   of WM_SIZE, WM_MOVE:
     ifWindow:
       window.updateBounds()
       case msg:
-      of WM_SIZE: callIfNotNil(window.onResize)
-      of WM_MOVE: callIfNotNil(window.onMove)
+      of WM_SIZE:
+        if window.onResize != nil:
+          window.onResize()
+      of WM_MOVE:
+        if window.onMove != nil:
+          window.onMove()
       else: discard
 
   of WM_PAINT:
     ifWindow:
-      window.repaint()
+      paint:
+        if window.onDraw != nil:
+          window.onDraw()
+        window.redrawPending = false
 
   of WM_CLOSE:
     ifWindow:
@@ -241,25 +255,27 @@ proc windowProc(hWnd: HWND, msg: UINT, wParam: WPARAM, lParam: LPARAM): INT_PTR 
     ifWindow:
       let buttonKind = getMouseButtonKind()
       if buttonKind.isSome:
-        window.mouse[buttonKind.get].isPressed = true
+        window.captureMouse()
+        window.mouse[buttonKind.get].update(true)
 
   of WM_LBUTTONUP, WM_MBUTTONUP, WM_RBUTTONUP, WM_XBUTTONUP:
     ifWindow:
       let buttonKind = getMouseButtonKind()
       if buttonKind.isSome:
-        window.mouse[buttonKind.get].isPressed = false
+        window.releaseMouse()
+        window.mouse[buttonKind.get].update(false)
 
   of WM_KEYDOWN, WM_SYSKEYDOWN:
     ifWindow:
       let keyKind = wParam.int.toKeyKind
       if keyKind.isSome:
-        window.keyboard[keyKind.get].isPressed = true
+        window.keyboard[keyKind.get].update(true)
 
   of WM_KEYUP, WM_SYSKEYUP:
     ifWindow:
       let keyKind = wParam.int.toKeyKind
       if keyKind.isSome:
-        window.keyboard[keyKind.get].isPressed = false
+        window.keyboard[keyKind.get].update(false)
 
   else:
     discard
@@ -270,8 +286,8 @@ proc newWindow*(hInstance: HINSTANCE, parent: HWND): Window =
   if result.hWnd != nil:
     result.title = "Unnamed Window"
     result.updateBounds()
-    result.backgroundColor = initColor(0, 0, 0)
-    result.penColor = initColor(0, 0, 0)
+    result.backgroundColor = initColor(16, 16, 16)
+    result.penColor = initColor(255, 255, 255)
     result.penThickness = 1
     result.penStyle = Solid
     result.pen = CreatePen(
@@ -280,7 +296,7 @@ proc newWindow*(hInstance: HINSTANCE, parent: HWND): Window =
       RGB(result.penColor.r, result.penColor.g, result.penColor.b)
     )
 
-    result.brushColor = initColor(0, 0, 0)
+    result.brushColor = initColor(255, 255, 255)
     result.brush = CreateSolidBrush(
       RGB(result.brushColor.r, result.brushColor.g, result.brushColor.b)
     )
@@ -288,4 +304,3 @@ proc newWindow*(hInstance: HINSTANCE, parent: HWND): Window =
     hWndWindows[result.hWnd] = result
 
     discard ShowWindow(result.hWnd, SW_SHOW)
-    # result.enableUpdateLoop(6)

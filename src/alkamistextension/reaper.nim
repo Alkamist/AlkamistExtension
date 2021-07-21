@@ -7,6 +7,9 @@ export
   tables,
   winapi, types, functions, window
 
+globalRaiseHook = proc(e: ref Exception): bool =
+  ShowConsoleMsg("An exception was raised: " & e.msg)
+
 var
   hInstance*: HINSTANCE
   pluginInfo*: ptr reaper_plugin_info_t
