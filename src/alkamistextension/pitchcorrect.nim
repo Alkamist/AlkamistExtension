@@ -20,8 +20,9 @@ proc pitchCorrectionMain*() =
   var x, y = 0.0
 
   window.onMouseMove = proc() =
-    x += window.mouse.xChange.float
-    y += window.mouse.yChange.float
+    if window.mouse[Middle].isPressed:
+      x += window.mouse.xChange.float
+      y += window.mouse.yChange.float
     window.redraw()
 
   # var keyEditor = initKeyEditor()

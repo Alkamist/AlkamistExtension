@@ -10,6 +10,8 @@ type
     onResize*: proc()
     onMove*: proc()
     onMouseMove*: proc()
+    onKey*: proc(key: KeyKind)
+    onMouseButton*: proc(button: MouseButtonKind)
     mouse*: Mouse
     keyboard*: Keyboard
     penColor*: Color
@@ -257,6 +259,8 @@ proc windowProc(hWnd: HWND, msg: UINT, wParam: WPARAM, lParam: LPARAM): INT_PTR 
       if buttonKind.isSome:
         window.captureMouse()
         window.mouse[buttonKind.get].update(true)
+        if window.onMouseButton != nil:
+          window.onMouseButton(buttonKind.get)
 
   of WM_LBUTTONUP, WM_MBUTTONUP, WM_RBUTTONUP, WM_XBUTTONUP:
     ifWindow:
@@ -264,18 +268,24 @@ proc windowProc(hWnd: HWND, msg: UINT, wParam: WPARAM, lParam: LPARAM): INT_PTR 
       if buttonKind.isSome:
         window.releaseMouse()
         window.mouse[buttonKind.get].update(false)
+        if window.onMouseButton != nil:
+          window.onMouseButton(buttonKind.get)
 
   of WM_KEYDOWN, WM_SYSKEYDOWN:
     ifWindow:
       let keyKind = wParam.int.toKeyKind
       if keyKind.isSome:
         window.keyboard[keyKind.get].update(true)
+        if window.onKey != nil:
+          window.onKey(keyKind.get)
 
   of WM_KEYUP, WM_SYSKEYUP:
     ifWindow:
       let keyKind = wParam.int.toKeyKind
       if keyKind.isSome:
         window.keyboard[keyKind.get].update(false)
+        if window.onKey != nil:
+          window.onKey(keyKind.get)
 
   else:
     discard
