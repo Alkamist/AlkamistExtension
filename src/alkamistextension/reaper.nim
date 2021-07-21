@@ -1,11 +1,12 @@
 import
   std/[tables, options],
-  input/[keyboard],
-  reaper/[winapi, types, functions, window]
+  windows/[winapi, window, keyboard, mouse],
+  reaper/[types, functions]
 
 export
-  tables,
-  winapi, types, functions, window
+  tables, options,
+  winapi, window, keyboard, mouse,
+  types, functions
 
 globalRaiseHook = proc(e: ref Exception): bool =
   ShowConsoleMsg("An exception was raised: " & e.msg)
@@ -14,30 +15,34 @@ var
   hInstance*: HINSTANCE
   pluginInfo*: ptr reaper_plugin_info_t
   actionProcs = initTable[int, proc()]()
-  keyListeners: seq[proc(keyKind: KeyKind, isDown: bool)]
+  keyPressListeners: seq[proc(key: KeyboardKey)]
+  keyReleaseListeners: seq[proc(key: KeyboardKey)]
 
 var accelReg = accelerator_register_t(isLocal: true, user: nil,
   translateAccel: proc(msg: ptr MSG, ctx: ptr accelerator_register_t): cint {.cdecl.} =
     case msg.message:
 
     of WM_KEYDOWN, WM_SYSKEYDOWN:
-      let keyKind = msg.wParam.int.toKeyKind
-      if keyKind.isSome:
-        for listener in keyListeners:
-          listener(keyKind.get, true)
+      let key = msg.wParam.int.toKeyboardKey
+      if key.isSome:
+        for listener in keyPressListeners:
+          listener(key.get)
 
     of WM_KEYUP, WM_SYSKEYUP:
-      let keyKind = msg.wParam.int.toKeyKind
-      if keyKind.isSome:
-        for listener in keyListeners:
-          listener(keyKind.get, false)
+      let key = msg.wParam.int.toKeyboardKey
+      if key.isSome:
+        for listener in keyReleaseListeners:
+          listener(key.get)
 
     else:
       discard
 )
 
-proc addKeyListener*(listener: proc(keyKind: KeyKind, isDown: bool)) =
-  keyListeners.add listener
+proc addKeyPressListener*(listener: proc(key: KeyboardKey)) =
+  keyPressListeners.add listener
+
+proc addKeyReleaseListener*(listener: proc(key: KeyboardKey)) =
+  keyReleaseListeners.add listener
 
 proc hookCommand(command: cint, flag: cint): bool =
   if command != 0 and actionProcs.contains(command):

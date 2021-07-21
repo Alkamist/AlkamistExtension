@@ -1,15 +1,4 @@
-import
-  reaper, input,
-  pitchcorrect/keyeditor
-
-# template key(kind: KeyKind): untyped =
-#   window.keyboard[kind]
-
-# template mouse(): untyped =
-#   window.mouse
-
-# template mb(kind: MouseButtonKind): untyped =
-#   window.mouse[kind]
+import reaper, pitchcorrect/keyeditor
 
 proc pitchCorrectionMain*() =
   var window = newWindow()
@@ -17,25 +6,23 @@ proc pitchCorrectionMain*() =
   window.title = "Pitch Correction"
   window.setBounds(400, 300, 800, 500)
 
-  var x, y = 0.0
+  var keyEditor = initKeyEditor()
 
-  window.onMouseMove = proc() =
-    if window.mouse[Middle].isPressed:
-      x += window.mouse.xChange.float
-      y += window.mouse.yChange.float
+  window.onMouseMove = proc(x, y, xPrevious, yPrevious: int) =
     window.redraw()
 
-  # var keyEditor = initKeyEditor()
-
   window.onDraw = proc() =
-    window.updateColor initColor(200, 200, 200)
-    window.drawRectangle(x, y, 50.0, 50.0)
-    # keyEditor.draw(window)
+    keyEditor.draw(window)
 
-  #window.onResize = proc() =
-    # keyEditor.width = window.width.float
-    # keyEditor.height = window.height.float
-    # window.redraw()
+  window.onResize = proc() =
+    keyEditor.width = window.width.float
+    keyEditor.height = window.height.float
+    window.redraw()
+
+  window.onKeyPress = proc(key: KeyboardKey) =
+    case key:
+    of Space: Main_OnCommandEx(40044, 0, nil)
+    else: discard
 
   # window.onUpdate = proc() =
   #   if key(Space).justPressed:

@@ -53,11 +53,9 @@ proc draw*(editor: var KeyEditor, window: var Window) =
       keyHeight = keyEnd - keyEndPrevious
 
     if whiteKeyNumbers.contains(pitchId):
-      window.updatePenColor(editor.whiteKeyColor)
-      window.updateBrushColor(editor.whiteKeyColor)
+      window.updateColor(editor.whiteKeyColor)
     else:
-      window.updatePenColor(editor.blackKeyColor)
-      window.updateBrushColor(editor.blackKeyColor)
+      window.updateColor(editor.blackKeyColor)
 
     window.drawRectangle(editor.x, editor.y + keyEnd, editor.width, keyHeight + 1)
 

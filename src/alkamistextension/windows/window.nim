@@ -1,7 +1,6 @@
 import
   std/[tables, math, options],
-  ../input/[keyboard, mouse, button],
-  winapi
+  winapi, keyboard, mouse
 
 type
   Window* = ref object
@@ -9,11 +8,15 @@ type
     onDraw*: proc()
     onResize*: proc()
     onMove*: proc()
-    onMouseMove*: proc()
-    onKey*: proc(key: KeyKind)
-    onMouseButton*: proc(button: MouseButtonKind)
-    mouse*: Mouse
-    keyboard*: Keyboard
+    onMouseMove*: proc(x, y, xPrevious, yPrevious: int)
+    onMousePress*: proc(button: MouseButton)
+    onMouseRelease*: proc(button: MouseButton)
+    onKeyPress*: proc(key: KeyboardKey)
+    onKeyRelease*: proc(key: KeyboardKey)
+    mouseX, mouseY: int
+    mouseXPrevious, mouseYPrevious: int
+    keyStates: array[KeyboardKey, bool]
+    mouseButtonStates: array[MouseButton, bool]
     penColor*: Color
     penThickness*: int
     penStyle*: PenStyle
@@ -80,6 +83,12 @@ func toInt*(ps: PenStyle): int =
 
 func setBounds*(window: var Window, x, y, width, height: int) =
   discard SetWindowPos(window.hWnd, HWND_TOP, x, y, width, height, SWP_NOZORDER)
+
+func keyIsPressed*(window: Window, key: KeyboardKey): bool =
+  window.keyStates[key]
+
+func mouseButtonIsPressed*(window: Window, button: MouseButton): bool =
+  window.mouseButtonStates[button]
 
 func title*(window: Window): string =
   window.title
@@ -193,7 +202,7 @@ proc windowProc(hWnd: HWND, msg: UINT, wParam: WPARAM, lParam: LPARAM): INT_PTR 
     of WM_XBUTTONDOWN, WM_XBUTTONUP, WM_XBUTTONDBLCLK:
       if HIWORD(wParam) == 1: some(Side1)
       else: some(Side2)
-    else: none(MouseButtonKind)
+    else: none(MouseButton)
 
   template paint(code: untyped): untyped =
     window.paintStruct = PAINTSTRUCT()
@@ -213,11 +222,15 @@ proc windowProc(hWnd: HWND, msg: UINT, wParam: WPARAM, lParam: LPARAM): INT_PTR 
 
   of WM_MOUSEMOVE:
     ifWindow:
-      window.mouse.updatePosition()
-      window.mouse.x = GET_X_LPARAM(lParam)
-      window.mouse.y = GET_Y_LPARAM(lParam)
+      window.mouseXPrevious = window.mouseX
+      window.mouseYPrevious = window.mouseY
+      window.mouseX = GET_X_LPARAM(lParam)
+      window.mouseY = GET_Y_LPARAM(lParam)
       if window.onMouseMove != nil:
-        window.onMouseMove()
+        window.onMouseMove(
+          window.mouseX, window.mouseY,
+          window.mouseXPrevious, window.mouseYPrevious
+        )
 
   of WM_TIMER:
     ifWindow:
@@ -258,34 +271,34 @@ proc windowProc(hWnd: HWND, msg: UINT, wParam: WPARAM, lParam: LPARAM): INT_PTR 
       let buttonKind = getMouseButtonKind()
       if buttonKind.isSome:
         window.captureMouse()
-        window.mouse[buttonKind.get].update(true)
-        if window.onMouseButton != nil:
-          window.onMouseButton(buttonKind.get)
+        window.mouseButtonStates[buttonKind.get] = true
+        if window.onMousePress != nil:
+          window.onMousePress(buttonKind.get)
 
   of WM_LBUTTONUP, WM_MBUTTONUP, WM_RBUTTONUP, WM_XBUTTONUP:
     ifWindow:
       let buttonKind = getMouseButtonKind()
       if buttonKind.isSome:
         window.releaseMouse()
-        window.mouse[buttonKind.get].update(false)
-        if window.onMouseButton != nil:
-          window.onMouseButton(buttonKind.get)
+        window.mouseButtonStates[buttonKind.get] = false
+        if window.onMouseRelease != nil:
+          window.onMouseRelease(buttonKind.get)
 
   of WM_KEYDOWN, WM_SYSKEYDOWN:
     ifWindow:
-      let keyKind = wParam.int.toKeyKind
-      if keyKind.isSome:
-        window.keyboard[keyKind.get].update(true)
-        if window.onKey != nil:
-          window.onKey(keyKind.get)
+      let key = wParam.int.toKeyboardKey
+      if key.isSome:
+        window.keyStates[key.get] = true
+        if window.onKeyPress != nil:
+          window.onKeyPress(key.get)
 
   of WM_KEYUP, WM_SYSKEYUP:
     ifWindow:
-      let keyKind = wParam.int.toKeyKind
-      if keyKind.isSome:
-        window.keyboard[keyKind.get].update(false)
-        if window.onKey != nil:
-          window.onKey(keyKind.get)
+      let key = wParam.int.toKeyboardKey
+      if key.isSome:
+        window.keyStates[key.get] = false
+        if window.onKeyRelease != nil:
+          window.onKeyRelease(key.get)
 
   else:
     discard

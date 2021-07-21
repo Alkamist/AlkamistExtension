@@ -1,4 +1,4 @@
-import winapi
+import ../windows/winapi
 
 const
   ReaperPluginHeader* = "../reapersdk/reaper_plugin.h"
