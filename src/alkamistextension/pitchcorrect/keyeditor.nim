@@ -16,24 +16,38 @@ type
   KeyEditor* = object
     x*: float
     y*: float
-    width*: float
-    height*: float
     timeLength*: float
     xView*: ViewAxis
     yView*: ViewAxis
     blackKeyColor*: Color
     whiteKeyColor*: Color
+    width: float
+    height: float
 
-proc editorXToTime(x: float, editor: KeyEditor, window: Window): float =
+proc `width=`*(editor: var KeyEditor, value: float) =
+  editor.xView.scale = value
+  editor.width = value
+
+proc width*(editor: KeyEditor): float =
+  editor.width
+
+proc `height=`*(editor: var KeyEditor, value: float) =
+  editor.yView.scale = value
+  editor.height = value
+
+proc height*(editor: KeyEditor): float =
+  editor.height
+
+proc editorXToTime*(editor: KeyEditor, x: float): float =
   editor.timeLength * (editor.xView.pan + x / (editor.width * editor.xView.zoom))
 
-proc editorYToPitch(y: float, editor: KeyEditor, window: Window): float =
+proc editorYToPitch*(editor: KeyEditor, y: float): float =
   numPitches.float * (1.0 - (editor.yView.pan + y / (editor.height * editor.yView.zoom))) - 0.5
 
-proc timeToEditorX(time: float, editor: KeyEditor, window: Window): float =
+proc timeToEditorX*(editor: KeyEditor, time: float): float =
   editor.xView.zoom * editor.width * (time / editor.timeLength - editor.xView.pan)
 
-proc pitchToEditorY(pitch: float, editor: KeyEditor, window: Window): float =
+proc pitchToEditorY*(editor: KeyEditor, pitch: float): float =
   editor.yView.zoom * editor.height * ((1.0 - (0.5 + pitch) / numPitches.float) - editor.yView.pan)
 
 proc initKeyEditor*(): KeyEditor =
@@ -45,11 +59,11 @@ proc initKeyEditor*(): KeyEditor =
   result.whiteKeyColor = initColor(130, 130, 130)
 
 proc draw*(editor: var KeyEditor, window: var Window) =
-  var keyEndPrevious = pitchToEditorY(numPitches + 0.5, editor, window)
+  var keyEndPrevious = editor.pitchToEditorY(numPitches + 0.5)
 
   for pitchId in 0 ..< numPitches:
     let
-      keyEnd = pitchToEditorY(numPitches - (pitchId + 1).float + 0.5, editor, window)
+      keyEnd = editor.pitchToEditorY(numPitches - (pitchId + 1).float + 0.5)
       keyHeight = keyEnd - keyEndPrevious
 
     if whiteKeyNumbers.contains(pitchId):

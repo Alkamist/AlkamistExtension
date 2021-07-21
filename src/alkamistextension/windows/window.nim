@@ -32,7 +32,7 @@ type
     brush: HBRUSH
     bounds: RECT
     title: string
-    redrawPending: bool
+    pendingRedraw: bool
 
   Color* = object
     r*, g*, b*: int
@@ -83,6 +83,12 @@ func toInt*(ps: PenStyle): int =
 
 func setBounds*(window: var Window, x, y, width, height: int) =
   discard SetWindowPos(window.hWnd, HWND_TOP, x, y, width, height, SWP_NOZORDER)
+
+func mouseX*(window: Window): int =
+  window.mouseX
+
+func mouseY*(window: Window): int =
+  window.mouseY
 
 func keyIsPressed*(window: Window, key: KeyboardKey): bool =
   window.keyStates[key]
@@ -184,9 +190,9 @@ proc releaseMouse(window: var Window) =
   discard ReleaseCapture()
 
 proc redraw*(window: var Window) =
-  if not window.redrawPending:
+  if not window.pendingRedraw:
     discard InvalidateRect(window.hWnd, nil, 0)
-    window.redrawPending = true
+    window.pendingRedraw = true
 
 proc windowProc(hWnd: HWND, msg: UINT, wParam: WPARAM, lParam: LPARAM): INT_PTR {.stdcall.} =
   template ifWindow(code: untyped): untyped =
@@ -254,7 +260,7 @@ proc windowProc(hWnd: HWND, msg: UINT, wParam: WPARAM, lParam: LPARAM): INT_PTR 
       paint:
         if window.onDraw != nil:
           window.onDraw()
-        window.redrawPending = false
+          window.pendingRedraw = false
 
   of WM_CLOSE:
     ifWindow:

@@ -119,6 +119,8 @@ const
   WM_XBUTTONDOWN* {.windowsHeader.} = 0x020b
   WM_XBUTTONUP* {.windowsHeader.} = 0x020c
   WM_XBUTTONDBLCLK* {.windowsHeader.} = 0x020d
+  WM_CREATE* {.windowsHeader.} = 0x0001
+  WM_SHOWWINDOW* {.windowsHeader.} = 0x0018
   WM_PAINT* {.windowsHeader.} = 0x000f
   WM_ERASEBKGND* {.windowsHeader.} = 0x0014
   WM_CLOSE* {.windowsHeader.} = 0x0010

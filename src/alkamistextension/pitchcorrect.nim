@@ -8,8 +8,27 @@ proc pitchCorrectionMain*() =
 
   var keyEditor = initKeyEditor()
 
+  window.onMousePress = proc(button: MouseButton) =
+    case button:
+    of Middle:
+      keyEditor.xView.target = window.mouseX.float
+      keyEditor.yView.target = -window.mouseY.float
+    else: discard
+
   window.onMouseMove = proc(x, y, xPrevious, yPrevious: int) =
-    window.redraw()
+    let
+      xChange = (x - xPrevious).float
+      yChange = (y - yPrevious).float
+
+    if window.mouseButtonIsPressed(Middle):
+      if window.keyIsPressed(Shift):
+        keyEditor.xView.changeZoom(xChange)
+        keyEditor.yView.changeZoom(yChange)
+      else:
+        keyEditor.xView.changePan(xChange)
+        keyEditor.yView.changePan(-yChange)
+
+      window.redraw()
 
   window.onDraw = proc() =
     keyEditor.draw(window)
@@ -23,21 +42,3 @@ proc pitchCorrectionMain*() =
     case key:
     of Space: Main_OnCommandEx(40044, 0, nil)
     else: discard
-
-  # window.onUpdate = proc() =
-  #   if key(Space).justPressed:
-  #     Main_OnCommandEx(40044, 0, nil)
-
-    # if mb(Middle).isPressed and mouse.justMoved:
-    #   x += mouse.xChange.float
-    #   y += mouse.yChange.float
-      # keyEditor.xView.changePan(mouse.xChange.float)
-      # keyEditor.yView.changePan(mouse.yChange.float)
-
-    # if x > window.width.float:
-    #   xVelocity = -100.0
-    # if x < 0.0:
-    #   xVelocity = 100.0
-    # x += xVelocity
-
-    # window.redraw()
