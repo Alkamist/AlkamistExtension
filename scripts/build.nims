@@ -12,7 +12,7 @@ cd ".."
 
 proc buildDll =
   let opts = [
-    # "-d:release",
+    "-d:release",
     "--app:lib",
     "--cc:vcc",
     "--nimcache:cache",

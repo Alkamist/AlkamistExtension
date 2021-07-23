@@ -1,4 +1,4 @@
-import ../windows/winapi, types
+import winapi, types
 
 {.pragma: ReaperAPI, importc, header: ReaperPluginFunctionsHeader.}
 
@@ -415,55 +415,6 @@ proc kbd_reprocessMenu*(menu: HMENU; section: ptr KbdSectionInfo) {.ReaperAPI.}
 proc kbd_RunCommandThroughHooks*(section: ptr KbdSectionInfo; actionCommandID: ptr cint; val: ptr cint; valhw: ptr cint; relmode: ptr cint; hwnd: HWND): bool {.ReaperAPI.}
 proc kbd_translateAccelerator*(hwnd: HWND; msg: ptr MSG; section: ptr KbdSectionInfo): cint {.ReaperAPI.}
 proc kbd_translateMouse*(winmsg: pointer; midimsg: ptr cuchar): bool {.ReaperAPI.}
-# proc LICE__Destroy*(bm: ptr LICE_IBitmap) {.ReaperAPI.}
-# proc LICE__DestroyFont*(font: ptr LICE_IFont) {.ReaperAPI.}
-# proc LICE__DrawText*(font: ptr LICE_IFont; bm: ptr LICE_IBitmap; str: cstring; strcnt: cint; rect: ptr RECT; dtFlags: UINT): cint {.ReaperAPI.}
-# proc LICE__GetBits*(bm: ptr LICE_IBitmap): pointer {.ReaperAPI.}
-# proc LICE__GetDC*(bm: ptr LICE_IBitmap): HDC {.ReaperAPI.}
-# proc LICE__GetHeight*(bm: ptr LICE_IBitmap): cint {.ReaperAPI.}
-# proc LICE__GetRowSpan*(bm: ptr LICE_IBitmap): cint {.ReaperAPI.}
-# proc LICE__GetWidth*(bm: ptr LICE_IBitmap): cint {.ReaperAPI.}
-# proc LICE__IsFlipped*(bm: ptr LICE_IBitmap): bool {.ReaperAPI.}
-# proc LICE__resize*(bm: ptr LICE_IBitmap; w: cint; h: cint): bool {.ReaperAPI.}
-# proc LICE__SetBkColor*(font: ptr LICE_IFont; color: LICE_pixel): LICE_pixel {.ReaperAPI.}
-# proc LICE__SetFromHFont*(font: ptr LICE_IFont; hfont: HFONT; flags: cint) {.ReaperAPI.}
-# proc LICE__SetTextColor*(font: ptr LICE_IFont; color: LICE_pixel): LICE_pixel {.ReaperAPI.}
-# proc LICE__SetTextCombineMode*(ifont: ptr LICE_IFont; mode: cint; alpha: cfloat) {.ReaperAPI.}
-proc LICE_Arc*(dest: ptr LICE_IBitmap; cx: cfloat; cy: cfloat; r: cfloat; minAngle: cfloat; maxAngle: cfloat; color: LICE_pixel; alpha: cfloat; mode: cint; aa: bool) {.ReaperAPI.}
-proc LICE_Blit*(dest: ptr LICE_IBitmap; src: ptr LICE_IBitmap; dstx: cint; dsty: cint; srcx: cint; srcy: cint; srcw: cint; srch: cint; alpha: cfloat; mode: cint) {.ReaperAPI.}
-proc LICE_Blur*(dest: ptr LICE_IBitmap; src: ptr LICE_IBitmap; dstx: cint; dsty: cint; srcx: cint; srcy: cint; srcw: cint; srch: cint) {.ReaperAPI.}
-proc LICE_BorderedRect*(dest: ptr LICE_IBitmap; x: cint; y: cint; w: cint; h: cint; bgcolor: LICE_pixel; fgcolor: LICE_pixel; alpha: cfloat; mode: cint) {.ReaperAPI.}
-proc LICE_Circle*(dest: ptr LICE_IBitmap; cx: cfloat; cy: cfloat; r: cfloat; color: LICE_pixel; alpha: cfloat; mode: cint; aa: bool) {.ReaperAPI.}
-proc LICE_Clear*(dest: ptr LICE_IBitmap; color: LICE_pixel) {.ReaperAPI.}
-proc LICE_ClearRect*(dest: ptr LICE_IBitmap; x: cint; y: cint; w: cint; h: cint; mask: LICE_pixel; orbits: LICE_pixel) {.ReaperAPI.}
-proc LICE_ClipLine*(pX1Out: ptr cint; pY1Out: ptr cint; pX2Out: ptr cint; pY2Out: ptr cint; xLo: cint; yLo: cint; xHi: cint; yHi: cint): bool {.ReaperAPI.}
-proc LICE_Copy*(dest: ptr LICE_IBitmap; src: ptr LICE_IBitmap) {.ReaperAPI.}
-proc LICE_CreateBitmap*(mode: cint; w: cint; h: cint): ptr LICE_IBitmap {.ReaperAPI.}
-proc LICE_CreateFont*(): ptr LICE_IFont {.ReaperAPI.}
-proc LICE_DrawCBezier*(dest: ptr LICE_IBitmap; xstart: cdouble; ystart: cdouble; xctl1: cdouble; yctl1: cdouble; xctl2: cdouble; yctl2: cdouble; xend: cdouble; yend: cdouble; color: LICE_pixel; alpha: cfloat; mode: cint; aa: bool; tol: cdouble) {.ReaperAPI.}
-proc LICE_DrawChar*(bm: ptr LICE_IBitmap; x: cint; y: cint; c: char; color: LICE_pixel; alpha: cfloat; mode: cint) {.ReaperAPI.}
-proc LICE_DrawGlyph*(dest: ptr LICE_IBitmap; x: cint; y: cint; color: LICE_pixel; alphas: ptr LICE_pixel_chan; glyph_w: cint; glyph_h: cint; alpha: cfloat; mode: cint) {.ReaperAPI.}
-proc LICE_DrawRect*(dest: ptr LICE_IBitmap; x: cint; y: cint; w: cint; h: cint; color: LICE_pixel; alpha: cfloat; mode: cint) {.ReaperAPI.}
-proc LICE_DrawText*(bm: ptr LICE_IBitmap; x: cint; y: cint; string: cstring; color: LICE_pixel; alpha: cfloat; mode: cint) {.ReaperAPI.}
-proc LICE_FillCBezier*(dest: ptr LICE_IBitmap; xstart: cdouble; ystart: cdouble; xctl1: cdouble; yctl1: cdouble; xctl2: cdouble; yctl2: cdouble; xend: cdouble; yend: cdouble; yfill: cint; color: LICE_pixel; alpha: cfloat; mode: cint; aa: bool; tol: cdouble) {.ReaperAPI.}
-proc LICE_FillCircle*(dest: ptr LICE_IBitmap; cx: cfloat; cy: cfloat; r: cfloat; color: LICE_pixel; alpha: cfloat; mode: cint; aa: bool) {.ReaperAPI.}
-proc LICE_FillConvexPolygon*(dest: ptr LICE_IBitmap; x: ptr cint; y: ptr cint; npoints: cint; color: LICE_pixel; alpha: cfloat; mode: cint) {.ReaperAPI.}
-proc LICE_FillRect*(dest: ptr LICE_IBitmap; x: cint; y: cint; w: cint; h: cint; color: LICE_pixel; alpha: cfloat; mode: cint) {.ReaperAPI.}
-proc LICE_FillTrapezoid*(dest: ptr LICE_IBitmap; x1a: cint; x1b: cint; y1: cint; x2a: cint; x2b: cint; y2: cint; color: LICE_pixel; alpha: cfloat; mode: cint) {.ReaperAPI.}
-proc LICE_FillTriangle*(dest: ptr LICE_IBitmap; x1: cint; y1: cint; x2: cint; y2: cint; x3: cint; y3: cint; color: LICE_pixel; alpha: cfloat; mode: cint) {.ReaperAPI.}
-proc LICE_GetPixel*(bm: ptr LICE_IBitmap; x: cint; y: cint): LICE_pixel {.ReaperAPI.}
-proc LICE_GradRect*(dest: ptr LICE_IBitmap; dstx: cint; dsty: cint; dstw: cint; dsth: cint; ir: cfloat; ig: cfloat; ib: cfloat; ia: cfloat; drdx: cfloat; dgdx: cfloat; dbdx: cfloat; dadx: cfloat; drdy: cfloat; dgdy: cfloat; dbdy: cfloat; dady: cfloat; mode: cint) {.ReaperAPI.}
-proc LICE_Line*(dest: ptr LICE_IBitmap; x1: cfloat; y1: cfloat; x2: cfloat; y2: cfloat; color: LICE_pixel; alpha: cfloat; mode: cint; aa: bool) {.ReaperAPI.}
-proc LICE_LineInt*(dest: ptr LICE_IBitmap; x1: cint; y1: cint; x2: cint; y2: cint; color: LICE_pixel; alpha: cfloat; mode: cint; aa: bool) {.ReaperAPI.}
-proc LICE_LoadPNG*(filename: cstring; bmp: ptr LICE_IBitmap): ptr LICE_IBitmap {.ReaperAPI.}
-proc LICE_LoadPNGFromResource*(hInst: HINSTANCE; resid: cstring; bmp: ptr LICE_IBitmap): ptr LICE_IBitmap {.ReaperAPI.}
-proc LICE_MeasureText*(string: cstring; w: ptr cint; h: ptr cint) {.ReaperAPI.}
-proc LICE_MultiplyAddRect*(dest: ptr LICE_IBitmap; x: cint; y: cint; w: cint; h: cint; rsc: cfloat; gsc: cfloat; bsc: cfloat; asc: cfloat; radd: cfloat; gadd: cfloat; badd: cfloat; aadd: cfloat) {.ReaperAPI.}
-proc LICE_PutPixel*(bm: ptr LICE_IBitmap; x: cint; y: cint; color: LICE_pixel; alpha: cfloat; mode: cint) {.ReaperAPI.}
-proc LICE_RotatedBlit*(dest: ptr LICE_IBitmap; src: ptr LICE_IBitmap; dstx: cint; dsty: cint; dstw: cint; dsth: cint; srcx: cfloat; srcy: cfloat; srcw: cfloat; srch: cfloat; angle: cfloat; cliptosourcerect: bool; alpha: cfloat; mode: cint; rotxcent: cfloat; rotycent: cfloat) {.ReaperAPI.}
-proc LICE_RoundRect*(drawbm: ptr LICE_IBitmap; xpos: cfloat; ypos: cfloat; w: cfloat; h: cfloat; cornerradius: cint; col: LICE_pixel; alpha: cfloat; mode: cint; aa: bool) {.ReaperAPI.}
-proc LICE_ScaledBlit*(dest: ptr LICE_IBitmap; src: ptr LICE_IBitmap; dstx: cint; dsty: cint; dstw: cint; dsth: cint; srcx: cfloat; srcy: cfloat; srcw: cfloat; srch: cfloat; alpha: cfloat; mode: cint) {.ReaperAPI.}
-proc LICE_SimpleFill*(dest: ptr LICE_IBitmap; x: cint; y: cint; newcolor: LICE_pixel; comparemask: LICE_pixel; keepmask: LICE_pixel) {.ReaperAPI.}
 proc LocalizeString*(src_string: cstring; section: cstring; flagsOptional: cint): cstring {.ReaperAPI.}
 proc Loop_OnArrow*(project: ptr ReaProject; direction: cint): bool {.ReaperAPI.}
 proc Main_OnCommand*(command: cint; flag: cint) {.ReaperAPI.}
@@ -811,4 +762,4 @@ proc UpdateTimeline*() {.ReaperAPI.}
 proc ValidatePtr*(pointer: pointer; ctypename: cstring): bool {.ReaperAPI.}
 proc ValidatePtr2*(proj: ptr ReaProject; pointer: pointer; ctypename: cstring): bool {.ReaperAPI.}
 proc ViewPrefs*(page: cint; pageByName: cstring) {.ReaperAPI.}
-proc WDL_VirtualWnd_ScaledBlitBG*(dest: ptr LICE_IBitmap; src: ptr WDL_VirtualWnd_BGCfg; destx: cint; desty: cint; destw: cint; desth: cint; clipx: cint; clipy: cint; clipw: cint; cliph: cint; alpha: cfloat; mode: cint): bool {.ReaperAPI.}
+# proc WDL_VirtualWnd_ScaledBlitBG*(dest: ptr LICE_IBitmap; src: ptr WDL_VirtualWnd_BGCfg; destx: cint; desty: cint; destw: cint; desth: cint; clipx: cint; clipy: cint; clipw: cint; cliph: cint; alpha: cfloat; mode: cint): bool {.ReaperAPI.}

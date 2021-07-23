@@ -1,7 +1,6 @@
 import
   std/[tables, options],
-  windows/[winapi, window, keyboard, mouse],
-  reaper/[types, functions]
+  reaper/[types, functions, winapi, window, keyboard, mouse]
 
 export
   tables, options,

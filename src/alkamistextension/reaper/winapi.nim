@@ -4,8 +4,8 @@ when defined windows:
   {.pragma: windowsHeader, importc, header: "<windows.h>".}
   {.pragma: windowsXHeader, importc, header: "<windowsx.h>".}
 else:
-  {.pragma: windowsHeader, importc, header: "swell/swell.h".}
-  {.pragma: windowsXHeader, importc, header: "swell/swell.h".}
+  {.pragma: windowsHeader, importc, header: "../swell/swell.h".}
+  {.pragma: windowsXHeader, importc, header: "../swell/swell.h".}
 
 when defined cpu64:
   type
@@ -51,6 +51,7 @@ type
   HDC* {.windowsHeader.} = HANDLE
   HPEN* {.windowsHeader.} = HANDLE
   HBRUSH* {.windowsHeader.} = HANDLE
+  HFONT* {.windowsHeader.} = HANDLE
   HGDIOBJ* {.windowsHeader.} = HANDLE
 
   POINT* {.windowsHeader.} = object
@@ -120,6 +121,7 @@ const
   WM_XBUTTONUP* {.windowsHeader.} = 0x020c
   WM_XBUTTONDBLCLK* {.windowsHeader.} = 0x020d
   WM_CREATE* {.windowsHeader.} = 0x0001
+  WM_INITDIALOG* {.windowsHeader.} = 0x0110
   WM_SHOWWINDOW* {.windowsHeader.} = 0x0018
   WM_PAINT* {.windowsHeader.} = 0x000f
   WM_ERASEBKGND* {.windowsHeader.} = 0x0014
@@ -180,6 +182,7 @@ const
   SWP_NOSIZE* {.windowsHeader.} = 0x0001
   SWP_NOZORDER* {.windowsHeader.} = 0x0004
   SWP_SHOWWINDOW* {.windowsHeader.} = 0x0040
+  SRCCOPY* {.windowsHeader.} = 0x00CC0020
 
 proc LOWORD*(value: WPARAM): int {.stdcall, windowsXHeader.}
 proc HIWORD*(value: WPARAM): int {.stdcall, windowsXHeader.}
@@ -188,7 +191,7 @@ proc GET_Y_LPARAM*(lParam: LPARAM): int {.stdcall, windowsXHeader.}
 proc MAKEINTRESOURCE*(i: int): LPCTSTR {.stdcall, windowsHeader.}
 
 proc CreateDialog*(hInstance: HINSTANCE, lpName: LPCTSTR, hWndParent: HWND, lpDialogFunc: DLGPROC): HWND {.stdcall, windowsHeader.}
-proc ShowWindow*(hWnd: HINSTANCE, nCmdShow: int32): BOOL {.stdcall, windowsHeader.}
+proc ShowWindow*(hWnd: HINSTANCE, nCmdShow: int): BOOL {.stdcall, windowsHeader.}
 proc DestroyWindow*(hWnd: HWND): BOOL {.stdcall, windowsHeader.}
 proc GetWindowRect*(hWnd: HWND, lpRect: ptr Rect): BOOL {.stdcall, windowsHeader.}
 proc SetWindowText*(hWnd: HWND, lpString: LPCSTR): BOOL {.stdcall, windowsHeader.}
@@ -199,6 +202,7 @@ proc SetCapture*(hWnd: HWND): HWND {.stdcall, windowsHeader.}
 proc ReleaseCapture*(): BOOL {.stdcall, windowsHeader.}
 proc GetCursorPos*(lpPoint: ptr POINT): BOOL {.stdcall, windowsHeader.}
 proc InvalidateRect*(hWnd: HWND, lpRect: ptr RECT, bErase: BOOL): BOOL {.stdcall, windowsHeader.}
+proc BitBlt*(hdc: HDC, x, y, cx, cy: int, hdcSrc: HDC, x1, y1: int, rop: DWORD): BOOL {.stdcall, windowsHeader.}
 
 proc BeginPaint*(hWnd: HWND, lpPaint: LPPAINTSTRUCT): HDC {.stdcall, windowsHeader.}
 proc EndPaint*(hWnd: HWND, lpPaint: ptr PAINTSTRUCT): BOOL {.stdcall, windowsHeader.}

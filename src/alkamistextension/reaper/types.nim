@@ -1,22 +1,17 @@
-import ../windows/winapi
+import winapi
 
 const
   ReaperPluginHeader* = "../reapersdk/reaper_plugin.h"
   ReaperPluginFunctionsHeader* = "../reapersdk/reaper_plugin_functions.h"
 
 type
-  LICE_pixel* = cuint
-  LICE_pixel_chan* = cuchar
-
   ReaProject* {.importc, header: ReaperPluginHeader.} = object
   MediaTrack* {.importc, header: ReaperPluginHeader.} = object
   MediaItem* {.importc, header: ReaperPluginHeader.} = object
   MediaItem_Take* {.importc, header: ReaperPluginHeader.} = object
   TrackEnvelope* {.importc, header: ReaperPluginHeader.} = object
-
   AudioAccessor* {.importc, header: ReaperPluginFunctionsHeader.} = object
-  LICE_IBitmap* {.importc, header: ReaperPluginFunctionsHeader.} = object
-  LICE_IFont* {.importc, header: ReaperPluginFunctionsHeader.} = object
+
   WDL_VirtualWnd_BGCfg* {.importc, header: ReaperPluginFunctionsHeader.} = object
   joystick_device* {.importc, header: ReaperPluginFunctionsHeader.} = object
 

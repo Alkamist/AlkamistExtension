@@ -1,6 +1,6 @@
 import
-  std/[tables, math, options],
-  winapi, keyboard, mouse
+  std/[tables, options],
+  winapi, lice, keyboard, mouse
 
 type
   Window* = ref object
@@ -17,69 +17,18 @@ type
     mouseXPrevious, mouseYPrevious: int
     keyStates: array[KeyboardKey, bool]
     mouseButtonStates: array[MouseButton, bool]
-    penColor*: Color
-    penThickness*: int
-    penStyle*: PenStyle
-    brushColor*: Color
-    backgroundColor*: Color
+    mainBitmap: Bitmap
+    backgroundColor: Color
     hasUpdateLoop: bool
-    ctx: HDC
+    hdc: HDC
     paintStruct: PAINTSTRUCT
     hInstance: HINSTANCE
     hWnd: HWND
     parent: HWND
-    pen: HPEN
-    brush: HBRUSH
     bounds: RECT
     title: string
-    pendingRedraw: bool
-
-  Color* = object
-    r*, g*, b*: int
-
-  PenStyle* {.pure.} = enum
-    Cosmetic,
-    EndcapRound,
-    JoinRound,
-    Solid,
-    Dash,
-    Dot,
-    DashDot,
-    DashDotDot,
-    Null,
-    InsideFrame,
-    UserStyle,
-    Alternate,
-    EndcapSquare,
-    EndcapFlat,
-    JoinBevel,
-    JoinMiter,
-    Geometric,
 
 var hWndWindows = initTable[HWND, Window]()
-
-func initColor*(r, g, b: int): Color =
-  Color(r: r, g: g, b: b)
-
-func toInt*(ps: PenStyle): int =
-  case ps:
-  of Cosmetic: PS_COSMETIC
-  of EndcapRound: PS_ENDCAP_ROUND
-  of JoinRound: PS_JOIN_ROUND
-  of Solid: PS_SOLID
-  of Dash: PS_DASH
-  of Dot: PS_DOT
-  of DashDot: PS_DASHDOT
-  of DashDotDot: PS_DASHDOTDOT
-  of Null: PS_NULL
-  of InsideFrame: PS_INSIDEFRAME
-  of UserStyle: PS_USERSTYLE
-  of Alternate: PS_ALTERNATE
-  of EndcapSquare: PS_ENDCAP_SQUARE
-  of EndcapFlat: PS_ENDCAP_FLAT
-  of JoinBevel: PS_JOIN_BEVEL
-  of JoinMiter: PS_JOIN_MITER
-  of Geometric: PS_GEOMETRIC
 
 func setBounds*(window: var Window, x, y, width, height: int) =
   discard SetWindowPos(window.hWnd, HWND_TOP, x, y, width, height, SWP_NOZORDER)
@@ -121,55 +70,14 @@ func width*(window: Window): int =
 func height*(window: Window): int =
   abs(window.bottom - window.top)
 
-func updatePen*(window: var Window) =
-  discard DeleteObject(window.pen)
-  window.pen = CreatePen(
-    window.penStyle.toInt,
-    window.penThickness,
-    RGB(window.penColor.r, window.penColor.g, window.penColor.b)
-  )
-  discard window.ctx.SelectObject(window.pen)
-
-func updatePenColor*(window: var Window, color: Color) =
-  window.penColor = color
-  window.updatePen()
-
-func updateBrush*(window: var Window) =
-  discard DeleteObject(window.brush)
-  window.brush = CreateSolidBrush(
-    RGB(window.brushColor.r, window.brushColor.g, window.brushColor.b)
-  )
-  discard window.ctx.SelectObject(window.brush)
-
-func updateBrushColor*(window: var Window, color: Color) =
-  window.brushColor = color
-  window.updateBrush()
-
-func updateColor*(window: var Window, color: Color) =
-  window.updatePenColor(color)
-  window.updateBrushColor(color)
-
 func drawRectangle*(window: Window, x, y, width, height: int) =
-  discard window.ctx.Rectangle(x, y, x + width, y + height)
+  discard
 
 func drawRectangle*(window: Window, x, y, width, height: float) =
-  let
-    xRound = x.round.int
-    yRound = y.round.int
-  discard window.ctx.Rectangle(xRound, yRound, xRound + width.round.int, yRound + height.round.int)
+  discard
 
 func fillBackground(window: var Window) =
-  let
-    penColorPrevious = window.penColor
-    brushColorPrevious = window.brushColor
-
-  window.updatePenColor window.backgroundColor
-  window.updateBrushColor window.backgroundColor
-
-  window.drawRectangle(0, 0, window.width, window.height)
-
-  window.updatePenColor penColorPrevious
-  window.updateBrushColor brushColorPrevious
+  window.mainBitmap.clear(window.backgroundColor)
 
 func updateBounds(window: var Window) =
   discard GetWindowRect(window.hWnd, addr window.bounds)
@@ -189,10 +97,17 @@ proc captureMouse(window: var Window) =
 proc releaseMouse(window: var Window) =
   discard ReleaseCapture()
 
+proc blitMainBitmap(window: var Window) =
+  discard BitBlt(
+    window.hdc,
+    0, 0, window.width, window.height,
+    window.mainBitmap.context,
+    0, 0,
+    SRCCOPY,
+  )
+
 proc redraw*(window: var Window) =
-  if not window.pendingRedraw:
-    discard InvalidateRect(window.hWnd, nil, 0)
-    window.pendingRedraw = true
+  discard InvalidateRect(window.hWnd, nil, 1)
 
 proc windowProc(hWnd: HWND, msg: UINT, wParam: WPARAM, lParam: LPARAM): INT_PTR {.stdcall.} =
   template ifWindow(code: untyped): untyped =
@@ -210,21 +125,13 @@ proc windowProc(hWnd: HWND, msg: UINT, wParam: WPARAM, lParam: LPARAM): INT_PTR 
       else: some(Side2)
     else: none(MouseButton)
 
-  template paint(code: untyped): untyped =
-    window.paintStruct = PAINTSTRUCT()
-    window.ctx = window.hWnd.BeginPaint(addr window.paintStruct)
-    discard window.ctx.SelectObject(window.pen)
-    code
-    discard window.hWnd.EndPaint(addr window.paintStruct)
-
   case msg:
 
   of WM_ERASEBKGND:
     ifWindow:
-      window.updateBounds()
-      paint:
-        window.fillBackground()
-        return 1
+      window.fillBackground()
+      window.redraw()
+      return 1
 
   of WM_MOUSEMOVE:
     ifWindow:
@@ -243,24 +150,27 @@ proc windowProc(hWnd: HWND, msg: UINT, wParam: WPARAM, lParam: LPARAM): INT_PTR 
       if window.onUpdate != nil:
         window.onUpdate()
 
-  of WM_SIZE, WM_MOVE:
+  of WM_SIZE:
     ifWindow:
       window.updateBounds()
-      case msg:
-      of WM_SIZE:
-        if window.onResize != nil:
-          window.onResize()
-      of WM_MOVE:
-        if window.onMove != nil:
-          window.onMove()
-      else: discard
+      window.mainBitmap.resize(window.width, window.height)
+      if window.onResize != nil:
+        window.onResize()
+
+  of WM_MOVE:
+    ifWindow:
+      window.updateBounds()
+      if window.onMove != nil:
+        window.onMove()
 
   of WM_PAINT:
     ifWindow:
-      paint:
-        if window.onDraw != nil:
+      window.paintStruct = PAINTSTRUCT()
+      window.hdc = window.hWnd.BeginPaint(addr window.paintStruct)
+      if window.onDraw != nil:
           window.onDraw()
-          window.pendingRedraw = false
+      blitMainBitmap(window)
+      discard window.hWnd.EndPaint(addr window.paintStruct)
 
   of WM_CLOSE:
     ifWindow:
@@ -315,21 +225,7 @@ proc newWindow*(hInstance: HINSTANCE, parent: HWND): Window =
   if result.hWnd != nil:
     result.title = "Unnamed Window"
     result.updateBounds()
-    result.backgroundColor = initColor(16, 16, 16)
-    result.penColor = initColor(255, 255, 255)
-    result.penThickness = 1
-    result.penStyle = Solid
-    result.pen = CreatePen(
-      result.penStyle.toInt,
-      result.penThickness,
-      RGB(result.penColor.r, result.penColor.g, result.penColor.b)
-    )
-
-    result.brushColor = initColor(255, 255, 255)
-    result.brush = CreateSolidBrush(
-      RGB(result.brushColor.r, result.brushColor.g, result.brushColor.b)
-    )
-
+    result.backgroundColor = rgb(16, 16, 16, 1.0)
+    result.mainBitmap = newBitmap(0, 0)
     hWndWindows[result.hWnd] = result
-
     discard ShowWindow(result.hWnd, SW_SHOW)
