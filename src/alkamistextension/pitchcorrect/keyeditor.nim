@@ -1,4 +1,6 @@
-import ../reaper, viewaxis
+import
+  std/math,
+  ../reaper/lice, viewaxis
 
 export viewaxis
 
@@ -8,69 +10,73 @@ func getWhiteKeyNumbers(): seq[int] =
     for multiple in whiteKeyMultiples:
       result.add i * 12 + multiple
 
-const
-  numPitches = 128
-  whiteKeyNumbers = getWhiteKeyNumbers()
+const whiteKeyNumbers = getWhiteKeyNumbers()
 
 type
   KeyEditor* = object
-    x*: float
-    y*: float
+    bitmap*: Bitmap
+    numPitches*: int
     timeLength*: float
     xView*: ViewAxis
     yView*: ViewAxis
+    backgroundColor*: Color
     blackKeyColor*: Color
     whiteKeyColor*: Color
-    width: float
-    height: float
 
-proc `width=`*(editor: var KeyEditor, value: float) =
-  editor.xView.scale = value
-  editor.width = value
+func width*(editor: KeyEditor): int =
+  editor.xView.scale.round.int
 
-proc width*(editor: KeyEditor): float =
-  editor.width
+func height*(editor: KeyEditor): int =
+  editor.yView.scale.round.int
 
-proc `height=`*(editor: var KeyEditor, value: float) =
-  editor.yView.scale = value
-  editor.height = value
+proc resize*(editor: var KeyEditor, width, height: int) =
+  editor.xView.scale = width.float
+  editor.yView.scale = height.float
+  editor.bitmap.resize(width, height)
 
-proc height*(editor: KeyEditor): float =
-  editor.height
+proc `width=`*(editor: var KeyEditor, value: int) =
+  editor.resize(value, editor.height)
 
-proc editorXToTime*(editor: KeyEditor, x: float): float =
-  editor.timeLength * (editor.xView.pan + x / (editor.width * editor.xView.zoom))
+proc `height=`*(editor: var KeyEditor, value: int) =
+  editor.resize(editor.width, value)
 
-proc editorYToPitch*(editor: KeyEditor, y: float): float =
-  numPitches.float * (1.0 - (editor.yView.pan + y / (editor.height * editor.yView.zoom))) - 0.5
+func xToTime*(editor: KeyEditor, x: float): float =
+  editor.timeLength * (editor.xView.pan + x / (editor.width.float * editor.xView.zoom))
 
-proc timeToEditorX*(editor: KeyEditor, time: float): float =
-  editor.xView.zoom * editor.width * (time / editor.timeLength - editor.xView.pan)
+func yToPitch*(editor: KeyEditor, y: float): float =
+  editor.numPitches.float * (1.0 - (editor.yView.pan + y / (editor.height.float * editor.yView.zoom))) - 0.5
 
-proc pitchToEditorY*(editor: KeyEditor, pitch: float): float =
-  editor.yView.zoom * editor.height * ((1.0 - (0.5 + pitch) / numPitches.float) - editor.yView.pan)
+func timeToX*(editor: KeyEditor, time: float): float =
+  editor.xView.zoom * editor.width.float * (time / editor.timeLength - editor.xView.pan)
 
-proc initKeyEditor*(): KeyEditor =
-  result.width = 800.0
-  result.height = 600.0
+func pitchToY*(editor: KeyEditor, pitch: float): float =
+  editor.yView.zoom * editor.height.float * ((1.0 - (0.5 + pitch) / editor.numPitches.float) - editor.yView.pan)
+
+func initKeyEditor*(width, height: int): KeyEditor =
+  result.numPitches = 128
   result.xView = initViewAxis()
   result.yView = initViewAxis()
-  result.blackKeyColor = initColor(60, 60, 60)
-  result.whiteKeyColor = initColor(130, 130, 130)
+  result.resize(width, height)
+  result.bitmap = newBitmap(width, height)
+  result.backgroundColor = rgb(30, 30, 30)
+  result.blackKeyColor = rgb(60, 60, 60, 1.0)
+  result.whiteKeyColor = rgb(110, 110, 110, 1.0)
 
-proc draw*(editor: var KeyEditor, window: var Window) =
-  var keyEndPrevious = editor.pitchToEditorY(numPitches + 0.5)
+func updateBitmap*(editor: KeyEditor) =
+  editor.bitmap.clear(editor.backgroundColor)
 
-  for pitchId in 0 ..< numPitches:
+  var keyEndPrevious = editor.pitchToY(editor.numPitches.float + 0.5)
+
+  for pitchId in 0 ..< editor.numPitches:
     let
-      keyEnd = editor.pitchToEditorY(numPitches - (pitchId + 1).float + 0.5)
+      keyEnd = editor.pitchToY(editor.numPitches.float - (pitchId + 1).float + 0.5)
       keyHeight = keyEnd - keyEndPrevious
+      keyColor =
+        if whiteKeyNumbers.contains(pitchId):
+          editor.whiteKeyColor
+        else:
+          editor.blackKeyColor
 
-    if whiteKeyNumbers.contains(pitchId):
-      window.updateColor(editor.whiteKeyColor)
-    else:
-      window.updateColor(editor.blackKeyColor)
-
-    window.drawRectangle(editor.x, editor.y + keyEnd, editor.width, keyHeight + 1)
+    editor.bitmap.fillRectangle(0, keyEnd.round.int, editor.width, keyHeight.round.int + 1, keyColor)
 
     keyEndPrevious = keyEnd

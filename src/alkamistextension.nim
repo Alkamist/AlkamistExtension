@@ -1,16 +1,19 @@
-# import alkamistextension/[reaper, pitchcorrect]
+# addAction("Alkamist: Test Action", "ALKAMIST_TEST_ACTION", testActionFn)
 
-# createExtension:
-  # addAction("Alkamist: Test Action", "ALKAMIST_TEST_ACTION", testActionFn)
-  # pitchCorrectionMain()
 
-import alkamistextension/reaper
+import alkamistextension/[reaper, pitchcorrect]
 
 createExtension:
-  var window = newWindow()
+  pitchCorrectionMain()
 
-  window.title = "Pitch Correction"
-  window.setBounds(400, 300, 800, 500)
 
-  # window.onResize = proc() =
-  #   window.redraw()
+
+
+
+# import alkamistextension/reaper
+
+# createExtension:
+#   var window = newWindow()
+
+#   window.title = "Pitch Correction"
+#   window.setBounds(400, 300, 800, 500)

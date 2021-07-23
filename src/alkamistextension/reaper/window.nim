@@ -4,6 +4,8 @@ import
 
 type
   Window* = ref object
+    bitmap*: Bitmap
+    backgroundColor*: Color
     onUpdate*: proc()
     onDraw*: proc()
     onResize*: proc()
@@ -17,8 +19,6 @@ type
     mouseXPrevious, mouseYPrevious: int
     keyStates: array[KeyboardKey, bool]
     mouseButtonStates: array[MouseButton, bool]
-    mainBitmap: Bitmap
-    backgroundColor: Color
     hasUpdateLoop: bool
     hdc: HDC
     paintStruct: PAINTSTRUCT
@@ -30,7 +30,7 @@ type
 
 var hWndWindows = initTable[HWND, Window]()
 
-func setBounds*(window: var Window, x, y, width, height: int) =
+func setBounds*(window: Window, x, y, width, height: int) =
   discard SetWindowPos(window.hWnd, HWND_TOP, x, y, width, height, SWP_NOZORDER)
 
 func mouseX*(window: Window): int =
@@ -70,18 +70,6 @@ func width*(window: Window): int =
 func height*(window: Window): int =
   abs(window.bottom - window.top)
 
-func drawRectangle*(window: Window, x, y, width, height: int) =
-  discard
-
-func drawRectangle*(window: Window, x, y, width, height: float) =
-  discard
-
-func fillBackground(window: var Window) =
-  window.mainBitmap.clear(window.backgroundColor)
-
-func updateBounds(window: var Window) =
-  discard GetWindowRect(window.hWnd, addr window.bounds)
-
 func enableUpdateLoop*(window: var Window, loopEvery: UINT) =
   discard SetTimer(window.hWnd, 1, loopEvery, nil)
   window.hasUpdateLoop = true
@@ -91,23 +79,11 @@ func disableUpdateLoop*(window: var Window) =
     discard KillTimer(window.hWnd, 1)
     window.hasUpdateLoop = false
 
-proc captureMouse(window: var Window) =
-  discard SetCapture(window.hWnd)
-
-proc releaseMouse(window: var Window) =
-  discard ReleaseCapture()
-
-proc blitMainBitmap(window: var Window) =
-  discard BitBlt(
-    window.hdc,
-    0, 0, window.width, window.height,
-    window.mainBitmap.context,
-    0, 0,
-    SRCCOPY,
-  )
-
-proc redraw*(window: var Window) =
+func redraw*(window: Window) =
   discard InvalidateRect(window.hWnd, nil, 1)
+
+template updateBounds(window: var Window): untyped =
+  discard GetWindowRect(window.hWnd, addr window.bounds)
 
 proc windowProc(hWnd: HWND, msg: UINT, wParam: WPARAM, lParam: LPARAM): INT_PTR {.stdcall.} =
   template ifWindow(code: untyped): untyped =
@@ -129,7 +105,7 @@ proc windowProc(hWnd: HWND, msg: UINT, wParam: WPARAM, lParam: LPARAM): INT_PTR 
 
   of WM_ERASEBKGND:
     ifWindow:
-      window.fillBackground()
+      window.bitmap.clear(window.backgroundColor)
       window.redraw()
       return 1
 
@@ -153,7 +129,7 @@ proc windowProc(hWnd: HWND, msg: UINT, wParam: WPARAM, lParam: LPARAM): INT_PTR 
   of WM_SIZE:
     ifWindow:
       window.updateBounds()
-      window.mainBitmap.resize(window.width, window.height)
+      window.bitmap.resize(window.width, window.height)
       if window.onResize != nil:
         window.onResize()
 
@@ -169,7 +145,15 @@ proc windowProc(hWnd: HWND, msg: UINT, wParam: WPARAM, lParam: LPARAM): INT_PTR 
       window.hdc = window.hWnd.BeginPaint(addr window.paintStruct)
       if window.onDraw != nil:
           window.onDraw()
-      blitMainBitmap(window)
+      let bitmapContext = window.bitmap.context
+      if bitmapContext.isSome:
+        discard BitBlt(
+          window.hdc,
+          0, 0, window.width, window.height,
+          bitmapContext.get,
+          0, 0,
+          SRCCOPY,
+        )
       discard window.hWnd.EndPaint(addr window.paintStruct)
 
   of WM_CLOSE:
@@ -186,7 +170,7 @@ proc windowProc(hWnd: HWND, msg: UINT, wParam: WPARAM, lParam: LPARAM): INT_PTR 
     ifWindow:
       let buttonKind = getMouseButtonKind()
       if buttonKind.isSome:
-        window.captureMouse()
+        discard SetCapture(window.hWnd)
         window.mouseButtonStates[buttonKind.get] = true
         if window.onMousePress != nil:
           window.onMousePress(buttonKind.get)
@@ -195,7 +179,7 @@ proc windowProc(hWnd: HWND, msg: UINT, wParam: WPARAM, lParam: LPARAM): INT_PTR 
     ifWindow:
       let buttonKind = getMouseButtonKind()
       if buttonKind.isSome:
-        window.releaseMouse()
+        discard ReleaseCapture()
         window.mouseButtonStates[buttonKind.get] = false
         if window.onMouseRelease != nil:
           window.onMouseRelease(buttonKind.get)
@@ -225,7 +209,7 @@ proc newWindow*(hInstance: HINSTANCE, parent: HWND): Window =
   if result.hWnd != nil:
     result.title = "Unnamed Window"
     result.updateBounds()
-    result.backgroundColor = rgb(16, 16, 16, 1.0)
-    result.mainBitmap = newBitmap(0, 0)
+    result.backgroundColor = rgb(0, 0, 0)
+    result.bitmap = newBitmap(0, 0)
     hWndWindows[result.hWnd] = result
     discard ShowWindow(result.hWnd, SW_SHOW)

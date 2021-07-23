@@ -1,4 +1,6 @@
-import winapi, types
+import
+  std/options,
+  winapi, types
 
 type
   LICE_pixel = cuint
@@ -21,7 +23,7 @@ proc LICE_private_resize(bm: ptr LICE_IBitmap; w: cint; h: cint): bool {.importc
 # proc LICE_private_SetTextColor(font: ptr LICE_IFont; color: LICE_pixel): LICE_pixel {.importc: "LICE__SetTextColor", header: ReaperPluginFunctionsHeader.}
 # proc LICE_private_SetTextCombineMode(ifont: ptr LICE_IFont; mode: cint; alpha: cfloat) {.importc: "LICE__SetTextCombineMode", header: ReaperPluginFunctionsHeader.}
 # proc LICE_Arc(dest: ptr LICE_IBitmap; cx: cfloat; cy: cfloat; r: cfloat; minAngle: cfloat; maxAngle: cfloat; color: LICE_pixel; alpha: cfloat; mode: cint; aa: bool) {.importc, header: ReaperPluginFunctionsHeader.}
-# proc LICE_Blit(dest: ptr LICE_IBitmap; src: ptr LICE_IBitmap; dstx: cint; dsty: cint; srcx: cint; srcy: cint; srcw: cint; srch: cint; alpha: cfloat; mode: cint) {.importc, header: ReaperPluginFunctionsHeader.}
+proc LICE_Blit(dest: ptr LICE_IBitmap; src: ptr LICE_IBitmap; dstx: cint; dsty: cint; srcx: cint; srcy: cint; srcw: cint; srch: cint; alpha: cfloat; mode: cint) {.importc, header: ReaperPluginFunctionsHeader.}
 # proc LICE_Blur(dest: ptr LICE_IBitmap; src: ptr LICE_IBitmap; dstx: cint; dsty: cint; srcx: cint; srcy: cint; srcw: cint; srch: cint) {.importc, header: ReaperPluginFunctionsHeader.}
 # proc LICE_BorderedRect(dest: ptr LICE_IBitmap; x: cint; y: cint; w: cint; h: cint; bgcolor: LICE_pixel; fgcolor: LICE_pixel; alpha: cfloat; mode: cint) {.importc, header: ReaperPluginFunctionsHeader.}
 # proc LICE_Circle(dest: ptr LICE_IBitmap; cx: cfloat; cy: cfloat; r: cfloat; color: LICE_pixel; alpha: cfloat; mode: cint; aa: bool) {.importc, header: ReaperPluginFunctionsHeader.}
@@ -39,7 +41,7 @@ proc LICE_DrawRect(dest: ptr LICE_IBitmap; x: cint; y: cint; w: cint; h: cint; c
 # proc LICE_FillCBezier(dest: ptr LICE_IBitmap; xstart: cdouble; ystart: cdouble; xctl1: cdouble; yctl1: cdouble; xctl2: cdouble; yctl2: cdouble; xend: cdouble; yend: cdouble; yfill: cint; color: LICE_pixel; alpha: cfloat; mode: cint; aa: bool; tol: cdouble) {.importc, header: ReaperPluginFunctionsHeader.}
 # proc LICE_FillCircle(dest: ptr LICE_IBitmap; cx: cfloat; cy: cfloat; r: cfloat; color: LICE_pixel; alpha: cfloat; mode: cint; aa: bool) {.importc, header: ReaperPluginFunctionsHeader.}
 # proc LICE_FillConvexPolygon(dest: ptr LICE_IBitmap; x: ptr cint; y: ptr cint; npoints: cint; color: LICE_pixel; alpha: cfloat; mode: cint) {.importc, header: ReaperPluginFunctionsHeader.}
-# proc LICE_FillRect(dest: ptr LICE_IBitmap; x: cint; y: cint; w: cint; h: cint; color: LICE_pixel; alpha: cfloat; mode: cint) {.importc, header: ReaperPluginFunctionsHeader.}
+proc LICE_FillRect(dest: ptr LICE_IBitmap; x: cint; y: cint; w: cint; h: cint; color: LICE_pixel; alpha: cfloat; mode: cint) {.importc, header: ReaperPluginFunctionsHeader.}
 # proc LICE_FillTrapezoid(dest: ptr LICE_IBitmap; x1a: cint; x1b: cint; y1: cint; x2a: cint; x2b: cint; y2: cint; color: LICE_pixel; alpha: cfloat; mode: cint) {.importc, header: ReaperPluginFunctionsHeader.}
 # proc LICE_FillTriangle(dest: ptr LICE_IBitmap; x1: cint; y1: cint; x2: cint; y2: cint; x3: cint; y3: cint; color: LICE_pixel; alpha: cfloat; mode: cint) {.importc, header: ReaperPluginFunctionsHeader.}
 # proc LICE_GetPixel(bm: ptr LICE_IBitmap; x: cint; y: cint): LICE_pixel {.importc, header: ReaperPluginFunctionsHeader.}
@@ -61,46 +63,89 @@ type
     r*, g*, b*: int
     a*: float
 
-  LiceError* = object of CatchableError
+  BitmapMode* = enum
+    NoContext,
+    WithContext,
+
+  BlitMode* = enum
+    Copy,
+    Add,
+    Dodge,
+    Multiply,
+    Overlay,
+    HsvAdjust,
+    ChannelCopy,
+
+  BlitFilter* = enum
+    None,
+    Bilinear,
 
   Bitmap* = object
+    mode: BitmapMode
     width, height: int
     licePtr: pointer
 
+# const
+#   LiceBlitModeMask = 0xff
+#   LiceBlitFilterMask = 0xff00
+#   LiceBlitIgnoreScaling = 0x20000
+#   LiceBlitUseAlpha = 0x10000
+
 {.push inline.}
 
-func rgb*(r, g, b: int, a: float): Color =
+func rgb*(r, g, b: int, a = 1.0): Color =
   Color(r: r, g: g, b: b, a: a)
 
 func toLicePixel(color: Color): LICE_pixel =
-  let alphaInt = (255 * color.a).int
+  # let alphaInt = (255.0 * color.a).int
+  let alphaInt = 255
   ((color.b and 0xff) or
   ((color.g and 0xff) shl 8) or
   ((color.r and 0xff) shl 16) or
   ((alphaInt and 0xff) shl 24)).uint32
 
-func liceBitmap(bitmap: Bitmap): ptr LICE_IBitmap =
-  if bitmap.licePtr != nil:
-    return cast[ptr LICE_IBitmap](bitmap.licePtr)
-  else:
-    raise newException(LiceError, "LICE_IBitmap pointer is nil.")
+func toLiceBitmapMode(mode: BitmapMode): cint =
+  case mode:
+  of NoContext: 0
+  of WithContext: 1
 
-func newBitmap*(width, height: int): Bitmap =
+func toLiceBlitFilter(filter: BlitFilter): cint =
+  case filter:
+  of None: 0
+  of Bilinear: 1
+
+func toLiceBlitMode(mode: BlitMode, filter = BlitFilter.None): cint =
+  case mode:
+  of Copy: 0 or filter.toLiceBlitFilter
+  of Add: 1 or filter.toLiceBlitFilter
+  of Dodge: 2 or filter.toLiceBlitFilter
+  of Multiply: 3 or filter.toLiceBlitFilter
+  of Overlay: 4 or filter.toLiceBlitFilter
+  of HsvAdjust: 5 or filter.toLiceBlitFilter
+  of ChannelCopy: 0xf0 or filter.toLiceBlitFilter
+
+template liceBitmap(bitmap: Bitmap): untyped =
+  cast[ptr LICE_IBitmap](bitmap.licePtr)
+
+func newBitmap*(width, height: int, mode = WithContext): Bitmap =
   result.width = width
   result.height = height
-  result.licePtr = LICE_CreateBitmap(1, width.cint, height.cint)
+  result.mode = mode
+  result.licePtr = LICE_CreateBitmap(mode.toLiceBitmapMode, width.cint, height.cint)
 
 func `=destroy`(bitmap: var Bitmap) =
   if bitmap.licePtr != nil:
     LICE_private_Destroy(bitmap.liceBitmap)
 
-func context*(bitmap: var Bitmap): HDC =
-  LICE_private_GetDC(bitmap.liceBitmap)
+func context*(bitmap: Bitmap): Option[HDC] =
+  if bitmap.licePtr != nil and bitmap.mode == WithContext:
+    return some(LICE_private_GetDC(bitmap.liceBitmap))
 
 func resize*(bitmap: var Bitmap, width, height: int) =
   bitmap.width = width
   bitmap.height = height
-  discard LICE_private_resize(bitmap.liceBitmap, width.cint, height.cint)
+  if bitmap.licePtr != nil:
+    discard LICE_private_resize(bitmap.liceBitmap, width.cint, height.cint)
 
 func width*(bitmap: Bitmap): int =
   bitmap.width
@@ -109,9 +154,19 @@ func height*(bitmap: Bitmap): int =
   bitmap.height
 
 func clear*(bitmap: Bitmap, color: Color) =
-  LICE_Clear(bitmap.liceBitmap, color.toLicePixel)
+  if bitmap.licePtr != nil:
+    LICE_Clear(bitmap.liceBitmap, color.toLicePixel)
 
-func drawRectangle*(bitmap: Bitmap, color: Color, x, y, width, height: int) =
-  LICE_DrawRect(bitmap.liceBitmap, x.cint, y.cint, width.cint, height.cint, color.toLicePixel, 1.0, 0)
+func drawBitmap*(self: Bitmap, other: Bitmap, x, y = 0, mode = BlitMode.Copy, filter = BlitFilter.None) =
+  if self.licePtr != nil and other.licePtr != nil:
+    LICE_Blit(self.liceBitmap, other.liceBitmap, x.cint, y.cint, 0, 0, other.width.cint, other.height.cint, 1.0, mode.toLiceBlitMode(filter))
+
+func drawRectangle*(bitmap: Bitmap, x, y, width, height: int, color: Color, mode = BlitMode.Copy) =
+  if bitmap.licePtr != nil:
+    LICE_DrawRect(bitmap.liceBitmap, x.cint, y.cint, width.cint, height.cint, color.toLicePixel, color.a.cfloat, mode.toLiceBlitMode)
+
+func fillRectangle*(bitmap: Bitmap, x, y, width, height: int, color: Color, mode = BlitMode.Copy) =
+  if bitmap.licePtr != nil:
+    LICE_FillRect(bitmap.liceBitmap, x.cint, y.cint, width.cint, height.cint, color.toLicePixel, color.a.cfloat, mode.toLiceBlitMode)
 
 {.pop.}

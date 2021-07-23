@@ -4,9 +4,13 @@ proc pitchCorrectionMain*() =
   var window = newWindow()
 
   window.title = "Pitch Correction"
+  window.backgroundColor = rgb(16, 16, 16)
   window.setBounds(400, 300, 800, 500)
 
-  var keyEditor = initKeyEditor()
+  var
+    keyEditor = initKeyEditor(600, 300)
+    editorX = 0
+    editorY = 0
 
   window.onMousePress = proc(button: MouseButton) =
     case button:
@@ -31,11 +35,11 @@ proc pitchCorrectionMain*() =
       window.redraw()
 
   window.onDraw = proc() =
-    keyEditor.draw(window)
+    keyEditor.updateBitmap()
+    window.bitmap.drawBitmap(keyEditor.bitmap)
 
   window.onResize = proc() =
-    keyEditor.width = window.width.float
-    keyEditor.height = window.height.float
+    # keyEditor.resize(window.width, window.height)
     window.redraw()
 
   window.onKeyPress = proc(key: KeyboardKey) =
