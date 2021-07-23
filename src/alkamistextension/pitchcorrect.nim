@@ -7,40 +7,25 @@ proc pitchCorrectionMain*() =
   window.backgroundColor = rgb(16, 16, 16)
   window.setBounds(400, 300, 800, 500)
 
-  var
-    keyEditor = initKeyEditor(600, 300)
-    editorX = 0
-    editorY = 0
+  var editor = initKeyEditor(0, 0, window.width, window.height)
 
   window.onMousePress = proc(button: MouseButton) =
-    case button:
-    of Middle:
-      keyEditor.xView.target = window.mouseX.float
-      keyEditor.yView.target = -window.mouseY.float
-    else: discard
+    editor.onMousePress(window, button)
+
+  window.onMouseRelease = proc(button: MouseButton) =
+    editor.onMouseRelease(window, button)
 
   window.onMouseMove = proc(x, y, xPrevious, yPrevious: int) =
-    let
-      xChange = (x - xPrevious).float
-      yChange = (y - yPrevious).float
-
-    if window.mouseButtonIsPressed(Middle):
-      if window.keyIsPressed(Shift):
-        keyEditor.xView.changeZoom(xChange)
-        keyEditor.yView.changeZoom(yChange)
-      else:
-        keyEditor.xView.changePan(xChange)
-        keyEditor.yView.changePan(-yChange)
-
-      window.redraw()
-
-  window.onDraw = proc() =
-    keyEditor.updateBitmap()
-    window.bitmap.drawBitmap(keyEditor.bitmap)
+    editor.onMouseMove(window,x, y, xPrevious, yPrevious)
 
   window.onResize = proc() =
-    # keyEditor.resize(window.width, window.height)
-    window.redraw()
+    editor.onResize(window)
+
+  window.onDraw = proc() =
+    editor.updateBitmap()
+    window.bitmap.drawBitmap(
+      editor.bitmap, editor.x, editor.y
+    )
 
   window.onKeyPress = proc(key: KeyboardKey) =
     case key:

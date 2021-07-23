@@ -1,6 +1,7 @@
 import
   std/math,
-  ../reaper/lice, viewaxis
+  ../reaper/[window, mouse, keyboard, lice],
+  viewaxis
 
 export viewaxis
 
@@ -14,6 +15,7 @@ const whiteKeyNumbers = getWhiteKeyNumbers()
 
 type
   KeyEditor* = object
+    x*, y*: int
     bitmap*: Bitmap
     numPitches*: int
     timeLength*: float
@@ -22,6 +24,7 @@ type
     backgroundColor*: Color
     blackKeyColor*: Color
     whiteKeyColor*: Color
+    mouseMiddleWasPressedInside*: bool
 
 func width*(editor: KeyEditor): int =
   editor.xView.scale.round.int
@@ -52,15 +55,56 @@ func timeToX*(editor: KeyEditor, time: float): float =
 func pitchToY*(editor: KeyEditor, pitch: float): float =
   editor.yView.zoom * editor.height.float * ((1.0 - (0.5 + pitch) / editor.numPitches.float) - editor.yView.pan)
 
-func initKeyEditor*(width, height: int): KeyEditor =
+func initKeyEditor*(x, y, width, height: int): KeyEditor =
   result.numPitches = 128
   result.xView = initViewAxis()
   result.yView = initViewAxis()
   result.resize(width, height)
   result.bitmap = newBitmap(width, height)
-  result.backgroundColor = rgb(30, 30, 30)
+  result.backgroundColor = rgb(16, 16, 16)
   result.blackKeyColor = rgb(60, 60, 60, 1.0)
   result.whiteKeyColor = rgb(110, 110, 110, 1.0)
+
+func positionIsInside*(editor: KeyEditor, x, y: int): bool =
+  x >= editor.x and
+  x <= editor.x + editor.width and
+  y >= editor.y and
+  y <= editor.y + editor.height
+
+func onMousePress*(editor: var KeyEditor, window: Window, button: MouseButton) =
+  case button:
+  of Middle:
+    if editor.positionIsInside(window.mouseX, window.mouseY):
+      editor.mouseMiddleWasPressedInside = true
+      editor.xView.target = window.mouseX.float
+      editor.yView.target = -window.mouseY.float
+  else: discard
+
+func onMouseRelease*(editor: var KeyEditor, window: Window, button: MouseButton) =
+  case button:
+  of Middle:
+    editor.mouseMiddleWasPressedInside = false
+  else: discard
+
+func onMouseMove*(editor: var KeyEditor, window: Window, x, y, xPrevious, yPrevious: int) =
+  let
+    xChange = (x - xPrevious).float
+    yChange = (y - yPrevious).float
+
+  if editor.mouseMiddleWasPressedInside and
+     window.mouseButtonIsPressed(Middle):
+    if window.keyIsPressed(Shift):
+      editor.xView.changeZoom(xChange)
+      editor.yView.changeZoom(yChange)
+    else:
+      editor.xView.changePan(xChange)
+      editor.yView.changePan(-yChange)
+
+    window.redraw()
+
+func onResize*(editor: var KeyEditor, window: Window) =
+  editor.resize(window.width, window.height)
+  window.redraw()
 
 func updateBitmap*(editor: KeyEditor) =
   editor.bitmap.clear(editor.backgroundColor)

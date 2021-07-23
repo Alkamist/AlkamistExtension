@@ -1,6 +1,6 @@
 import
   std/[tables, options],
-  winapi, lice, keyboard, mouse
+  winapi, lice, keyboard, mouse, functions
 
 type
   Window* = ref object
