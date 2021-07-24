@@ -1,17 +1,9 @@
 import
   std/[math, options, random],
   ../reaper/[window, mouse, keyboard, lice],
-  viewaxis
+  viewaxis, utility
 
 export viewaxis
-
-func getWhiteKeyNumbers(): seq[int] =
-  const whiteKeyMultiples = [0, 2, 3, 5, 7, 8, 10]
-  for i in 0 .. 10:
-    for multiple in whiteKeyMultiples:
-      result.add i * 12 + multiple
-
-const whiteKeyNumbers = getWhiteKeyNumbers()
 
 type
   PitchPoint* = object
@@ -24,7 +16,6 @@ type
   PitchEditor* = ref object
     x*, y*: int
     bitmap*: Bitmap
-    numPitches*: int
     timeLength*: float
     xView*: ViewAxis
     yView*: ViewAxis
@@ -57,18 +48,17 @@ func xToTime*(editor: PitchEditor, x: float): float =
   editor.timeLength * (editor.xView.pan + x / (editor.width.float * editor.xView.zoom))
 
 func yToPitch*(editor: PitchEditor, y: float): float =
-  editor.numPitches.float * (1.0 - (editor.yView.pan + y / (editor.height.float * editor.yView.zoom))) - 0.5
+  numKeys.float * (1.0 - (editor.yView.pan + y / (editor.height.float * editor.yView.zoom))) - 0.5
 
 func timeToX*(editor: PitchEditor, time: float): float =
   editor.xView.zoom * editor.width.float * (time / editor.timeLength - editor.xView.pan)
 
 func pitchToY*(editor: PitchEditor, pitch: float): float =
-  editor.yView.zoom * editor.height.float * ((1.0 - (0.5 + pitch) / editor.numPitches.float) - editor.yView.pan)
+  editor.yView.zoom * editor.height.float * ((1.0 - (0.5 + pitch) / numKeys.float) - editor.yView.pan)
 
 proc newPitchEditor*(x, y, width, height: int): PitchEditor =
   result = PitchEditor()
   result.timeLength = 10.0
-  result.numPitches = 128
   result.xView = initViewAxis()
   result.yView = initViewAxis()
   result.resize(width, height)
@@ -86,7 +76,7 @@ proc newPitchEditor*(x, y, width, height: int): PitchEditor =
       let pointNumber = 5 * correctionId + pointId
       correction.points.add PitchPoint(
         time: pointNumber.float,
-        pitch: rand(128).float,
+        pitch: rand(numKeys).float,
       )
 
     result.corrections.add correction
@@ -96,6 +86,18 @@ func positionIsInside*(editor: PitchEditor, x, y: int): bool =
   x <= editor.x + editor.width and
   y >= editor.y and
   y <= editor.y + editor.height
+
+# func xIsBoundedByPitchCorrection(editor: PitchEditor, correction: PitchCorrection, x: int): bool =
+#   let numPoints = correction.points.len
+#   if numPoints < 2:
+#     return false
+
+#   let
+#     xTime = editor.xToTime(x.float)
+#     firstPoint = correction.points[0]
+#     lastPoint = correction.points[numPoints-1]
+
+#   xTime >= firstPoint.time and xTime <= lastPoint.time
 
 # func calculateClosestPointToMouse(editor: var PitchEditor, window: Window) =
 #   editor.closestPointToMouse = none(ptr PitchPoint)
@@ -163,15 +165,15 @@ func onResize*(editor: var PitchEditor, window: Window) =
 
 func drawKeys(editor: PitchEditor) =
   var
-    keyEndPrevious = editor.pitchToY(editor.numPitches.float + 0.5)
+    keyEndPrevious = editor.pitchToY(numKeys.float + 0.5)
     keyColorPrevious: Option[Color]
 
-  for pitchId in 0 ..< editor.numPitches:
+  for pitchId in 0 ..< numKeys:
     let
-      keyEnd = editor.pitchToY(editor.numPitches.float - (pitchId + 1).float + 0.5)
+      keyEnd = editor.pitchToY(numKeys.float - (pitchId + 1).float + 0.5)
       keyHeight = keyEnd - keyEndPrevious
       keyColor =
-        if whiteKeyNumbers.contains(pitchId):
+        if isWhiteKey(pitchId):
           editor.whiteKeyColor
         else:
           editor.blackKeyColor
