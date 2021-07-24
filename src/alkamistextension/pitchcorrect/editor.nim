@@ -1,5 +1,5 @@
 import
-  std/math,
+  std/[math, options],
   ../reaper/[window, mouse, keyboard, lice],
   viewaxis
 
@@ -14,7 +14,7 @@ func getWhiteKeyNumbers(): seq[int] =
 const whiteKeyNumbers = getWhiteKeyNumbers()
 
 type
-  KeyEditor* = object
+  PitchEditor* = object
     x*, y*: int
     bitmap*: Bitmap
     numPitches*: int
@@ -26,36 +26,36 @@ type
     whiteKeyColor*: Color
     mouseMiddleWasPressedInside*: bool
 
-func width*(editor: KeyEditor): int =
+func width*(editor: PitchEditor): int =
   editor.xView.scale.round.int
 
-func height*(editor: KeyEditor): int =
+func height*(editor: PitchEditor): int =
   editor.yView.scale.round.int
 
-proc resize*(editor: var KeyEditor, width, height: int) =
+proc resize*(editor: var PitchEditor, width, height: int) =
   editor.xView.scale = width.float
   editor.yView.scale = height.float
   editor.bitmap.resize(width, height)
 
-proc `width=`*(editor: var KeyEditor, value: int) =
+proc `width=`*(editor: var PitchEditor, value: int) =
   editor.resize(value, editor.height)
 
-proc `height=`*(editor: var KeyEditor, value: int) =
+proc `height=`*(editor: var PitchEditor, value: int) =
   editor.resize(editor.width, value)
 
-func xToTime*(editor: KeyEditor, x: float): float =
+func xToTime*(editor: PitchEditor, x: float): float =
   editor.timeLength * (editor.xView.pan + x / (editor.width.float * editor.xView.zoom))
 
-func yToPitch*(editor: KeyEditor, y: float): float =
+func yToPitch*(editor: PitchEditor, y: float): float =
   editor.numPitches.float * (1.0 - (editor.yView.pan + y / (editor.height.float * editor.yView.zoom))) - 0.5
 
-func timeToX*(editor: KeyEditor, time: float): float =
+func timeToX*(editor: PitchEditor, time: float): float =
   editor.xView.zoom * editor.width.float * (time / editor.timeLength - editor.xView.pan)
 
-func pitchToY*(editor: KeyEditor, pitch: float): float =
+func pitchToY*(editor: PitchEditor, pitch: float): float =
   editor.yView.zoom * editor.height.float * ((1.0 - (0.5 + pitch) / editor.numPitches.float) - editor.yView.pan)
 
-func initKeyEditor*(x, y, width, height: int): KeyEditor =
+func initPitchEditor*(x, y, width, height: int): PitchEditor =
   result.numPitches = 128
   result.xView = initViewAxis()
   result.yView = initViewAxis()
@@ -65,13 +65,13 @@ func initKeyEditor*(x, y, width, height: int): KeyEditor =
   result.blackKeyColor = rgb(60, 60, 60, 1.0)
   result.whiteKeyColor = rgb(110, 110, 110, 1.0)
 
-func positionIsInside*(editor: KeyEditor, x, y: int): bool =
+func positionIsInside*(editor: PitchEditor, x, y: int): bool =
   x >= editor.x and
   x <= editor.x + editor.width and
   y >= editor.y and
   y <= editor.y + editor.height
 
-func onMousePress*(editor: var KeyEditor, window: Window, button: MouseButton) =
+func onMousePress*(editor: var PitchEditor, window: Window, button: MouseButton) =
   case button:
   of Middle:
     if editor.positionIsInside(window.mouseX, window.mouseY):
@@ -80,13 +80,13 @@ func onMousePress*(editor: var KeyEditor, window: Window, button: MouseButton) =
       editor.yView.target = -window.mouseY.float
   else: discard
 
-func onMouseRelease*(editor: var KeyEditor, window: Window, button: MouseButton) =
+func onMouseRelease*(editor: var PitchEditor, window: Window, button: MouseButton) =
   case button:
   of Middle:
     editor.mouseMiddleWasPressedInside = false
   else: discard
 
-func onMouseMove*(editor: var KeyEditor, window: Window, x, y, xPrevious, yPrevious: int) =
+func onMouseMove*(editor: var PitchEditor, window: Window, x, y, xPrevious, yPrevious: int) =
   let
     xChange = (x - xPrevious).float
     yChange = (y - yPrevious).float
@@ -102,14 +102,16 @@ func onMouseMove*(editor: var KeyEditor, window: Window, x, y, xPrevious, yPrevi
 
     window.redraw()
 
-func onResize*(editor: var KeyEditor, window: Window) =
+func onResize*(editor: var PitchEditor, window: Window) =
   editor.resize(window.width, window.height)
   window.redraw()
 
-func updateBitmap*(editor: KeyEditor) =
+func updateBitmap*(editor: PitchEditor) =
   editor.bitmap.clear(editor.backgroundColor)
 
-  var keyEndPrevious = editor.pitchToY(editor.numPitches.float + 0.5)
+  var
+    keyEndPrevious = editor.pitchToY(editor.numPitches.float + 0.5)
+    keyColorPrevious: Option[Color]
 
   for pitchId in 0 ..< editor.numPitches:
     let
@@ -123,4 +125,8 @@ func updateBitmap*(editor: KeyEditor) =
 
     editor.bitmap.fillRectangle(0, keyEnd.round.int, editor.width, keyHeight.round.int + 1, keyColor)
 
+    if keyColorPrevious.isSome and keyColorPrevious.get == editor.whiteKeyColor:
+      editor.bitmap.drawLine(0, keyEnd.round.int, editor.width, keyEnd.round.int, editor.blackKeyColor)
+
     keyEndPrevious = keyEnd
+    keyColorPrevious = some(keyColor)

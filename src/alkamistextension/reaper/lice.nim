@@ -47,7 +47,7 @@ proc LICE_FillRect(dest: ptr LICE_IBitmap; x: cint; y: cint; w: cint; h: cint; c
 # proc LICE_GetPixel(bm: ptr LICE_IBitmap; x: cint; y: cint): LICE_pixel {.importc, header: ReaperPluginFunctionsHeader.}
 # proc LICE_GradRect(dest: ptr LICE_IBitmap; dstx: cint; dsty: cint; dstw: cint; dsth: cint; ir: cfloat; ig: cfloat; ib: cfloat; ia: cfloat; drdx: cfloat; dgdx: cfloat; dbdx: cfloat; dadx: cfloat; drdy: cfloat; dgdy: cfloat; dbdy: cfloat; dady: cfloat; mode: cint) {.importc, header: ReaperPluginFunctionsHeader.}
 # proc LICE_Line(dest: ptr LICE_IBitmap; x1: cfloat; y1: cfloat; x2: cfloat; y2: cfloat; color: LICE_pixel; alpha: cfloat; mode: cint; aa: bool) {.importc, header: ReaperPluginFunctionsHeader.}
-# proc LICE_LineInt(dest: ptr LICE_IBitmap; x1: cint; y1: cint; x2: cint; y2: cint; color: LICE_pixel; alpha: cfloat; mode: cint; aa: bool) {.importc, header: ReaperPluginFunctionsHeader.}
+proc LICE_LineInt(dest: ptr LICE_IBitmap; x1: cint; y1: cint; x2: cint; y2: cint; color: LICE_pixel; alpha: cfloat; mode: cint; aa: bool) {.importc, header: ReaperPluginFunctionsHeader.}
 # proc LICE_LoadPNG(filename: cstring; bmp: ptr LICE_IBitmap): ptr LICE_IBitmap {.importc, header: ReaperPluginFunctionsHeader.}
 # proc LICE_LoadPNGFromResource(hInst: HINSTANCE; resid: cstring; bmp: ptr LICE_IBitmap): ptr LICE_IBitmap {.importc, header: ReaperPluginFunctionsHeader.}
 # proc LICE_MeasureText(string: cstring; w: ptr cint; h: ptr cint) {.importc, header: ReaperPluginFunctionsHeader.}
@@ -168,5 +168,9 @@ func drawRectangle*(bitmap: Bitmap, x, y, width, height: int, color: Color, mode
 func fillRectangle*(bitmap: Bitmap, x, y, width, height: int, color: Color, mode = BlitMode.Copy) =
   if bitmap.licePtr != nil:
     LICE_FillRect(bitmap.liceBitmap, x.cint, y.cint, width.cint, height.cint, color.toLicePixel, color.a.cfloat, mode.toLiceBlitMode)
+
+func drawLine*(bitmap: Bitmap, x1, y1, x2, y2: int, color: Color, antiAlias = true, mode = BlitMode.Copy) =
+  if bitmap.licePtr != nil:
+    LICE_LineInt(bitmap.liceBitmap, x1.cint, y1.cint, x2.cint, y2.cint, color.toLicePixel, color.a.cfloat, mode.toLiceBlitMode, antiAlias)
 
 {.pop.}
