@@ -6,7 +6,7 @@ import
 export viewaxis
 
 func getWhiteKeyNumbers(): seq[int] =
-  const whiteKeyMultiples = [1, 3, 4, 6, 8, 9, 11]
+  const whiteKeyMultiples = [0, 2, 3, 5, 7, 8, 10]
   for i in 0 .. 10:
     for multiple in whiteKeyMultiples:
       result.add i * 12 + multiple
