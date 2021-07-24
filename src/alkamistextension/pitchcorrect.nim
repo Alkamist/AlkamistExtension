@@ -5,7 +5,7 @@ proc pitchCorrectionMain*() =
 
   window.title = "Pitch Correction"
   window.backgroundColor = rgb(16, 16, 16)
-  window.setBounds(400, 300, 800, 500)
+  window.setBounds(300, 200, 1200, 800)
 
   var editor = newPitchEditor(0, 0, window.width, window.height)
 

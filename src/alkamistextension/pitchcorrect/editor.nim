@@ -14,9 +14,12 @@ func getWhiteKeyNumbers(): seq[int] =
 const whiteKeyNumbers = getWhiteKeyNumbers()
 
 type
-  CorrectionPoint* = object
+  PitchPoint* = object
     time*: float
     pitch*: float
+
+  PitchCorrection* = object
+    points*: seq[PitchPoint]
 
   PitchEditor* = ref object
     x*, y*: int
@@ -31,8 +34,7 @@ type
     correctionPointSelectionDistance*: float
     correctionPointVisualRadius*: float
     mouseMiddleWasPressedInside: bool
-    closestPointToMouse: Option[ptr CorrectionPoint]
-    correctionPoints: seq[CorrectionPoint]
+    corrections: seq[PitchCorrection]
 
 func width*(editor: PitchEditor): int =
   editor.xView.scale.round.int
@@ -77,11 +79,17 @@ proc newPitchEditor*(x, y, width, height: int): PitchEditor =
   result.correctionPointSelectionDistance = 5.0
   result.correctionPointVisualRadius = 3.0
 
-  for i in 0 ..< 100:
-    result.correctionPoints.add CorrectionPoint(
-      time: result.timeLength * (i + 1).float / 100.0,
-      pitch: rand(128).float,
-    )
+  for correctionId in 0 ..< 10:
+    var correction = PitchCorrection()
+
+    for pointId in 0 ..< 5:
+      let pointNumber = 5 * correctionId + pointId
+      correction.points.add PitchPoint(
+        time: pointNumber.float,
+        pitch: rand(128).float,
+      )
+
+    result.corrections.add correction
 
 func positionIsInside*(editor: PitchEditor, x, y: int): bool =
   x >= editor.x and
@@ -89,32 +97,32 @@ func positionIsInside*(editor: PitchEditor, x, y: int): bool =
   y >= editor.y and
   y <= editor.y + editor.height
 
-func calculateClosestPointToMouse(editor: var PitchEditor, window: Window) =
-  editor.closestPointToMouse = none(ptr CorrectionPoint)
+# func calculateClosestPointToMouse(editor: var PitchEditor, window: Window) =
+#   editor.closestPointToMouse = none(ptr PitchPoint)
 
-  var closestX, closestY, closestDistance: float
+#   var closestX, closestY, closestDistance: float
 
-  for point in editor.correctionPoints.mitems:
-    let
-      mouseX = window.mouseX.float
-      mouseY = window.mouseY.float
-      pointX = editor.timeToX(point.time)
-      pointY = editor.pitchToY(point.pitch)
-      mouseDistance = sqrt(pow(mouseY - pointY, 2) + pow(mouseX - pointX, 2))
-      mouseIsInside = mouseDistance <= editor.correctionPointSelectionDistance
+#   for point in editor.correctionPoints.mitems:
+#     let
+#       mouseX = window.mouseX.float
+#       mouseY = window.mouseY.float
+#       pointX = editor.timeToX(point.time)
+#       pointY = editor.pitchToY(point.pitch)
+#       mouseDistance = sqrt(pow(mouseY - pointY, 2) + pow(mouseX - pointX, 2))
+#       mouseIsInside = mouseDistance <= editor.correctionPointSelectionDistance
 
-    if mouseIsInside:
-      if editor.closestPointToMouse.isSome:
-        if mouseDistance < closestDistance:
-          editor.closestPointToMouse = some(point.addr)
-          closestX = pointX
-          closestY = pointY
-          closestDistance = mouseDistance
-      else:
-        editor.closestPointToMouse = some(point.addr)
-        closestX = pointX
-        closestY = pointY
-        closestDistance = mouseDistance
+#     if mouseIsInside:
+#       if editor.closestPointToMouse.isSome:
+#         if mouseDistance < closestDistance:
+#           editor.closestPointToMouse = some(point.addr)
+#           closestX = pointX
+#           closestY = pointY
+#           closestDistance = mouseDistance
+#       else:
+#         editor.closestPointToMouse = some(point.addr)
+#         closestX = pointX
+#         closestY = pointY
+#         closestDistance = mouseDistance
 
 func onMousePress*(editor: var PitchEditor, window: Window, button: MouseButton) =
   case button:
@@ -136,7 +144,7 @@ func onMouseMove*(editor: var PitchEditor, window: Window, x, y, xPrevious, yPre
     xChange = (x - xPrevious).float
     yChange = (y - yPrevious).float
 
-  editor.calculateClosestPointToMouse(window)
+  # editor.calculateClosestPointToMouse(window)
 
   if editor.mouseMiddleWasPressedInside and
      window.mouseButtonIsPressed(Middle):
@@ -176,21 +184,33 @@ func drawKeys(editor: PitchEditor) =
     keyEndPrevious = keyEnd
     keyColorPrevious = some(keyColor)
 
-func drawCorrectionPoints(editor: PitchEditor, window: Window) =
-  for point in editor.correctionPoints.mitems:
-    let
-      x = editor.timeToX(point.time)
-      y = editor.pitchToY(point.pitch)
-      r = editor.correctionPointVisualRadius
+func drawPitchCorrections(editor: PitchEditor, window: Window) =
+  let color = rgb(109, 186, 191)
 
-    editor.bitmap.fillCircle(x, y, r, rgb(160, 80, 255))
-    editor.bitmap.drawCircle(x, y, r, rgb(255, 255, 255, 0.35))
+  for correction in editor.corrections:
+    let lastPointId = correction.points.len - 1
 
-    if editor.closestPointToMouse.isSome and
-       point.addr == editor.closestPointToMouse.get:
-      editor.bitmap.fillCircle(x, y, r, rgb(255, 255, 255, 0.35))
+    for i, point in correction.points:
+      let
+        x = editor.timeToX(point.time)
+        y = editor.pitchToY(point.pitch)
+        r = editor.correctionPointVisualRadius
+
+      if i < lastPointId:
+        let
+          nextPoint = correction.points[i + 1]
+          nextX = editor.timeToX(nextPoint.time)
+          nextY = editor.pitchToY(nextPoint.pitch)
+        editor.bitmap.drawLine(x, y, nextX, nextY, color)
+
+      editor.bitmap.fillCircle(x, y, r, rgb(29, 81, 84))
+      editor.bitmap.drawCircle(x, y, r, color)
+
+      # if editor.closestPointToMouse.isSome and
+      #   point.addr == editor.closestPointToMouse.get:
+      #   editor.bitmap.fillCircle(x, y, r, rgb(255, 255, 255, 0.35))
 
 func updateBitmap*(editor: PitchEditor, window: Window) =
   editor.bitmap.clear(editor.backgroundColor)
   editor.drawKeys()
-  editor.drawCorrectionPoints(window)
+  editor.drawPitchCorrections(window)
