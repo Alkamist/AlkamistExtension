@@ -22,7 +22,7 @@ proc pitchCorrectionMain*() =
     editor.onResize(window)
 
   window.onDraw = proc() =
-    editor.updateBitmap()
+    editor.updateBitmap(window)
     window.bitmap.drawBitmap(
       editor.bitmap, editor.x, editor.y
     )

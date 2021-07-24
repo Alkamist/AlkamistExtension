@@ -26,7 +26,7 @@ proc LICE_private_resize(bm: ptr LICE_IBitmap; w: cint; h: cint): bool {.importc
 proc LICE_Blit(dest: ptr LICE_IBitmap; src: ptr LICE_IBitmap; dstx: cint; dsty: cint; srcx: cint; srcy: cint; srcw: cint; srch: cint; alpha: cfloat; mode: cint) {.importc, header: ReaperPluginFunctionsHeader.}
 # proc LICE_Blur(dest: ptr LICE_IBitmap; src: ptr LICE_IBitmap; dstx: cint; dsty: cint; srcx: cint; srcy: cint; srcw: cint; srch: cint) {.importc, header: ReaperPluginFunctionsHeader.}
 # proc LICE_BorderedRect(dest: ptr LICE_IBitmap; x: cint; y: cint; w: cint; h: cint; bgcolor: LICE_pixel; fgcolor: LICE_pixel; alpha: cfloat; mode: cint) {.importc, header: ReaperPluginFunctionsHeader.}
-# proc LICE_Circle(dest: ptr LICE_IBitmap; cx: cfloat; cy: cfloat; r: cfloat; color: LICE_pixel; alpha: cfloat; mode: cint; aa: bool) {.importc, header: ReaperPluginFunctionsHeader.}
+proc LICE_Circle(dest: ptr LICE_IBitmap; cx: cfloat; cy: cfloat; r: cfloat; color: LICE_pixel; alpha: cfloat; mode: cint; aa: bool) {.importc, header: ReaperPluginFunctionsHeader.}
 proc LICE_Clear(dest: ptr LICE_IBitmap; color: LICE_pixel) {.importc, header: ReaperPluginFunctionsHeader.}
 # proc LICE_ClearRect(dest: ptr LICE_IBitmap; x: cint; y: cint; w: cint; h: cint; mask: LICE_pixel; orbits: LICE_pixel) {.importc, header: ReaperPluginFunctionsHeader.}
 # proc LICE_ClipLine(pX1Out: ptr cint; pY1Out: ptr cint; pX2Out: ptr cint; pY2Out: ptr cint; xLo: cint; yLo: cint; xHi: cint; yHi: cint): bool {.importc, header: ReaperPluginFunctionsHeader.}
@@ -39,15 +39,15 @@ proc LICE_CreateBitmap(mode: cint; w: cint; h: cint): ptr LICE_IBitmap {.importc
 proc LICE_DrawRect(dest: ptr LICE_IBitmap; x: cint; y: cint; w: cint; h: cint; color: LICE_pixel; alpha: cfloat; mode: cint) {.importc, header: ReaperPluginFunctionsHeader.}
 # proc LICE_DrawText(bm: ptr LICE_IBitmap; x: cint; y: cint; string: cstring; color: LICE_pixel; alpha: cfloat; mode: cint) {.importc, header: ReaperPluginFunctionsHeader.}
 # proc LICE_FillCBezier(dest: ptr LICE_IBitmap; xstart: cdouble; ystart: cdouble; xctl1: cdouble; yctl1: cdouble; xctl2: cdouble; yctl2: cdouble; xend: cdouble; yend: cdouble; yfill: cint; color: LICE_pixel; alpha: cfloat; mode: cint; aa: bool; tol: cdouble) {.importc, header: ReaperPluginFunctionsHeader.}
-# proc LICE_FillCircle(dest: ptr LICE_IBitmap; cx: cfloat; cy: cfloat; r: cfloat; color: LICE_pixel; alpha: cfloat; mode: cint; aa: bool) {.importc, header: ReaperPluginFunctionsHeader.}
+proc LICE_FillCircle(dest: ptr LICE_IBitmap; cx: cfloat; cy: cfloat; r: cfloat; color: LICE_pixel; alpha: cfloat; mode: cint; aa: bool) {.importc, header: ReaperPluginFunctionsHeader.}
 # proc LICE_FillConvexPolygon(dest: ptr LICE_IBitmap; x: ptr cint; y: ptr cint; npoints: cint; color: LICE_pixel; alpha: cfloat; mode: cint) {.importc, header: ReaperPluginFunctionsHeader.}
 proc LICE_FillRect(dest: ptr LICE_IBitmap; x: cint; y: cint; w: cint; h: cint; color: LICE_pixel; alpha: cfloat; mode: cint) {.importc, header: ReaperPluginFunctionsHeader.}
 # proc LICE_FillTrapezoid(dest: ptr LICE_IBitmap; x1a: cint; x1b: cint; y1: cint; x2a: cint; x2b: cint; y2: cint; color: LICE_pixel; alpha: cfloat; mode: cint) {.importc, header: ReaperPluginFunctionsHeader.}
 # proc LICE_FillTriangle(dest: ptr LICE_IBitmap; x1: cint; y1: cint; x2: cint; y2: cint; x3: cint; y3: cint; color: LICE_pixel; alpha: cfloat; mode: cint) {.importc, header: ReaperPluginFunctionsHeader.}
 # proc LICE_GetPixel(bm: ptr LICE_IBitmap; x: cint; y: cint): LICE_pixel {.importc, header: ReaperPluginFunctionsHeader.}
 # proc LICE_GradRect(dest: ptr LICE_IBitmap; dstx: cint; dsty: cint; dstw: cint; dsth: cint; ir: cfloat; ig: cfloat; ib: cfloat; ia: cfloat; drdx: cfloat; dgdx: cfloat; dbdx: cfloat; dadx: cfloat; drdy: cfloat; dgdy: cfloat; dbdy: cfloat; dady: cfloat; mode: cint) {.importc, header: ReaperPluginFunctionsHeader.}
-# proc LICE_Line(dest: ptr LICE_IBitmap; x1: cfloat; y1: cfloat; x2: cfloat; y2: cfloat; color: LICE_pixel; alpha: cfloat; mode: cint; aa: bool) {.importc, header: ReaperPluginFunctionsHeader.}
-proc LICE_LineInt(dest: ptr LICE_IBitmap; x1: cint; y1: cint; x2: cint; y2: cint; color: LICE_pixel; alpha: cfloat; mode: cint; aa: bool) {.importc, header: ReaperPluginFunctionsHeader.}
+proc LICE_Line(dest: ptr LICE_IBitmap; x1: cfloat; y1: cfloat; x2: cfloat; y2: cfloat; color: LICE_pixel; alpha: cfloat; mode: cint; aa: bool) {.importc, header: ReaperPluginFunctionsHeader.}
+# proc LICE_LineInt(dest: ptr LICE_IBitmap; x1: cint; y1: cint; x2: cint; y2: cint; color: LICE_pixel; alpha: cfloat; mode: cint; aa: bool) {.importc, header: ReaperPluginFunctionsHeader.}
 # proc LICE_LoadPNG(filename: cstring; bmp: ptr LICE_IBitmap): ptr LICE_IBitmap {.importc, header: ReaperPluginFunctionsHeader.}
 # proc LICE_LoadPNGFromResource(hInst: HINSTANCE; resid: cstring; bmp: ptr LICE_IBitmap): ptr LICE_IBitmap {.importc, header: ReaperPluginFunctionsHeader.}
 # proc LICE_MeasureText(string: cstring; w: ptr cint; h: ptr cint) {.importc, header: ReaperPluginFunctionsHeader.}
@@ -169,8 +169,16 @@ func fillRectangle*(bitmap: Bitmap, x, y, width, height: int, color: Color, mode
   if bitmap.licePtr != nil:
     LICE_FillRect(bitmap.liceBitmap, x.cint, y.cint, width.cint, height.cint, color.toLicePixel, color.a.cfloat, mode.toLiceBlitMode)
 
-func drawLine*(bitmap: Bitmap, x1, y1, x2, y2: int, color: Color, antiAlias = true, mode = BlitMode.Copy) =
+func drawCircle*(bitmap: Bitmap, x, y, radius: float, color: Color, antiAlias = true, mode = BlitMode.Copy) =
   if bitmap.licePtr != nil:
-    LICE_LineInt(bitmap.liceBitmap, x1.cint, y1.cint, x2.cint, y2.cint, color.toLicePixel, color.a.cfloat, mode.toLiceBlitMode, antiAlias)
+    LICE_Circle(bitmap.liceBitmap, x.cfloat, y.cfloat, radius.cfloat, color.toLicePixel, color.a.cfloat, mode.toLiceBlitMode, antiAlias)
+
+func fillCircle*(bitmap: Bitmap, x, y, radius: float, color: Color, antiAlias = true, mode = BlitMode.Copy) =
+  if bitmap.licePtr != nil:
+    LICE_FillCircle(bitmap.liceBitmap, x.cfloat, y.cfloat, radius.cfloat, color.toLicePixel, color.a.cfloat, mode.toLiceBlitMode, antiAlias)
+
+func drawLine*(bitmap: Bitmap, x1, y1, x2, y2: float, color: Color, antiAlias = true, mode = BlitMode.Copy) =
+  if bitmap.licePtr != nil:
+    LICE_Line(bitmap.liceBitmap, x1.cfloat, y1.cfloat, x2.cfloat, y2.cfloat, color.toLicePixel, color.a.cfloat, mode.toLiceBlitMode, antiAlias)
 
 {.pop.}
