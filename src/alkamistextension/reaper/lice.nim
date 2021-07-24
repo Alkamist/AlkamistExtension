@@ -127,7 +127,7 @@ func toLiceBlitMode(mode: BlitMode, filter = BlitFilter.None): cint =
 template liceBitmap(bitmap: Bitmap): untyped =
   cast[ptr LICE_IBitmap](bitmap.licePtr)
 
-func newBitmap*(width, height: int, mode = WithContext): Bitmap =
+func initBitmap*(width, height: int, mode = WithContext): Bitmap =
   result.width = width
   result.height = height
   result.mode = mode

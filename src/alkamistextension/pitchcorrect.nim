@@ -7,7 +7,7 @@ proc pitchCorrectionMain*() =
   window.backgroundColor = rgb(16, 16, 16)
   window.setBounds(400, 300, 800, 500)
 
-  var editor = initPitchEditor(0, 0, window.width, window.height)
+  var editor = newPitchEditor(0, 0, window.width, window.height)
 
   window.onMousePress = proc(button: MouseButton) =
     editor.onMousePress(window, button)

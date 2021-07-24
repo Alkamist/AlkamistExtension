@@ -210,6 +210,6 @@ proc newWindow*(hInstance: HINSTANCE, parent: HWND): Window =
     result.title = "Unnamed Window"
     result.updateBounds()
     result.backgroundColor = rgb(0, 0, 0)
-    result.bitmap = newBitmap(0, 0)
+    result.bitmap = initBitmap(0, 0)
     hWndWindows[result.hWnd] = result
     discard ShowWindow(result.hWnd, SW_SHOW)
