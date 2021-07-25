@@ -1,49 +1,34 @@
 import
   std/[tables, options],
-  winapi, lice, keyboard, mouse
+  winapi, lice, units, input
 
 type
   Window* = ref object
-    bitmap*: Bitmap
+    image*: Image
     backgroundColor*: Color
+    input*: Input
+    dpi*: Dpi
     onUpdate*: proc()
     onDraw*: proc()
     onResize*: proc()
     onMove*: proc()
-    onMouseMove*: proc(x, y, xPrevious, yPrevious: int)
-    onMousePress*: proc(button: MouseButton)
-    onMouseRelease*: proc(button: MouseButton)
-    onKeyPress*: proc(key: KeyboardKey)
-    onKeyRelease*: proc(key: KeyboardKey)
-    mouseX, mouseY: int
-    mouseXPrevious, mouseYPrevious: int
-    keyStates: array[KeyboardKey, bool]
-    mouseButtonStates: array[MouseButton, bool]
+    onMouseMove*: proc()
+    onMousePress*: proc()
+    onMouseRelease*: proc()
+    onKeyPress*: proc()
+    onKeyRelease*: proc()
     hasUpdateLoop: bool
     hdc: HDC
     paintStruct: PAINTSTRUCT
     hInstance: HINSTANCE
     hWnd: HWND
     parent: HWND
-    bounds: RECT
+    rect: RECT
     title: string
 
 var hWndWindows = initTable[HWND, Window]()
 
-func setBounds*(window: Window, x, y, width, height: int) =
-  discard SetWindowPos(window.hWnd, HWND_TOP, x, y, width, height, SWP_NOZORDER)
-
-func mouseX*(window: Window): int =
-  window.mouseX
-
-func mouseY*(window: Window): int =
-  window.mouseY
-
-func keyIsPressed*(window: Window, key: KeyboardKey): bool =
-  window.keyStates[key]
-
-func mouseButtonIsPressed*(window: Window, button: MouseButton): bool =
-  window.mouseButtonStates[button]
+{.push inline.}
 
 func title*(window: Window): string =
   window.title
@@ -52,23 +37,40 @@ func `title=`*(window: var Window, value: string) =
   window.title = value
   discard SetWindowText(window.hWnd, value)
 
-func left*(window: Window): int =
-  window.bounds.left
+func left*(window: Window): Inches =
+  window.rect.left / window.dpi
 
-func right*(window: Window): int =
-  window.bounds.right
+func right*(window: Window): Inches =
+  window.rect.right / window.dpi
 
-func top*(window: Window): int =
-  window.bounds.top
+func top*(window: Window): Inches =
+  window.rect.top / window.dpi
 
-func bottom*(window: Window): int =
-  window.bounds.bottom
+func bottom*(window: Window): Inches =
+  window.rect.bottom / window.dpi
 
-func width*(window: Window): int =
+func x*(window: Window): Inches =
+  window.left
+
+func y*(window: Window): Inches =
+  window.top
+
+func position*(window: Window): VisualPosition =
+  result.x = window.x
+  result.y = window.y
+
+func width*(window: Window): Inches =
   abs(window.right - window.left)
 
-func height*(window: Window): int =
+func height*(window: Window): Inches =
   abs(window.bottom - window.top)
+
+{.pop.}
+
+func setBounds*(window: Window, x, y, width, height: Inches) =
+  template toCint(inches: Inches): cint =
+    (inches * window.dpi).cint
+  discard SetWindowPos(window.hWnd, HWND_TOP, x.toCint, y.toCint, width.toCint, height.toCint, SWP_NOZORDER)
 
 func enableUpdateLoop*(window: var Window, loopEvery: UINT) =
   discard SetTimer(window.hWnd, 1, loopEvery, nil)
@@ -83,7 +85,7 @@ func redraw*(window: Window) =
   discard InvalidateRect(window.hWnd, nil, 1)
 
 template updateBounds(window: var Window): untyped =
-  discard GetWindowRect(window.hWnd, addr window.bounds)
+  discard GetWindowRect(window.hWnd, addr window.rect)
 
 proc windowProc(hWnd: HWND, msg: UINT, wParam: WPARAM, lParam: LPARAM): INT_PTR {.stdcall.} =
   template ifWindow(code: untyped): untyped =
@@ -105,21 +107,18 @@ proc windowProc(hWnd: HWND, msg: UINT, wParam: WPARAM, lParam: LPARAM): INT_PTR 
 
   of WM_ERASEBKGND:
     ifWindow:
-      window.bitmap.clear(window.backgroundColor)
+      window.image.clear(window.backgroundColor)
       window.redraw()
       return 1
 
   of WM_MOUSEMOVE:
     ifWindow:
-      window.mouseXPrevious = window.mouseX
-      window.mouseYPrevious = window.mouseY
-      window.mouseX = GET_X_LPARAM(lParam)
-      window.mouseY = GET_Y_LPARAM(lParam)
+      window.input.previousMousePosition.x = window.input.mousePosition.x
+      window.input.previousMousePosition.y = window.input.mousePosition.y
+      window.input.mousePosition.x = GET_X_LPARAM(lParam).Pixels / window.dpi
+      window.input.mousePosition.y = GET_Y_LPARAM(lParam).Pixels / window.dpi
       if window.onMouseMove != nil:
-        window.onMouseMove(
-          window.mouseX, window.mouseY,
-          window.mouseXPrevious, window.mouseYPrevious
-        )
+        window.onMouseMove()
 
   of WM_TIMER:
     ifWindow:
@@ -129,7 +128,8 @@ proc windowProc(hWnd: HWND, msg: UINT, wParam: WPARAM, lParam: LPARAM): INT_PTR 
   of WM_SIZE:
     ifWindow:
       window.updateBounds()
-      window.bitmap.resize(window.width, window.height)
+      window.image.resize(window.width * window.dpi,
+                          window.height * window.dpi)
       if window.onResize != nil:
         window.onResize()
 
@@ -145,12 +145,14 @@ proc windowProc(hWnd: HWND, msg: UINT, wParam: WPARAM, lParam: LPARAM): INT_PTR 
       window.hdc = window.hWnd.BeginPaint(addr window.paintStruct)
       if window.onDraw != nil:
           window.onDraw()
-      let bitmapContext = window.bitmap.context
-      if bitmapContext.isSome:
+      let context = window.image.context
+      if context.isSome:
         discard BitBlt(
           window.hdc,
-          0, 0, window.width, window.height,
-          bitmapContext.get,
+          0, 0,
+          (window.width * window.dpi).cint,
+          (window.height * window.dpi).cint,
+          context.get,
           0, 0,
           SRCCOPY,
         )
@@ -168,37 +170,41 @@ proc windowProc(hWnd: HWND, msg: UINT, wParam: WPARAM, lParam: LPARAM): INT_PTR 
      WM_RBUTTONDOWN, WM_RBUTTONDBLCLK,
      WM_XBUTTONDOWN, WM_XBUTTONDBLCLK:
     ifWindow:
-      let buttonKind = getMouseButtonKind()
-      if buttonKind.isSome:
+      let button = getMouseButtonKind()
+      if button.isSome:
         discard SetCapture(window.hWnd)
-        window.mouseButtonStates[buttonKind.get] = true
+        window.input.mouseButtonStates[button.get] = true
         if window.onMousePress != nil:
-          window.onMousePress(buttonKind.get)
+          window.input.lastMousePress = button.get
+          window.onMousePress()
 
   of WM_LBUTTONUP, WM_MBUTTONUP, WM_RBUTTONUP, WM_XBUTTONUP:
     ifWindow:
-      let buttonKind = getMouseButtonKind()
-      if buttonKind.isSome:
+      let button = getMouseButtonKind()
+      if button.isSome:
         discard ReleaseCapture()
-        window.mouseButtonStates[buttonKind.get] = false
+        window.input.mouseButtonStates[button.get] = false
         if window.onMouseRelease != nil:
-          window.onMouseRelease(buttonKind.get)
+          window.input.lastMouseRelease = button.get
+          window.onMouseRelease()
 
   of WM_KEYDOWN, WM_SYSKEYDOWN:
     ifWindow:
       let key = wParam.int.toKeyboardKey
       if key.isSome:
-        window.keyStates[key.get] = true
+        window.input.keyStates[key.get] = true
         if window.onKeyPress != nil:
-          window.onKeyPress(key.get)
+          window.input.lastKeyPress = key.get
+          window.onKeyPress()
 
   of WM_KEYUP, WM_SYSKEYUP:
     ifWindow:
       let key = wParam.int.toKeyboardKey
       if key.isSome:
-        window.keyStates[key.get] = false
+        window.input.keyStates[key.get] = false
         if window.onKeyRelease != nil:
-          window.onKeyRelease(key.get)
+          window.input.lastKeyRelease = key.get
+          window.onKeyRelease()
 
   else:
     discard
@@ -210,6 +216,8 @@ proc newWindow*(hInstance: HINSTANCE, parent: HWND): Window =
     result.title = "Unnamed Window"
     result.updateBounds()
     result.backgroundColor = rgb(0, 0, 0)
-    result.bitmap = initBitmap(0, 0)
+    result.image = initImage(0.Pixels, 0.Pixels)
+    result.input = newInput()
+    result.dpi = 96.0.Dpi
     hWndWindows[result.hWnd] = result
     discard ShowWindow(result.hWnd, SW_SHOW)

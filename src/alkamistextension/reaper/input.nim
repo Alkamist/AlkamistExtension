@@ -1,6 +1,13 @@
-import std/options
+import std/options, units
 
 type
+  MouseButton* = enum
+    Left,
+    Middle,
+    Right,
+    Side1,
+    Side2,
+
   KeyboardKey* = enum
     ControlBreak,
     Backspace,
@@ -155,7 +162,33 @@ type
     Apostrophe,
     IMEProcess,
 
-proc toKeyboardKey*(keyCode: int): Option[KeyboardKey] =
+  Input* = ref object
+    lastKeyPress*: KeyboardKey
+    lastKeyRelease*: KeyboardKey
+    lastMousePress*: MouseButton
+    lastMouseRelease*: MouseButton
+    mousePosition*: WindowPosition
+    previousMousePosition*: WindowPosition
+    keyStates*: array[KeyboardKey, bool]
+    mouseButtonStates*: array[MouseButton, bool]
+
+{.push inline.}
+
+func newInput*(): Input =
+  result = Input()
+
+func mouseDelta*(input: Input): VisualVector =
+  input.mousePosition - input.previousMousePosition
+
+func isPressed*(input: Input, key: KeyboardKey): bool =
+  input.keyStates[key]
+
+func isPressed*(input: Input, button: MouseButton): bool =
+  input.mouseButtonStates[button]
+
+{.pop.}
+
+func toKeyboardKey*(keyCode: int): Option[KeyboardKey] =
   case keyCode:
   of 3: some(KeyboardKey.ControlBreak)
   of 8: some(KeyboardKey.Backspace)

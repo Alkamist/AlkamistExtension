@@ -9,17 +9,17 @@ proc pitchCorrectionMain*() =
 
   var editor = newPitchEditor(0, 0, window.width, window.height)
 
-  window.onMousePress = proc(button: MouseButton) =
-    editor.onMousePress(window, button)
+  window.onMousePress = proc() =
+    editor.onMousePress()
 
-  window.onMouseRelease = proc(button: MouseButton) =
-    editor.onMouseRelease(window, button)
+  window.onMouseRelease = proc() =
+    editor.onMouseRelease()
 
-  window.onMouseMove = proc(x, y, xPrevious, yPrevious: int) =
-    editor.onMouseMove(window,x, y, xPrevious, yPrevious)
+  window.onMouseMove = proc() =
+    editor.onMouseMove()
 
   window.onResize = proc() =
-    editor.onResize(window)
+    editor.onResize()
 
   window.onDraw = proc() =
     editor.updateBitmap(window)
