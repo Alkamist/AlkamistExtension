@@ -167,8 +167,8 @@ type
     lastKeyRelease*: KeyboardKey
     lastMousePress*: MouseButton
     lastMouseRelease*: MouseButton
-    mousePosition*: Position2d[Inches]
-    previousMousePosition*: Position2d[Inches]
+    mousePosition*: Vector2d[Inches]
+    previousMousePosition*: Vector2d[Inches]
     keyStates*: array[KeyboardKey, bool]
     mouseButtonStates*: array[MouseButton, bool]
 

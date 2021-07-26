@@ -1,39 +1,41 @@
 import std/math, ../units
 
-type ViewT = SomeNumber | SomeDistance
-
 type
-  ViewAxis*[T: ViewT] = object
-    pan*: float
-    zoom*: float
-    sensitivity*: float
-    scale*: T
-    target*: T
+  ViewAxis*[I, E] = object
+    pan*, zoomTarget*: I
+    externalSize*: E
+    zoom*, zoomSensitivity*: float
 
-  View*[T: ViewT] = object
-    x*, y*: ViewAxis[T]
+{.push inline.}
 
-proc initViewAxis*[T: ViewT](): ViewAxis[T] =
-  result.pan = 0.0
+func initViewAxis*[I, E](): ViewAxis[I, E] =
+  result.pan = 0.I
+  result.zoomTarget = 0.I
+  result.externalSize = 1.E
   result.zoom = 1.0
-  result.sensitivity = 0.01
-  result.scale = 1.T
-  result.target = 0.T
+  result.zoomSensitivity = 0.5
 
-proc initView*[T: ViewT](): View[T] =
-  result.x = initViewAxis[T]()
-  result.y = initViewAxis[T]()
+func toInternalScale*[I, E](axis: ViewAxis[I, E], value: E): I =
+  (value.toFloat * axis.zoom).I
 
-proc changePan*[T: ViewT](axis: var ViewAxis, value: T) =
-  let change = value / axis.scale
-  axis.pan += change / axis.zoom
+func toExternalScale*[I, E](axis: ViewAxis[I, E], value: I): E =
+  (value.toFloat / axis.zoom).E
 
-proc changeZoom*[T: ViewT](axis: var ViewAxis, value: T) =
-  let
-    target = axis.target / axis.scale
-    change = pow(2.0, axis.sensitivity * value)
-  axis.zoom *= change
-  axis.pan -= (change - 1.0) * target.float / axis.zoom
+func toInternalValue*[I, E](axis: ViewAxis[I, E], value: E): I =
+  axis.toInternalScale(value) - axis.pan
 
-# proc transform*(axis: ViewAxis, value: float): float =
-#   axis.scale.float * axis.zoom * (value + axis.pan)
+func toExternalValue*[I, E](axis: ViewAxis[I, E], value: I): E =
+  axis.toExternalScale(value + axis.pan)
+
+func changePan*[I, E](axis: var ViewAxis[I, E], value: I) =
+  axis.pan += value
+
+func changePan*[I, E](axis: var ViewAxis[I, E], value: E) =
+  axis.changePan(axis.toInternalScale(value))
+
+func changeZoom*[I, E](axis: var ViewAxis[I, E], value: E) =
+  let zoomChange = 2.0.pow(axis.zoomSensitivity * value.toFloat)
+  axis.zoom *= zoomChange
+  axis.pan += (axis.zoomTarget / axis.zoom) * (zoomChange - 1.0)
+
+{.pop.}

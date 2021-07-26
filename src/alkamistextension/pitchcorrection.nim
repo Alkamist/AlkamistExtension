@@ -7,24 +7,41 @@ proc pitchCorrectionMain*() =
   window.backgroundColor = rgb(16, 16, 16)
   window.setBounds(4.Inches, 2.Inches, 12.Inches, 8.Inches)
 
-  var editor = newPitchEditor(0, 0, window.width, window.height)
+  var editor = newPitchEditor(
+    position = (x: 0.Inches, y: 0.Inches),
+    width = window.width,
+    height = window.height,
+    dpi = window.dpi,
+    timeLength = 10.Seconds,
+  )
 
-  # window.onMousePress = proc() =
-  #   editor.onMousePress()
+  template redrawIfNeeded(): untyped =
+    if editor.shouldRedraw:
+      window.redraw()
+      editor.shouldRedraw = false
 
-  # window.onMouseRelease = proc() =
-  #   editor.onMouseRelease()
+  window.onMousePress = proc() =
+    editor.onMousePress(window.input)
+    redrawIfNeeded()
 
-  # window.onMouseMove = proc() =
-  #   editor.onMouseMove()
+  window.onMouseRelease = proc() =
+    editor.onMouseRelease(window.input)
+    redrawIfNeeded()
 
-  # window.onResize = proc() =
-  #   editor.onResize()
+  window.onMouseMove = proc() =
+    editor.onMouseMove(window.input)
+    redrawIfNeeded()
+
+  window.onResize = proc() =
+    editor.onResize(window.width, window.height)
+    redrawIfNeeded()
 
   window.onDraw = proc() =
     editor.updateImage()
     window.image.drawImage(
-      editor.image, editor.x, editor.y
+      editor.image,
+      editor.x * window.dpi,
+      editor.y * window.dpi,
     )
 
   window.onKeyPress = proc() =
