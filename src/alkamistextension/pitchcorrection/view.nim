@@ -5,6 +5,7 @@ type
     pan*, zoomTarget*: I
     externalSize*: E
     zoom*, zoomSensitivity*: float
+    isInverted*: bool
 
 {.push inline.}
 
@@ -15,27 +16,44 @@ func initViewAxis*[I, E](): ViewAxis[I, E] =
   result.zoom = 1.0
   result.zoomSensitivity = 0.5
 
-func toInternalScale*[I, E](axis: ViewAxis[I, E], value: E): I =
+func scale*[I, E](axis: ViewAxis[I, E], value: E): I =
   (value.toFloat * axis.zoom).I
 
-func toExternalScale*[I, E](axis: ViewAxis[I, E], value: I): E =
+func scale*[I, E](axis: ViewAxis[I, E], value: I): E =
   (value.toFloat / axis.zoom).E
 
-func toInternalValue*[I, E](axis: ViewAxis[I, E], value: E): I =
-  axis.toInternalScale(value) - axis.pan
+func convert*[I, E](axis: ViewAxis[I, E], value: E): I =
+  if axis.isInverted:
+    axis.pan - axis.scale(value - axis.externalSize)
+  else:
+    axis.pan + axis.scale(value)
 
-func toExternalValue*[I, E](axis: ViewAxis[I, E], value: I): E =
-  axis.toExternalScale(value + axis.pan)
+func convert*[I, E](axis: ViewAxis[I, E], value: I): E =
+  if axis.isInverted:
+    axis.scale(axis.pan - value) + axis.externalSize
+  else:
+    axis.scale(axis.pan + value)
 
 func changePan*[I, E](axis: var ViewAxis[I, E], value: I) =
   axis.pan += value
 
 func changePan*[I, E](axis: var ViewAxis[I, E], value: E) =
-  axis.changePan(axis.toInternalScale(value))
+  axis.changePan(axis.scale(value))
 
 func changeZoom*[I, E](axis: var ViewAxis[I, E], value: E) =
-  let zoomChange = 2.0.pow(axis.zoomSensitivity * value.toFloat)
-  axis.zoom *= zoomChange
-  axis.pan += (axis.zoomTarget / axis.zoom) * (zoomChange - 1.0)
+  let
+    previousSize = axis.scale(axis.externalSize)
+    zoomMultiplier = 2.0.pow(axis.zoomSensitivity * value.toFloat)
+  axis.zoom *= zoomMultiplier
+
+  let
+    currentSize = axis.scale(axis.externalSize)
+    zoomRatio = (axis.zoomTarget - axis.pan) / currentSize
+    sizeChange = currentSize - previousSize
+
+  if axis.isInverted:
+    axis.pan -= sizeChange * zoomRatio
+  else:
+    axis.pan += sizeChange * zoomRatio
 
 {.pop.}
