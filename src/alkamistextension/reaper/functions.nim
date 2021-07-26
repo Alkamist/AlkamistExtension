@@ -1,4 +1,4 @@
-import winapi, types
+import ../winapi, types
 
 {.pragma: ReaperAPI, importc, header: ReaperPluginFunctionsHeader.}
 

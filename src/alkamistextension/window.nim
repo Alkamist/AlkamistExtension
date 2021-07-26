@@ -1,6 +1,6 @@
 import
   std/[tables, options],
-  winapi, lice, units, input
+  winapi, units, lice, input
 
 type
   Window* = ref object
@@ -38,16 +38,16 @@ func `title=`*(window: var Window, value: string) =
   discard SetWindowText(window.hWnd, value)
 
 func left*(window: Window): Inches =
-  window.rect.left / window.dpi
+  window.rect.left.Pixels / window.dpi
 
 func right*(window: Window): Inches =
-  window.rect.right / window.dpi
+  window.rect.right.Pixels / window.dpi
 
 func top*(window: Window): Inches =
-  window.rect.top / window.dpi
+  window.rect.top.Pixels / window.dpi
 
 func bottom*(window: Window): Inches =
-  window.rect.bottom / window.dpi
+  window.rect.bottom.Pixels / window.dpi
 
 func x*(window: Window): Inches =
   window.left
@@ -55,7 +55,7 @@ func x*(window: Window): Inches =
 func y*(window: Window): Inches =
   window.top
 
-func position*(window: Window): VisualPosition =
+func position*(window: Window): Position2d[Inches] =
   result.x = window.x
   result.y = window.y
 

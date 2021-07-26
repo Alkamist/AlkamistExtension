@@ -1,6 +1,7 @@
 import
   std/options,
-  winapi, types, units
+  reaper/types,
+  winapi, units
 
 type
   LICE_pixel = cuint
@@ -163,7 +164,7 @@ func clear*(image: Image, color: Color) =
   if image.licePtr != nil:
     LICE_Clear(image.liceBitmap, color.toLicePixel)
 
-func drawBitmap*(self, other: Image,
+func drawImage*(self, other: Image,
                  x, y = 0.Pixels,
                  mode = BlitMode.Copy,
                  filter = BlitFilter.None) =

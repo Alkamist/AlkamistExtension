@@ -167,8 +167,8 @@ type
     lastKeyRelease*: KeyboardKey
     lastMousePress*: MouseButton
     lastMouseRelease*: MouseButton
-    mousePosition*: WindowPosition
-    previousMousePosition*: WindowPosition
+    mousePosition*: Position2d[Inches]
+    previousMousePosition*: Position2d[Inches]
     keyStates*: array[KeyboardKey, bool]
     mouseButtonStates*: array[MouseButton, bool]
 
@@ -177,7 +177,7 @@ type
 func newInput*(): Input =
   result = Input()
 
-func mouseDelta*(input: Input): VisualVector =
+func mouseDelta*(input: Input): Vector2d[Inches] =
   input.mousePosition - input.previousMousePosition
 
 func isPressed*(input: Input, key: KeyboardKey): bool =

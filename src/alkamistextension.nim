@@ -1,7 +1,7 @@
 # addAction("Alkamist: Test Action", "ALKAMIST_TEST_ACTION", testActionFn)
 
 
-import alkamistextension/[reaper, pitchcorrect]
+import alkamistextension/[reaper, pitchcorrection]
 
 createExtension:
   pitchCorrectionMain()

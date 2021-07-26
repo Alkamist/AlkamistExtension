@@ -1,26 +1,21 @@
 import
-  std/[math, options, random, decls],
-  ../reaper/[lice, units, input],
+  std/[math, options],
+  ../lice, ../units, ../input,
   view, whitekeys
 
 export view
 
 type
-  EditorPosition* {.borrow: `.`.} = distinct WindowPosition
-
-  Semitones* = distinct float
-  Seconds* = distinct float
-
   PitchPoint* = object
     time*: Seconds
     pitch*: Semitones
 
   PitchEditor* = ref object
-    position*: WindowPosition
+    position*: Position2d[Inches]
     image*: Image
     dpi*: Dpi
     timeLength*: Seconds
-    view*: View
+    view*: View[Inches]
     backgroundColor*: Color
     blackKeyColor*: Color
     whiteKeyColor*: Color
@@ -36,14 +31,14 @@ func y*(editor: PitchEditor): Inches =
   editor.position.y
 
 func width*(editor: PitchEditor): Inches =
-  editor.view.x.scale.Inches
+  editor.view.x.scale
 
 func height*(editor: PitchEditor): Inches =
-  editor.view.y.scale.round.Inches
+  editor.view.y.scale
 
 proc resize*(editor: var PitchEditor, width, height: Inches) =
-  editor.view.x.scale = width.float
-  editor.view.y.scale = height.float
+  editor.view.x.scale = width
+  editor.view.y.scale = height
   editor.image.resize(width * editor.dpi, height * editor.dpi)
 
 proc `width=`*(editor: var PitchEditor, value: Inches) =
@@ -61,19 +56,19 @@ proc `height=`*(editor: var PitchEditor, value: Inches) =
 # func timeToX*(editor: PitchEditor, time: Seconds): float =
 #   editor.xView.zoom * editor.width.float * (time.float / editor.timeLength - editor.xView.pan)
 
-func pitchToDistance*(editor: PitchEditor, pitch: Semitones): Inches =
-  (editor.view.y.zoom * editor.height.float * ((1.0 - (0.5 + pitch.float) / numKeys.float) - editor.view.y.pan)).Inches
+# func pitchToDistance*(editor: PitchEditor, pitch: Semitones): Inches =
+#   (editor.view.y.zoom * editor.height.float * ((1.0 - (0.5 + pitch.float) / numKeys.float) - editor.view.y.pan)).Inches
 
 {.pop.}
 
-proc newPitchEditor*(position: VisualPosition,
+proc newPitchEditor*(position: Position2d[Inches],
                      width, height: Inches,
                      dpi: Dpi,
                      timeLength: Seconds): PitchEditor =
   result = PitchEditor()
   result.position = position
   result.timeLength = timeLength
-  result.view = initView()
+  result.view = initView[Inches]()
   result.resize(width, height)
   result.dpi = dpi
   result.image = initImage(width * dpi, height * dpi)
@@ -95,50 +90,47 @@ proc newPitchEditor*(position: VisualPosition,
 
   #   result.corrections.lines.add correction
 
-func positionIsInside*(editor: PitchEditor, position: VisualPosition): bool =
+func positionIsInside*(editor: PitchEditor, position: Position2d[Inches]): bool =
   position.x >= editor.x and
   position.x <= editor.x + editor.width and
   position.y >= editor.y and
   position.y <= editor.y + editor.height
 
-func onMousePress*(editor: var PitchEditor, position: VisualPosition, button: MouseButton) =
-  case button:
+func onMousePress*(editor: var PitchEditor, input: Input) =
+  case input.lastMousePress:
   of Middle:
-    if editor.positionIsInside(position):
+    if editor.positionIsInside(input.mousePosition):
       editor.mouseMiddleWasPressedInside = true
-      editor.view.x.target = -position.x.float
-      editor.view.y.target = -position.y.float
+      editor.view.x.target = -input.mousePosition.x
+      editor.view.y.target = -input.mousePosition.y
   else: discard
 
-func onMouseRelease*(editor: var PitchEditor, position: VisualPosition, button: MouseButton) =
-  case button:
+func onMouseRelease*(editor: var PitchEditor, input: Input) =
+  case input.lastMouseRelease:
   of Middle:
     editor.mouseMiddleWasPressedInside = false
   else: discard
 
-func onMouseMove*(editor: var PitchEditor, position, previousPosition: VisualPosition) =
+func onMouseMove*(editor: var PitchEditor, input: Input) =
   let
-    xChange = (position.x - previousPosition.x).float
-    yChange = (position.y - previousPosition.y).float
+    xChange = input.mouseDelta.x
+    yChange = input.mouseDelta.y
 
   # editor.corrections.calculateEditPointAndSegment(
   #   (editor.xToTime(x.float), editor.yToPitch(y.float))
   # )
 
   if editor.mouseMiddleWasPressedInside and
-     window.mouseButtonIsPressed(Middle):
-    if window.keyIsPressed(Shift):
-      editor.xView.changeZoom(xChange)
-      editor.yView.changeZoom(yChange)
+     input.isPressed(Middle):
+    if input.isPressed(Shift):
+      editor.view.x.changeZoom(xChange)
+      editor.view.y.changeZoom(yChange)
     else:
-      editor.xView.changePan(-xChange)
-      editor.yView.changePan(-yChange)
+      editor.view.x.changePan(-xChange)
+      editor.view.y.changePan(-yChange)
 
-    window.redraw()
-
-func onResize*(editor: var PitchEditor, window: Window) =
-  editor.resize(window.width, window.height)
-  window.redraw()
+func onResize*(editor: var PitchEditor, width, height: Inches) =
+  editor.resize(width, height)
 
 func drawKeys(editor: PitchEditor) =
   var
@@ -163,42 +155,42 @@ func drawKeys(editor: PitchEditor) =
     keyEndPrevious = keyEnd
     keyColorPrevious = some(keyColor)
 
-func drawPitchCorrections(editor: PitchEditor, window: Window) =
-  let
-    r = editor.correctionPointVisualRadius
-    color = rgb(109, 186, 191)
-    highlightColor = rgb(255, 255, 255, 0.35)
+# func drawPitchCorrections(editor: PitchEditor, window: Window) =
+#   let
+#     r = editor.correctionPointVisualRadius
+#     color = rgb(109, 186, 191)
+#     highlightColor = rgb(255, 255, 255, 0.35)
 
-  for correction in editor.corrections.mitems:
-    let lastPointId = correction.points.len - 1
+#   for correction in editor.corrections.mitems:
+#     let lastPointId = correction.points.len - 1
 
-    for i, point in correction.points.mpairs:
-      let
-        x = editor.timeToX(point.x)
-        y = editor.pitchToY(point.y)
+#     for i, point in correction.points.mpairs:
+#       let
+#         x = editor.timeToX(point.x)
+#         y = editor.pitchToY(point.y)
 
-      if i < lastPointId:
-        var nextPoint {.byaddr.} = correction.points[i + 1]
+#       if i < lastPointId:
+#         var nextPoint {.byaddr.} = correction.points[i + 1]
 
-        let
-          nextX = editor.timeToX(nextPoint.x)
-          nextY = editor.pitchToY(nextPoint.y)
+#         let
+#           nextX = editor.timeToX(nextPoint.x)
+#           nextY = editor.pitchToY(nextPoint.y)
 
-        editor.image.drawLine(x, y, nextX, nextY, color)
+#         editor.image.drawLine(x, y, nextX, nextY, color)
 
-        # if editor.corrections.editIsSegment and
-        #    editor.corrections.editSegment[0] == point.addr and
-        #    editor.corrections.editSegment[1] == nextPoint.addr:
-        #   editor.image.drawLine(x, y, nextX, nextY, highlightColor)
+#         # if editor.corrections.editIsSegment and
+#         #    editor.corrections.editSegment[0] == point.addr and
+#         #    editor.corrections.editSegment[1] == nextPoint.addr:
+#         #   editor.image.drawLine(x, y, nextX, nextY, highlightColor)
 
-      editor.image.fillCircle(x, y, r, rgb(29, 81, 84))
-      editor.image.drawCircle(x, y, r, color)
+#       editor.image.fillCircle(x, y, r, rgb(29, 81, 84))
+#       editor.image.drawCircle(x, y, r, color)
 
-      # if editor.corrections.editIsPoint and
-      #    editor.corrections.editPoint == point.addr:
-      #   editor.image.fillCircle(x, y, r, highlightColor)
+#       # if editor.corrections.editIsPoint and
+#       #    editor.corrections.editPoint == point.addr:
+#       #   editor.image.fillCircle(x, y, r, highlightColor)
 
-func updateBitmap*(editor: PitchEditor, window: Window) =
+func updateImage*(editor: PitchEditor) =
   editor.image.clear(editor.backgroundColor)
   editor.drawKeys()
-  editor.drawPitchCorrections(window)
+  # editor.drawPitchCorrections(window)

@@ -1,12 +1,12 @@
 import
   std/[tables, options],
-  reaper/[types, functions, winapi, lice,
-          window, input, units]
+  reaper/[types, functions],
+  winapi, window, lice, input, units
 
 export
   tables, options,
-  types, functions, winapi, lice,
-  window, input, units
+  types, functions,
+  winapi, window, lice, input, units
 
 globalRaiseHook = proc(e: ref Exception): bool =
   ShowConsoleMsg("An exception was raised: " & e.msg & "\n")
