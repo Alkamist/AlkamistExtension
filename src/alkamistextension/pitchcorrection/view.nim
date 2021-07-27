@@ -17,10 +17,10 @@ func initViewAxis*[I, E](): ViewAxis[I, E] =
   result.zoomSensitivity = 0.5
 
 func scale*[I, E](axis: ViewAxis[I, E], value: E): I =
-  (value.toFloat * axis.zoom).I
+  (value.toFloat / axis.zoom).I
 
 func scale*[I, E](axis: ViewAxis[I, E], value: I): E =
-  (value.toFloat / axis.zoom).E
+  (value.toFloat * axis.zoom).E
 
 func convert*[I, E](axis: ViewAxis[I, E], value: E): I =
   if axis.isInverted:

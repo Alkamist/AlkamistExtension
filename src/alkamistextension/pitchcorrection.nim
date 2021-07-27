@@ -9,8 +9,8 @@ proc pitchCorrectionMain*() =
 
   var editor = newPitchEditor(
     position = (x: 0.Inches, y: 0.Inches),
-    width = window.width,
-    height = window.height,
+    width = window.clientWidth,
+    height = window.clientHeight,
     dpi = window.dpi,
     timeLength = 10.Seconds,
   )
@@ -33,7 +33,7 @@ proc pitchCorrectionMain*() =
     redrawIfNeeded()
 
   window.onResize = proc() =
-    editor.onResize(window.width, window.height)
+    editor.onResize(window.clientWidth, window.clientHeight)
     redrawIfNeeded()
 
   window.onDraw = proc() =

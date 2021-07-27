@@ -1,6 +1,7 @@
 import
   std/[math, options],
   ../lice, ../units, ../input,
+  ../reaper/functions,
   view, whitekeys
 
 export view
@@ -9,6 +10,8 @@ type
   PitchPoint* = object
     time*: Seconds
     pitch*: Semitones
+
+  # TODO: Make input mouse position relative to editor.
 
   PitchEditor* = ref object
     position*: Vector2d[Inches]
@@ -20,6 +23,7 @@ type
     backgroundColor*: Color
     blackKeyColor*: Color
     whiteKeyColor*: Color
+    centerLineColor*: Color
     shouldRedraw*: bool
     mouseMiddleWasPressedInside: bool
     # corrections: seq[seq[PitchPoint]]
@@ -32,7 +36,7 @@ func redraw*(editor: var PitchEditor) =
 func resize*(editor: var PitchEditor, width, height: Inches) =
   editor.viewX.externalSize = width
   editor.viewY.externalSize = height
-  editor.image.resize(width * editor.dpi, height * editor.dpi)
+  editor.image.resize(width * editor.dpi,height * editor.dpi)
 
 func x*(editor: PitchEditor): Inches = editor.position.x
 func y*(editor: PitchEditor): Inches = editor.position.y
@@ -40,6 +44,12 @@ func width*(editor: PitchEditor): Inches = editor.viewX.externalSize
 func height*(editor: PitchEditor): Inches = editor.viewY.externalSize
 func `width=`*(editor: var PitchEditor, value: Inches) = editor.resize(value, editor.height)
 func `height=`*(editor: var PitchEditor, value: Inches) = editor.resize(editor.width, value)
+
+func zoomOutXToFull*(editor: var PitchEditor) =
+  editor.viewX.zoom = editor.width.toFloat / editor.timeLength.toFloat
+
+func zoomOutYToFull*(editor: var PitchEditor) =
+  editor.viewY.zoom = editor.height.toFloat / numKeys.toFloat
 
 {.pop.}
 
@@ -54,11 +64,14 @@ proc newPitchEditor*(position: Vector2d[Inches],
   result.viewY = initViewAxis[Semitones, Inches]()
   result.viewY.isInverted = true
   result.resize(width, height)
+  result.zoomOutXToFull()
+  result.zoomOutYToFull()
   result.dpi = dpi
   result.image = initImage(width * dpi, height * dpi)
   result.backgroundColor = rgb(16, 16, 16)
   result.blackKeyColor = rgb(60, 60, 60, 1.0)
   result.whiteKeyColor = rgb(110, 110, 110, 1.0)
+  result.centerLineColor = rgb(255, 255, 255, 0.15)
 
   # result.corrections = newPolyLineGroup2d()
 
@@ -87,6 +100,9 @@ func onMousePress*(editor: var PitchEditor, input: Input) =
       editor.mouseMiddleWasPressedInside = true
       editor.viewX.zoomTarget = editor.viewX.convert input.mousePosition.x
       editor.viewY.zoomTarget = editor.viewY.convert input.mousePosition.y
+      # ShowConsoleMsg("Target: " & $editor.viewY.zoomTarget & "\n")
+      # ShowConsoleMsg("Pan: " & $editor.viewY.pan & "\n")
+      # ShowConsoleMsg("Zoom: " & $editor.viewY.zoom & "\n")
   else: discard
 
 func onMouseRelease*(editor: var PitchEditor, input: Input) =
@@ -103,10 +119,10 @@ func onMouseMove*(editor: var PitchEditor, input: Input) =
   if editor.mouseMiddleWasPressedInside and
      input.isPressed(Middle):
     if input.isPressed(Shift):
-      editor.viewY.changeZoom -xChange
-      editor.viewY.changeZoom -yChange
+      editor.viewX.changeZoom xChange
+      editor.viewY.changeZoom yChange
     else:
-      editor.viewY.changePan xChange
+      editor.viewX.changePan xChange
       editor.viewY.changePan yChange
 
     editor.redraw()
@@ -119,17 +135,18 @@ func drawKeys(editor: PitchEditor) =
   template toPixels(inches: Inches): Pixels =
     inches * editor.dpi
 
-  const lowestKeyBottom = -0.5.Semitones
-
-  var
-    keyBottomInches = editor.viewY.convert lowestKeyBottom
-    keyColorPrevious = editor.blackKeyColor
+  var keyColorPrevious = editor.blackKeyColor
 
   for pitchId in 0 ..< numKeys:
     let
-      topSemitones = (pitchId.toFloat + 0.5).Semitones
-      keyTopInches = editor.viewY.convert topSemitones
+      keyCenterSemitones = pitchId.Semitones
+      keyCenterInches = editor.viewY.convert keyCenterSemitones
+      keyBottomSemitones = keyCenterSemitones - 0.5.Semitones
+      keyBottomInches = editor.viewY.convert keyBottomSemitones
+      keyTopSemitones = keyCenterSemitones + 0.5.Semitones
+      keyTopInches = editor.viewY.convert keyTopSemitones
       keyLeftPixels = 0.Pixels
+      keyCenterPixels = keyCenterInches.toPixels
       keyTopPixels = keyTopInches.toPixels - 1.Pixels
       keyBottomPixels = keyBottomInches.toPixels
       keyWidthPixels = editor.width.toPixels
@@ -155,7 +172,12 @@ func drawKeys(editor: PitchEditor) =
         editor.blackKeyColor,
       )
 
-    keyBottomInches = keyTopInches
+    editor.image.drawLine(
+      keyLeftPixels, keyCenterPixels,
+      keyWidthPixels, keyCenterPixels,
+      editor.centerLineColor,
+    )
+
     keyColorPrevious = keyColor
 
 # func drawPitchCorrections(editor: PitchEditor, window: Window) =

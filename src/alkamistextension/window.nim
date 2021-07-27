@@ -24,6 +24,7 @@ type
     hWnd: HWND
     parent: HWND
     rect: RECT
+    clientRect: RECT
     title: string
 
 var hWndWindows = initTable[HWND, Window]()
@@ -65,6 +66,34 @@ func width*(window: Window): Inches =
 func height*(window: Window): Inches =
   abs(window.bottom - window.top)
 
+func clientLeft*(window: Window): Inches =
+  window.clientRect.left.Pixels / window.dpi
+
+func clientRight*(window: Window): Inches =
+  window.clientRect.right.Pixels / window.dpi
+
+func clientTop*(window: Window): Inches =
+  window.clientRect.top.Pixels / window.dpi
+
+func clientBottom*(window: Window): Inches =
+  window.clientRect.bottom.Pixels / window.dpi
+
+func clientX*(window: Window): Inches =
+  window.clientLeft
+
+func clientY*(window: Window): Inches =
+  window.clientRight
+
+func clientPosition*(window: Window): Vector2d[Inches] =
+  result.x = window.clientX
+  result.y = window.clientY
+
+func clientWidth*(window: Window): Inches =
+  abs(window.clientRight - window.clientLeft)
+
+func clientHeight*(window: Window): Inches =
+  abs(window.clientBottom - window.clientTop)
+
 {.pop.}
 
 func setBounds*(window: Window, x, y, width, height: Inches) =
@@ -85,6 +114,7 @@ func redraw*(window: Window) =
   discard InvalidateRect(window.hWnd, nil, 1)
 
 template updateBounds(window: var Window): untyped =
+  discard GetClientRect(window.hWnd, addr window.clientRect)
   discard GetWindowRect(window.hWnd, addr window.rect)
 
 proc windowProc(hWnd: HWND, msg: UINT, wParam: WPARAM, lParam: LPARAM): INT_PTR {.stdcall.} =
