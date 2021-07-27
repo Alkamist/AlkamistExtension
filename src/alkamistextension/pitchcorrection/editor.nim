@@ -1,5 +1,5 @@
 import
-  std/[math, options],
+  std/[math, options, algorithm, random],
   ../lice, ../units, ../input,
   ../reaper/functions,
   view, whitekeys
@@ -7,9 +7,14 @@ import
 export view
 
 type
-  PitchPoint* = object
+  PitchPoint* = ref object
     time*: Seconds
     pitch*: Semitones
+    # nextPoint*: PitchPoint
+    # previousPoint*: PitchPoint
+    # shouldConnect*: bool
+
+  PitchCorrection* = seq[PitchPoint]
 
   PitchEditor* = ref object
     position*: Vector2d[Inches]
@@ -22,11 +27,31 @@ type
     blackKeyColor*: Color
     whiteKeyColor*: Color
     centerLineColor*: Color
+    correctionPointVisualRadius*: Inches
     shouldRedraw*: bool
+    correctionEditDistance*: Inches
+    correctionEditIsPoint*: bool
+    correctionEditIsSegment*: bool
+    correctionEditPoint*: PitchPoint
+    correctionEditPointDistance*: Inches
+    correctionEditSegment*: tuple[a: PitchPoint, b: PitchPoint]
+    correctionEditSegmentDistance*: Inches
     mouseMiddleWasPressedInside: bool
-    # corrections: seq[seq[PitchPoint]]
+    corrections: seq[PitchCorrection]
+
+# proc comparePitchPoint(x, y: PitchPoint): int =
+#   if x.time < y.time: -1
+#   else: 1
 
 {.push inline.}
+
+# func hasNextPoint*(point: PitchPoint): bool = point.nextPoint != nil
+# func hasPreviousPoint*(point: PitchPoint): bool = point.previousPoint != nil
+# func isFirstPoint*(point: PitchPoint): bool = point.previousPoint == nil
+# func connectsBackward*(point: PitchPoint): bool =
+#   point.hasPreviousPoint and point.previousPoint.shouldConnect
+# func connectsForward*(point: PitchPoint): bool =
+#   point.hasNextPoint and point.shouldConnect
 
 func redraw*(editor: var PitchEditor) =
   editor.shouldRedraw = true
@@ -49,6 +74,19 @@ func zoomOutXToFull*(editor: var PitchEditor) =
 func zoomOutYToFull*(editor: var PitchEditor) =
   editor.viewY.zoom = editor.height.toFloat / numKeys.toFloat
 
+func positionIsInside*(editor: PitchEditor, position: Vector2d[Inches]): bool =
+  position.x >= 0.Inches and
+  position.x <= editor.width and
+  position.y >= 0.Inches and
+  position.y <= editor.height
+
+func toVisualPoint*(editor: PitchEditor, point: PitchPoint): Vector2d[Inches] =
+  (editor.viewX.convert(point.time), editor.viewY.convert(point.pitch))
+
+# func addCorrectionPoint*(editor: var PitchEditor, point: PitchPoint) =
+#   editor.corrections.add point
+#   editor.corrections.sort comparePitchPoint
+
 {.pop.}
 
 proc newPitchEditor*(position: Vector2d[Inches],
@@ -70,26 +108,59 @@ proc newPitchEditor*(position: Vector2d[Inches],
   result.blackKeyColor = rgb(60, 60, 60, 1.0)
   result.whiteKeyColor = rgb(110, 110, 110, 1.0)
   result.centerLineColor = rgb(255, 255, 255, 0.15)
+  result.correctionPointVisualRadius = (3.0 / 96.0).Inches
+  result.correctionEditDistance = (5.0 / 96.0).Inches
 
-  # result.corrections = newPolyLineGroup2d()
+  for correctionId in 0 ..< 5:
+    var correction: PitchCorrection
 
-  # for correctionId in 0 ..< 5:
-  #   var correction = newPolyLine2d()
+    for pointId in 0 ..< 5:
+      let pointNumber = 5 * correctionId + pointId
+      correction.add PitchPoint(
+        time: pointNumber.Seconds,
+        pitch: rand(numKeys).Semitones,
+      )
 
-  #   for pointId in 0 ..< 5:
-  #     let pointNumber = 5 * correctionId + pointId
-  #     correction.points.add (
-  #       x: pointNumber.float,
-  #       y: rand(numKeys).float,
-  #     )
+    result.corrections.add correction
 
-  #   result.corrections.lines.add correction
+func calculateCorrectionEditPointAndSegment*(editor: var PitchEditor, toPoint: Vector2d[Inches]) =
+  editor.correctionEditPoint = nil
+  editor.correctionEditPointDistance = 0.Inches
+  editor.correctionEditSegment = (nil, nil)
+  editor.correctionEditSegmentDistance = 0.Inches
 
-func positionIsInside*(editor: PitchEditor, position: Vector2d[Inches]): bool =
-  position.x >= 0.Inches and
-  position.x <= editor.width and
-  position.y >= 0.Inches and
-  position.y <= editor.height
+  let lastPointIndex = editor.corrections.len - 1
+
+  for correction in editor.corrections:
+    for i, point in correction:
+      let
+        pointInches = editor.toVisualPoint point
+        distanceToPoint = toPoint.distance pointInches
+
+      if i < lastPointIndex:
+        let
+          nextPoint = correction[i + 1]
+          nextPointInches = editor.toVisualPoint nextPoint
+          distanceToSegment = toPoint.distance (pointInches, nextPointInches)
+
+        if editor.correctionEditSegment == (nil, nil):
+          editor.correctionEditSegment = (point, nextPoint)
+          editor.correctionEditSegmentDistance = distanceToSegment
+        else:
+          if distanceToSegment < editor.correctionEditSegmentDistance:
+            editor.correctionEditSegment = (point, nextPoint)
+            editor.correctionEditSegmentDistance = distanceToSegment
+
+      if editor.correctionEditPoint == nil:
+        editor.correctionEditPoint = point
+        editor.correctionEditPointDistance = distanceToPoint
+      else:
+        if distanceToPoint < editor.correctionEditPointDistance:
+          editor.correctionEditPoint = point
+          editor.correctionEditPointDistance = distanceToPoint
+
+  editor.correctionEditIsPoint = editor.correctionEditPointDistance <= editor.correctionEditDistance
+  editor.correctionEditIsSegment = editor.correctionEditSegmentDistance <= editor.correctionEditDistance and not editor.correctionEditIsPoint
 
 func onMousePress*(editor: var PitchEditor, input: Input) =
   case input.lastMousePress:
@@ -98,9 +169,8 @@ func onMousePress*(editor: var PitchEditor, input: Input) =
       editor.mouseMiddleWasPressedInside = true
       editor.viewX.zoomTarget = editor.viewX.convert input.mousePosition.x
       editor.viewY.zoomTarget = editor.viewY.convert input.mousePosition.y
-      # ShowConsoleMsg("Target: " & $editor.viewY.zoomTarget & "\n")
-      # ShowConsoleMsg("Pan: " & $editor.viewY.pan & "\n")
-      # ShowConsoleMsg("Zoom: " & $editor.viewY.zoom & "\n")
+      # ShowConsoleMsg("Target: " & $editor.viewX.zoomTarget & "\n")
+      # ShowConsoleMsg("Pan: " & $editor.viewX.pan & "\n")
   else: discard
 
 func onMouseRelease*(editor: var PitchEditor, input: Input) =
@@ -114,13 +184,15 @@ func onMouseMove*(editor: var PitchEditor, input: Input) =
     xChange = input.mouseDelta.x
     yChange = input.mouseDelta.y
 
+  editor.calculateCorrectionEditPointAndSegment(input.mousePosition)
+
   if editor.mouseMiddleWasPressedInside and
      input.isPressed(Middle):
     if input.isPressed(Shift):
       editor.viewX.changeZoom xChange
       editor.viewY.changeZoom yChange
     else:
-      editor.viewX.changePan xChange
+      editor.viewX.changePan -xChange
       editor.viewY.changePan yChange
 
     editor.redraw()
@@ -178,42 +250,45 @@ func drawKeys(editor: PitchEditor) =
 
     keyColorPrevious = keyColor
 
-# func drawPitchCorrections(editor: PitchEditor, window: Window) =
-#   let
-#     r = editor.correctionPointVisualRadius
-#     color = rgb(109, 186, 191)
-#     highlightColor = rgb(255, 255, 255, 0.35)
+func drawPitchCorrections(editor: PitchEditor) =
+  template toPixels(inches: Inches): Pixels =
+    inches * editor.dpi
 
-#   for correction in editor.corrections.mitems:
-#     let lastPointId = correction.points.len - 1
+  let
+    r = editor.correctionPointVisualRadius.toPixels
+    color = rgb(109, 186, 191)
+    highlightColor = rgb(255, 255, 255, 0.5)
 
-#     for i, point in correction.points.mpairs:
-#       let
-#         x = editor.timeToX(point.x)
-#         y = editor.pitchToY(point.y)
+  for correction in editor.corrections:
+    let lastPointId = correction.len - 1
 
-#       if i < lastPointId:
-#         var nextPoint {.byaddr.} = correction.points[i + 1]
+    for i, point in correction:
+      let
+        x = editor.viewX.convert(point.time).toPixels
+        y = editor.viewY.convert(point.pitch).toPixels
 
-#         let
-#           nextX = editor.timeToX(nextPoint.x)
-#           nextY = editor.pitchToY(nextPoint.y)
+      if i < lastPointId:
+        var nextPoint = correction[i + 1]
 
-#         editor.image.drawLine(x, y, nextX, nextY, color)
+        let
+          nextX = editor.viewX.convert(nextPoint.time).toPixels
+          nextY = editor.viewY.convert(nextPoint.pitch).toPixels
 
-#         # if editor.corrections.editIsSegment and
-#         #    editor.corrections.editSegment[0] == point.addr and
-#         #    editor.corrections.editSegment[1] == nextPoint.addr:
-#         #   editor.image.drawLine(x, y, nextX, nextY, highlightColor)
+        editor.image.drawLine(x, y, nextX, nextY, color)
 
-#       editor.image.fillCircle(x, y, r, rgb(29, 81, 84))
-#       editor.image.drawCircle(x, y, r, color)
+        if editor.correctionEditIsSegment and
+           editor.correctionEditSegment[0] == point and
+           editor.correctionEditSegment[1] == nextPoint:
+          editor.image.drawLine(x, y, nextX, nextY, highlightColor)
 
-#       # if editor.corrections.editIsPoint and
-#       #    editor.corrections.editPoint == point.addr:
-#       #   editor.image.fillCircle(x, y, r, highlightColor)
+      editor.image.fillCircle(x, y, r, rgb(29, 81, 84))
+      editor.image.drawCircle(x, y, r, color)
+
+      if editor.correctionEditIsPoint and
+         editor.correctionEditPoint == point:
+        editor.image.fillCircle(x, y, r, highlightColor)
 
 func updateImage*(editor: PitchEditor) =
   editor.image.clear(editor.backgroundColor)
   editor.drawKeys()
-  # editor.drawPitchCorrections(window)
+  editor.drawPitchCorrections()

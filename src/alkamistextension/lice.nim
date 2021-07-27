@@ -27,7 +27,7 @@ proc LICE_private_resize(bm: ptr LICE_IBitmap; w: cint; h: cint): bool {.importc
 proc LICE_Blit(dest: ptr LICE_IBitmap; src: ptr LICE_IBitmap; dstx: cint; dsty: cint; srcx: cint; srcy: cint; srcw: cint; srch: cint; alpha: cfloat; mode: cint) {.importc, header: ReaperPluginFunctionsHeader.}
 # proc LICE_Blur(dest: ptr LICE_IBitmap; src: ptr LICE_IBitmap; dstx: cint; dsty: cint; srcx: cint; srcy: cint; srcw: cint; srch: cint) {.importc, header: ReaperPluginFunctionsHeader.}
 # proc LICE_BorderedRect(dest: ptr LICE_IBitmap; x: cint; y: cint; w: cint; h: cint; bgcolor: LICE_pixel; fgcolor: LICE_pixel; alpha: cfloat; mode: cint) {.importc, header: ReaperPluginFunctionsHeader.}
-# proc LICE_Circle(dest: ptr LICE_IBitmap; cx: cfloat; cy: cfloat; r: cfloat; color: LICE_pixel; alpha: cfloat; mode: cint; aa: bool) {.importc, header: ReaperPluginFunctionsHeader.}
+proc LICE_Circle(dest: ptr LICE_IBitmap; cx: cfloat; cy: cfloat; r: cfloat; color: LICE_pixel; alpha: cfloat; mode: cint; aa: bool) {.importc, header: ReaperPluginFunctionsHeader.}
 proc LICE_Clear(dest: ptr LICE_IBitmap; color: LICE_pixel) {.importc, header: ReaperPluginFunctionsHeader.}
 # proc LICE_ClearRect(dest: ptr LICE_IBitmap; x: cint; y: cint; w: cint; h: cint; mask: LICE_pixel; orbits: LICE_pixel) {.importc, header: ReaperPluginFunctionsHeader.}
 # proc LICE_ClipLine(pX1Out: ptr cint; pY1Out: ptr cint; pX2Out: ptr cint; pY2Out: ptr cint; xLo: cint; yLo: cint; xHi: cint; yHi: cint): bool {.importc, header: ReaperPluginFunctionsHeader.}
@@ -200,6 +200,21 @@ func fillCircle*(image: Image,
                  mode = BlitMode.Copy) =
   if image.licePtr != nil:
     LICE_FillCircle(
+      image.liceBitmap,
+      x.cfloat, y.cfloat, radius.cfloat,
+      color.toLicePixel,
+      color.a.cfloat,
+      mode.toLiceBlitMode,
+      antiAlias,
+    )
+
+func drawCircle*(image: Image,
+                 x, y, radius: Pixels,
+                 color: Color,
+                 antiAlias = true,
+                 mode = BlitMode.Copy) =
+  if image.licePtr != nil:
+    LICE_Circle(
       image.liceBitmap,
       x.cfloat, y.cfloat, radius.cfloat,
       color.toLicePixel,

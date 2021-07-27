@@ -8,7 +8,7 @@ proc pitchCorrectionMain*() =
   window.setBounds(4.Inches, 2.Inches, 12.Inches, 8.Inches)
 
   var editor = newPitchEditor(
-    position = (x: 0.Inches, y: 0.Inches),
+    position = (0.Inches, 0.Inches),
     width = window.clientWidth,
     height = window.clientHeight,
     dpi = window.dpi,

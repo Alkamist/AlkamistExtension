@@ -32,7 +32,7 @@ func convert*[I, E](axis: ViewAxis[I, E], value: I): E =
   if axis.isInverted:
     axis.scale(axis.pan - value) + axis.externalSize
   else:
-    axis.scale(axis.pan + value)
+    axis.scale(value - axis.pan)
 
 func changePan*[I, E](axis: var ViewAxis[I, E], value: I) =
   axis.pan += value
@@ -44,6 +44,7 @@ func changeZoom*[I, E](axis: var ViewAxis[I, E], value: E) =
   let
     previousSize = axis.scale(axis.externalSize)
     zoomMultiplier = 2.0.pow(axis.zoomSensitivity * value.toFloat)
+
   axis.zoom *= zoomMultiplier
 
   let
@@ -51,9 +52,6 @@ func changeZoom*[I, E](axis: var ViewAxis[I, E], value: E) =
     zoomRatio = (axis.zoomTarget - axis.pan) / currentSize
     sizeChange = currentSize - previousSize
 
-  if axis.isInverted:
-    axis.pan -= sizeChange * zoomRatio
-  else:
-    axis.pan += sizeChange * zoomRatio
+  axis.pan -= sizeChange * zoomRatio
 
 {.pop.}
