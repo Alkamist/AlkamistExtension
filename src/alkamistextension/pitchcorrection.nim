@@ -15,21 +15,24 @@ proc pitchCorrectionMain*() =
     timeLength = 10.Seconds,
   )
 
+  template editorInput: Input =
+    window.input.withMousePositionOffset(-editor.position)
+
   template redrawIfNeeded(): untyped =
     if editor.shouldRedraw:
       window.redraw()
       editor.shouldRedraw = false
 
   window.onMousePress = proc() =
-    editor.onMousePress(window.input)
+    editor.onMousePress(editorInput)
     redrawIfNeeded()
 
   window.onMouseRelease = proc() =
-    editor.onMouseRelease(window.input)
+    editor.onMouseRelease(editorInput)
     redrawIfNeeded()
 
   window.onMouseMove = proc() =
-    editor.onMouseMove(window.input)
+    editor.onMouseMove(editorInput)
     redrawIfNeeded()
 
   window.onResize = proc() =

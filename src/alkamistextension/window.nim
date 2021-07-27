@@ -247,7 +247,7 @@ proc newWindow*(hInstance: HINSTANCE, parent: HWND): Window =
     result.updateBounds()
     result.backgroundColor = rgb(0, 0, 0)
     result.image = initImage(0.Pixels, 0.Pixels)
-    result.input = newInput()
+    result.input = initInput()
     result.dpi = 96.0.Dpi
     hWndWindows[result.hWnd] = result
     discard ShowWindow(result.hWnd, SW_SHOW)

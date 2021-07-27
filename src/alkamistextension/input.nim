@@ -162,7 +162,7 @@ type
     Apostrophe,
     IMEProcess,
 
-  Input* = ref object
+  Input* = object
     lastKeyPress*: KeyboardKey
     lastKeyRelease*: KeyboardKey
     lastMousePress*: MouseButton
@@ -174,7 +174,7 @@ type
 
 {.push inline.}
 
-func newInput*(): Input =
+func initInput*(): Input =
   result = Input()
 
 func mouseDelta*(input: Input): Vector2d[Inches] =
@@ -185,6 +185,11 @@ func isPressed*(input: Input, key: KeyboardKey): bool =
 
 func isPressed*(input: Input, button: MouseButton): bool =
   input.mouseButtonStates[button]
+
+func withMousePositionOffset*(input: Input, offset: Vector2d[Inches]): Input =
+  result = input
+  result.mousePosition += offset
+  result.previousMousePosition += offset
 
 {.pop.}
 

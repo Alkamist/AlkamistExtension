@@ -39,8 +39,16 @@ defineFloatType(Meters)
 
 func `+`*[A, B](a: Vector2d[A], b: Vector2d[B]): Vector2d[A] {.inline.} =
   (x: a.x + b.x, y: a.y + b.y)
+func `+=`*[A, B](a: var Vector2d[A], b: Vector2d[B]) {.inline.} =
+  a = a + b
+
 func `-`*[A, B](a: Vector2d[A], b: Vector2d[B]): Vector2d[A] {.inline.} =
   (x: a.x - b.x, y: a.y - b.y)
+func `-=`*[A, B](a: var Vector2d[A], b: Vector2d[B]) {.inline.} =
+  a = a - b
+
+func `-`*[T](a: Vector2d[T]): Vector2d[T] {.inline.} =
+  (x: -a.x, y: -a.y)
 
 func `*`*(a: Dpi, b: Inches): Pixels {.borrow.}
 func `*`*(a: Inches, b: Dpi): Pixels {.borrow.}

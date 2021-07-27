@@ -11,8 +11,6 @@ type
     time*: Seconds
     pitch*: Semitones
 
-  # TODO: Make input mouse position relative to editor.
-
   PitchEditor* = ref object
     position*: Vector2d[Inches]
     image*: Image
@@ -88,10 +86,10 @@ proc newPitchEditor*(position: Vector2d[Inches],
   #   result.corrections.lines.add correction
 
 func positionIsInside*(editor: PitchEditor, position: Vector2d[Inches]): bool =
-  position.x >= editor.x and
-  position.x <= editor.x + editor.width and
-  position.y >= editor.y and
-  position.y <= editor.y + editor.height
+  position.x >= 0.Inches and
+  position.x <= editor.width and
+  position.y >= 0.Inches and
+  position.y <= editor.height
 
 func onMousePress*(editor: var PitchEditor, input: Input) =
   case input.lastMousePress:
