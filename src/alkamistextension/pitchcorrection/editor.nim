@@ -10,11 +10,9 @@ type
   PitchPoint* = ref object
     time*: Seconds
     pitch*: Semitones
-    # nextPoint*: PitchPoint
-    # previousPoint*: PitchPoint
-    # shouldConnect*: bool
 
-  PitchCorrection* = seq[PitchPoint]
+  PitchCorrection* = ref object
+    points*: seq[PitchPoint]
 
   PitchEditor* = ref object
     position*: Vector2d[Inches]
@@ -29,29 +27,41 @@ type
     centerLineColor*: Color
     correctionPointVisualRadius*: Inches
     shouldRedraw*: bool
+    isEditingCorrection*: bool
     correctionEditDistance*: Inches
     correctionEditIsPoint*: bool
     correctionEditIsSegment*: bool
     correctionEditPoint*: PitchPoint
+    correctionEditPointCorrection*: PitchCorrection
     correctionEditPointDistance*: Inches
     correctionEditSegment*: tuple[a: PitchPoint, b: PitchPoint]
+    correctionEditSegmentCorrection*: PitchCorrection
     correctionEditSegmentDistance*: Inches
     mouseMiddleWasPressedInside: bool
     corrections: seq[PitchCorrection]
 
-# proc comparePitchPoint(x, y: PitchPoint): int =
-#   if x.time < y.time: -1
-#   else: 1
+proc comparePitchPoint(x, y: PitchPoint): int =
+  if x.time < y.time: -1
+  else: 1
 
 {.push inline.}
 
-# func hasNextPoint*(point: PitchPoint): bool = point.nextPoint != nil
-# func hasPreviousPoint*(point: PitchPoint): bool = point.previousPoint != nil
-# func isFirstPoint*(point: PitchPoint): bool = point.previousPoint == nil
-# func connectsBackward*(point: PitchPoint): bool =
-#   point.hasPreviousPoint and point.previousPoint.shouldConnect
-# func connectsForward*(point: PitchPoint): bool =
-#   point.hasNextPoint and point.shouldConnect
+func `[]`*(correction: PitchCorrection, i: int): PitchPoint =
+  return correction.points[i]
+func `[]=`*(correction: PitchCorrection, i: int, point: PitchPoint) =
+  correction.points[i] = point
+iterator items*(correction: PitchCorrection): PitchPoint =
+  for point in correction.points:
+    yield point
+iterator pairs*(correction: PitchCorrection): (int, PitchPoint) =
+  for i, point in correction.points:
+    yield (i, point)
+func len*(correction: PitchCorrection): int =
+  correction.points.len
+func add*(correction: var PitchCorrection, point: PitchPoint) =
+  correction.points.add point
+func sort*(correction: var PitchCorrection, cmp: proc (x, y: PitchPoint): int) =
+  correction.points.sort cmp
 
 func redraw*(editor: var PitchEditor) =
   editor.shouldRedraw = true
@@ -83,10 +93,6 @@ func positionIsInside*(editor: PitchEditor, position: Vector2d[Inches]): bool =
 func toVisualPoint*(editor: PitchEditor, point: PitchPoint): Vector2d[Inches] =
   (editor.viewX.convert(point.time), editor.viewY.convert(point.pitch))
 
-# func addCorrectionPoint*(editor: var PitchEditor, point: PitchPoint) =
-#   editor.corrections.add point
-#   editor.corrections.sort comparePitchPoint
-
 {.pop.}
 
 proc newPitchEditor*(position: Vector2d[Inches],
@@ -112,7 +118,7 @@ proc newPitchEditor*(position: Vector2d[Inches],
   result.correctionEditDistance = (5.0 / 96.0).Inches
 
   for correctionId in 0 ..< 5:
-    var correction: PitchCorrection
+    var correction = PitchCorrection()
 
     for pointId in 0 ..< 5:
       let pointNumber = 5 * correctionId + pointId
@@ -123,7 +129,7 @@ proc newPitchEditor*(position: Vector2d[Inches],
 
     result.corrections.add correction
 
-func calculateCorrectionEditPointAndSegment*(editor: var PitchEditor, toPoint: Vector2d[Inches]) =
+func calculateCorrectionEdit*(editor: var PitchEditor, toPoint: Vector2d[Inches]) =
   editor.correctionEditPoint = nil
   editor.correctionEditPointDistance = 0.Inches
   editor.correctionEditSegment = (nil, nil)
@@ -146,24 +152,32 @@ func calculateCorrectionEditPointAndSegment*(editor: var PitchEditor, toPoint: V
         if editor.correctionEditSegment == (nil, nil):
           editor.correctionEditSegment = (point, nextPoint)
           editor.correctionEditSegmentDistance = distanceToSegment
+          editor.correctionEditSegmentCorrection = correction
         else:
           if distanceToSegment < editor.correctionEditSegmentDistance:
             editor.correctionEditSegment = (point, nextPoint)
             editor.correctionEditSegmentDistance = distanceToSegment
+            editor.correctionEditSegmentCorrection = correction
 
       if editor.correctionEditPoint == nil:
         editor.correctionEditPoint = point
         editor.correctionEditPointDistance = distanceToPoint
+        editor.correctionEditPointCorrection = correction
       else:
         if distanceToPoint < editor.correctionEditPointDistance:
           editor.correctionEditPoint = point
           editor.correctionEditPointDistance = distanceToPoint
+          editor.correctionEditPointCorrection = correction
 
   editor.correctionEditIsPoint = editor.correctionEditPointDistance <= editor.correctionEditDistance
   editor.correctionEditIsSegment = editor.correctionEditSegmentDistance <= editor.correctionEditDistance and not editor.correctionEditIsPoint
 
 func onMousePress*(editor: var PitchEditor, input: Input) =
   case input.lastMousePress:
+  of Left:
+    if editor.positionIsInside(input.mousePosition):
+      editor.isEditingCorrection = editor.correctionEditIsPoint or
+                                   editor.correctionEditIsSegment
   of Middle:
     if editor.positionIsInside(input.mousePosition):
       editor.mouseMiddleWasPressedInside = true
@@ -175,8 +189,8 @@ func onMousePress*(editor: var PitchEditor, input: Input) =
 
 func onMouseRelease*(editor: var PitchEditor, input: Input) =
   case input.lastMouseRelease:
-  of Middle:
-    editor.mouseMiddleWasPressedInside = false
+  of Left: editor.isEditingCorrection = false
+  of Middle: editor.mouseMiddleWasPressedInside = false
   else: discard
 
 func onMouseMove*(editor: var PitchEditor, input: Input) =
@@ -184,7 +198,23 @@ func onMouseMove*(editor: var PitchEditor, input: Input) =
     xChange = input.mouseDelta.x
     yChange = input.mouseDelta.y
 
-  editor.calculateCorrectionEditPointAndSegment(input.mousePosition)
+  if editor.isEditingCorrection:
+    let
+      timeChange = editor.viewX.scale xChange
+      pitchChange = editor.viewY.scale -yChange
+
+    if editor.correctionEditIsPoint:
+      editor.correctionEditPoint.time += timeChange
+      editor.correctionEditPoint.pitch += pitchChange
+      editor.correctionEditPointCorrection.sort comparePitchPoint
+    elif editor.correctionEditIsSegment:
+      editor.correctionEditSegment.a.time += timeChange
+      editor.correctionEditSegment.a.pitch += pitchChange
+      editor.correctionEditSegment.b.time += timeChange
+      editor.correctionEditSegment.b.pitch += pitchChange
+      editor.correctionEditSegmentCorrection.sort comparePitchPoint
+  else:
+    editor.calculateCorrectionEdit(input.mousePosition)
 
   if editor.mouseMiddleWasPressedInside and
      input.isPressed(Middle):
