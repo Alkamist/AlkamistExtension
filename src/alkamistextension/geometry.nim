@@ -1,56 +1,59 @@
 import std/math, units
 
 type
-  Vector2d*[T] = tuple[x: T, y: T]
-  Segment2d*[T] = tuple[a: Vector2d[T], b: Vector2d[T]]
+  Vector2d[T] = (T, T)
+  Segment2d[T] = ((T, T), (T, T))
+  PolyLine2d[T] = seq[(T, T)]
+  PolyLineGroup2d[T] = seq[seq[(T, T)]]
 
-  PolyLine2d*[T] = seq[Vector2d[T]]
-  PolyLine2dDistanceInfo*[T] = tuple
-    closestPointIndex: int
-    closestSegmentIndex: int
-    closestPointDistance: T
-    closestSegmentDistance: T
+  PolyLine2dDistanceInfo*[T] = object
+    closestPointIndex*: int
+    closestSegmentIndex*: int
+    closestPointDistance*: T
+    closestSegmentDistance*: T
 
-  PolyLineGroup2d*[T] = seq[PolyLine2d[T]]
-  PolyLineGroup2dDistanceInfo*[T] = tuple
-    closestPointIndex: int
-    closestSegmentIndex: int
-    closestPointPolyLineIndex: int
-    closestSegmentPolyLineIndex: int
-    closestPointDistance: T
-    closestSegmentDistance: T
+  PolyLineGroup2dDistanceInfo*[T] = object
+    closestPointIndex*: int
+    closestSegmentIndex*: int
+    closestPointPolyLineIndex*: int
+    closestSegmentPolyLineIndex*: int
+    closestPointDistance*: T
+    closestSegmentDistance*: T
 
 {.push inline.}
 
-func `+`*[A, B](a: Vector2d[A], b: Vector2d[B]): Vector2d[A] {.inline.} =
-  (x: a.x + b.x, y: a.y + b.y)
-func `+=`*[A, B](a: var Vector2d[A], b: Vector2d[B]) {.inline.} =
-  a = a + b
+func `a`*[T](a: Vector2d[T]): T = a[0]
+func `a=`*[T](a: var Vector2d[T], value: T) = a[0] = value
+func `b`*[T](a: Vector2d[T]): T = a[1]
+func `b=`*[T](a: var Vector2d[T], value: T) = a[1] = value
 
-func `-`*[A, B](a: Vector2d[A], b: Vector2d[B]): Vector2d[A] {.inline.} =
-  (x: a.x - b.x, y: a.y - b.y)
-func `-=`*[A, B](a: var Vector2d[A], b: Vector2d[B]) {.inline.} =
-  a = a - b
+func `x`*[T](a: Vector2d[T]): T = a[0]
+func `x=`*[T](a: var Vector2d[T], value: T) = a[0] = value
+func `y`*[T](a: Vector2d[T]): T = a[1]
+func `y=`*[T](a: var Vector2d[T], value: T) = a[1] = value
 
-func `-`*[T](a: Vector2d[T]): Vector2d[T] {.inline.} =
-  (x: -a.x, y: -a.y)
+func `+`*[A, B](a: Vector2d[A], b: Vector2d[B]): Vector2d[A] = (a[0] + b[0], a[1] + b[1])
+func `+=`*[A, B](a: var Vector2d[A], b: Vector2d[B]) = a = a + b
+func `-`*[A, B](a: Vector2d[A], b: Vector2d[B]): Vector2d[A] = (a[0] - b[0], a[1] - b[1])
+func `-=`*[A, B](a: var Vector2d[A], b: Vector2d[B]) = a = a - b
+func `-`*[T](a: Vector2d[T]): Vector2d[T] = (-a[0], -a[1])
 
 func distance*[T](a, b: Vector2d[T]): T =
   let
-    dx = (a.x - b.x).toFloat
-    dy = (a.y - b.y).toFloat
+    dx = (a[0] - b[0]).toFloat
+    dy = (a[1] - b[1]).toFloat
   sqrt(dx * dx + dy * dy).T
 
 {.pop.}
 
 func distance*[T](point: Vector2d[T], segment: Segment2d[T]): T =
   let
-    pX = point.x.toFloat
-    pY = point.y.toFloat
-    x1 = segment[0].x.toFloat
-    y1 = segment[0].y.toFloat
-    x2 = segment[1].x.toFloat
-    y2 = segment[1].y.toFloat
+    pX = point[0].toFloat
+    pY = point[1].toFloat
+    x1 = segment[0][0].toFloat
+    y1 = segment[0][1].toFloat
+    x2 = segment[1][0].toFloat
+    y2 = segment[1][1].toFloat
     a = pX - x1
     b = pY - y1
     c = x2 - x1

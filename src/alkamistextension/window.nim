@@ -58,7 +58,7 @@ func x*(window: Window): Inches =
 func y*(window: Window): Inches =
   window.top
 
-func position*(window: Window): Vector2d[Inches] =
+func position*(window: Window): (Inches, Inches) =
   result.x = window.x
   result.y = window.y
 
@@ -86,7 +86,7 @@ func clientX*(window: Window): Inches =
 func clientY*(window: Window): Inches =
   window.clientRight
 
-func clientPosition*(window: Window): Vector2d[Inches] =
+func clientPosition*(window: Window): (Inches, Inches) =
   result.x = window.clientX
   result.y = window.clientY
 
