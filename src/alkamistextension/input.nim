@@ -1,4 +1,4 @@
-import std/options, units
+import std/options, units, geometry
 
 type
   MouseButton* = enum

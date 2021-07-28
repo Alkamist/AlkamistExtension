@@ -1,4 +1,6 @@
-import reaper, pitchcorrection/editor
+import
+  reaper, window,
+  pitchcorrection/editor
 
 proc pitchCorrectionMain*() =
   var window = newWindow()
@@ -7,12 +9,11 @@ proc pitchCorrectionMain*() =
   window.backgroundColor = rgb(16, 16, 16)
   window.setBounds(4.Inches, 2.Inches, 12.Inches, 8.Inches)
 
-  var editor = newPitchEditor(
+  var editor = initPitchEditor(
     position = (0.Inches, 0.Inches),
     width = window.clientWidth,
     height = window.clientHeight,
     dpi = window.dpi,
-    timeLength = 10.Seconds,
   )
 
   template editorInput: Input =

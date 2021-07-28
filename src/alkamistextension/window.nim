@@ -1,6 +1,8 @@
 import
   std/[tables, options],
-  winapi, units, lice, input
+  winapi, units, geometry, lice, input
+
+export units, geometry, lice, input
 
 type
   Window* = ref object

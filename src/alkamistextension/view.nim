@@ -1,4 +1,4 @@
-import std/math, ../units
+import std/math, units
 
 type
   ViewAxis*[I, E] = object
