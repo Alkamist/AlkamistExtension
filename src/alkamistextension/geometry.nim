@@ -1,4 +1,4 @@
-import std/math
+import std/math, units
 
 type
   Vector2d*[T] = tuple[x: T, y: T]
@@ -11,7 +11,7 @@ type
     closestPointDistance: T
     closestSegmentDistance: T
 
-  PolyLineGroup2d*[T] = seq[Vector2d[T]]
+  PolyLineGroup2d*[T] = seq[PolyLine2d[T]]
   PolyLineGroup2dDistanceInfo*[T] = tuple
     closestPointIndex: int
     closestSegmentIndex: int
@@ -89,7 +89,7 @@ func distanceInfo*[T](line: PolyLine2d[T], toPoint: Vector2d[T]): PolyLine2dDist
   for i, point in line:
     if i < lastPointIndex:
       let
-        nextPoint = correction[i + 1]
+        nextPoint = line[i + 1]
         distanceToSegment = toPoint.distance (point, nextPoint)
 
       if i == 0:
@@ -110,7 +110,7 @@ func distanceInfo*[T](line: PolyLine2d[T], toPoint: Vector2d[T]): PolyLine2dDist
 
 func distanceInfo*[T](group: PolyLineGroup2d[T], toPoint: Vector2d[T]): PolyLineGroup2dDistanceInfo[T] =
   for i, line in group:
-    let info = line.distanceInfo
+    let info = line.distanceInfo toPoint
 
     if i == 0:
       result.closestPointIndex = info.closestPointIndex

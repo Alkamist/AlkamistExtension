@@ -5,7 +5,6 @@ import
 
 type
   PitchPoint* = tuple[time: Seconds, pitch: Semitones]
-  PitchSegment* = tuple[a, b: PitchPoint]
   PitchPolyLine* = seq[PitchPoint]
 
   PitchPolyLineEditState* = enum
@@ -16,7 +15,7 @@ type
   PitchPolyLineEdit* = object
     state*: PitchPolyLineEditState
     point*: ptr PitchPoint
-    segment*: ptr PitchSegment
+    segment*: tuple[a, b: ptr PitchPoint]
     pointDistance*: Inches
     segmentDistance*: Inches
     pointPolyLine*: ptr PitchPolyLine
@@ -168,18 +167,25 @@ func calculateCorrectionEdit(editor: var PitchEditor, input: Input) =
       visualLine.add point.toVisualPoint(editor)
     visualCorrections.add visualLine
 
-  var distanceInfo = distanceInfo[Inches](visualCorrections)
+  var info = visualCorrections.distanceInfo input.mousePosition
 
-  # state*: PitchPolyLineEditState
+  let
+    isPoint = info.closestPointDistance <= editor.correctionEditDistance
+    isSegment = info.closestSegmentDistance <= editor.correctionEditDistance and not isPoint
 
-  result.pointDistance = distanceInfo.closestPointDistance
-  result.pointPolyLine = editor.corrections[distanceInfo.closestPointPolyLineIndex].addr
-  result.point = result.pointPolyLine[distanceInfo.closestPointIndex].addr
+  editor.correctionEdit.state =
+    if isPoint: PitchPolyLineEditState.Point
+    elif isSegment: PitchPolyLineEditState.Segment
+    else: PitchPolyLineEditState.None
 
-  result.segmentDistance  = distanceInfo.closestSegmentDistance
-  result.segmentPolyLine = editor.corrections[distanceInfo.closestSegmentPolyLineIndex].addr
-  result.segment = (result.segmentPolyLine[distanceInfo.closestSegmentIndex].addr,
-                    result.segmentPolyLine[distanceInfo.closestSegmentIndex + 1].addr)
+  editor.correctionEdit.pointDistance = info.closestPointDistance
+  editor.correctionEdit.pointPolyLine = editor.corrections[info.closestPointPolyLineIndex].addr
+  editor.correctionEdit.point = editor.correctionEdit.pointPolyLine[info.closestPointIndex].addr
+
+  editor.correctionEdit.segmentDistance  = info.closestSegmentDistance
+  editor.correctionEdit.segmentPolyLine = editor.corrections[info.closestSegmentPolyLineIndex].addr
+  editor.correctionEdit.segment = (editor.correctionEdit.segmentPolyLine[info.closestSegmentIndex].addr,
+                                   editor.correctionEdit.segmentPolyLine[info.closestSegmentIndex + 1].addr)
 
 func onMouseMove*(editor: var PitchEditor, input: Input) =
   # if editor.isEditingCorrection:
@@ -245,25 +251,25 @@ func drawKeys(editor: PitchEditor) =
 
     keyColorPrevious = keyColor
 
-func drawPitchCorrections(editor: PitchEditor) =
+func drawPitchCorrections(editor: var PitchEditor) =
   template toPixels(inches: Inches): Pixels =
     inches * editor.dpi
 
   let
     r = editor.correctionPointVisualRadius.toPixels
     color = rgb(109, 186, 191)
-    # highlightColor = rgb(255, 255, 255, 0.5)
+    highlightColor = rgb(255, 255, 255, 0.5)
 
-  for correction in editor.corrections:
+  for correction in editor.corrections.mitems:
     let lastPointId = correction.len - 1
 
-    for i, point in correction:
+    for i, point in correction.mpairs:
       let
         x = editor.viewX.convert(point.time).toPixels
         y = editor.viewY.convert(point.pitch).toPixels
 
       if i < lastPointId:
-        var nextPoint = correction[i + 1]
+        var nextPoint = correction[i + 1].addr
 
         let
           nextX = editor.viewX.convert(nextPoint.time).toPixels
@@ -271,19 +277,19 @@ func drawPitchCorrections(editor: PitchEditor) =
 
         editor.image.drawLine(x, y, nextX, nextY, color)
 
-        # if editor.correctionEditIsSegment and
-        #    editor.correctionEditSegment[0] == point and
-        #    editor.correctionEditSegment[1] == nextPoint:
-        #   editor.image.drawLine(x, y, nextX, nextY, highlightColor)
+        if editor.correctionEdit.state == PitchPolyLineEditState.Segment and
+           editor.correctionEdit.segment[0] == point.addr and
+           editor.correctionEdit.segment[1] == nextPoint:
+          editor.image.drawLine(x, y, nextX, nextY, highlightColor)
 
       editor.image.fillCircle(x, y, r, rgb(29, 81, 84))
       editor.image.drawCircle(x, y, r, color)
 
-      # if editor.correctionEditIsPoint and
-      #    editor.correctionEdit.point == point:
-      #   editor.image.fillCircle(x, y, r, highlightColor)
+      if editor.correctionEdit.state == PitchPolyLineEditState.Point and
+         editor.correctionEdit.point == point.addr:
+        editor.image.fillCircle(x, y, r, highlightColor)
 
-func updateImage*(editor: PitchEditor) =
+func updateImage*(editor: var PitchEditor) =
   editor.image.clear(editor.colorScheme.background)
   editor.drawKeys()
   editor.drawPitchCorrections()
