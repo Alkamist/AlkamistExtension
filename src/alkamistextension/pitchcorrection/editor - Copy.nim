@@ -21,7 +21,9 @@ type
     segmentIndex*: int
     pointPolyLineIndex*: int
     segmentPolyLineIndex*: int
-    movementAccumulator*: PitchPoint
+    pointSnapStart*: PitchPoint
+    segmentSnapStart*: PitchPoint
+    segmentOffset*: (PitchPoint, PitchPoint)
 
   PitchEditorColorScheme* = object
     background*: Color
@@ -70,11 +72,6 @@ proc comparePitchPoint*(x, y: ref PitchPoint): int =
 
 {.push inline.}
 
-func symmetricalFloor*[T](value: T): T =
-  if value > 0.T: value.floor
-  elif value < 0.T: -(-value).floor
-  else: 0.T
-
 func defaultPitchEditorColorScheme*(): PitchEditorColorScheme =
   result.background = rgb(16, 16, 16)
   result.blackKeys = rgb(60, 60, 60, 1.0)
@@ -100,10 +97,6 @@ func mousePosition*(editor: PitchEditor, input: Input): PitchPoint =
   (editor.viewX.convert input.mousePosition.x,
    editor.viewY.convert input.mousePosition.y)
 
-func mouseDelta*(editor: PitchEditor, input: Input): PitchPoint =
-  (editor.viewX.scale input.mouseDelta.x,
-   editor.viewY.scale -input.mouseDelta.y)
-
 func zoomOutXToFull*(editor: var PitchEditor) =
   editor.viewX.zoom = editor.width.toFloat / editor.timeLength.toFloat
 
@@ -120,6 +113,38 @@ func toVisualPoint*(point: PitchPoint, editor: PitchEditor): (Inches, Inches) =
   (editor.viewX.convert point.time,
    editor.viewY.convert point.pitch)
 
+func resetPitchSnap(editor: var PitchEditor, input: Input) =
+  editor.correctionEdit.pointSnapStart = (
+    editor.correctionEdit.point.time,
+    editor.correctionEdit.point.pitch,
+  )
+
+  editor.correctionEdit.segmentSnapStart = (
+    editor.correctionEdit.segment[0].time,
+    editor.correctionEdit.segment[0].pitch,
+  )
+
+  # let
+  #   mouse = editor.mousePosition(input)
+
+  #   segmentMinTime = min(editor.correctionEdit.segment[0].time,
+  #                        editor.correctionEdit.segment[1].time)
+  #   segmentMaxTime = max(editor.correctionEdit.segment[0].time,
+  #                        editor.correctionEdit.segment[1].time)
+  #   segmentMinPitch = min(editor.correctionEdit.segment[0].pitch,
+  #                         editor.correctionEdit.segment[1].pitch)
+  #   segmentMaxPitch = max(editor.correctionEdit.segment[0].pitch,
+  #                         editor.correctionEdit.segment[1].pitch)
+  #   segmentTotalTime = abs(segmentMaxTime - segmentMinTime)
+  #   timeRatio = (mouse.time - segmentMinTime) / segmentTotalTime
+
+  #   pitchDelta = segmentMaxPitch - segmentMinPitch
+
+  #   segmentEditTime = segmentTotalTime * timeRatio + segmentMinTime
+  #   segmentEditPitch = pitchDelta * timeRatio + segmentMinPitch
+
+  # editor.correctionEdit.segmentSnapStart = (segmentEditTime, segmentEditPitch)
+
 {.pop.}
 
 func updateVisualCorrections(editor: var PitchEditor) =
@@ -129,6 +154,15 @@ func updateVisualCorrections(editor: var PitchEditor) =
     for point in correction:
       visualLine.add point[].toVisualPoint(editor)
     editor.visualCorrections.add visualLine
+
+func updateCorrectionEditSegmentOffset(editor: var PitchEditor, input: Input) =
+  let mouse = editor.mousePosition(input)
+  editor.correctionEdit.segmentOffset = (
+    (mouse.time - editor.correctionEdit.segment[0].time,
+     mouse.pitch - editor.correctionEdit.segment[0].pitch),
+    (mouse.time - editor.correctionEdit.segment[1].time,
+     mouse.pitch - editor.correctionEdit.segment[1].pitch),
+  )
 
 proc initPitchEditor*(position: (Inches, Inches),
                       width, height: Inches,
@@ -195,7 +229,8 @@ func onMousePress*(editor: var PitchEditor, input: Input) =
       editor.calculateCorrectionEdit(input)
       editor.isEditingCorrection = editor.correctionEdit.state != PitchEditState.None
       if editor.isEditingCorrection:
-        editor.correctionEdit.movementAccumulator = (0.Seconds, 0.Semitones)
+        editor.updateCorrectionEditSegmentOffset(input)
+        editor.resetPitchSnap(input)
   of Middle:
     if editor.positionIsInside(input.mousePosition):
       editor.mouseMiddleWasPressedInside = true
@@ -226,52 +261,51 @@ func handleViewMovement*(editor: var PitchEditor, input: Input) =
   editor.updateVisualCorrections()
 
 func handleEditMovement(editor: var PitchEditor, input: Input) =
-  template movePoint(delta: untyped): untyped =
+  let mouse = editor.mousePosition(input)
+
+  template assignPoint(p): untyped =
     if editor.correctionEdit.point != nil:
-      editor.correctionEdit.point[] += delta
+      editor.correctionEdit.point.time = p.time
+      editor.correctionEdit.point.pitch = p.pitch
       editor.corrections[editor.correctionEdit.pointPolyLineIndex].sort comparePitchPoint
 
-  # template moveSegment(delta: untyped): untyped =
-  #   if editor.correctionEdit.segment[0] != nil and
-  #      editor.correctionEdit.segment[1] != nil:
-  #     editor.correctionEdit.segment[0][] += delta
-  #     editor.correctionEdit.segment[1][] += delta
-  #     editor.corrections[editor.correctionEdit.pointPolyLineIndex].sort comparePitchPoint
+  template assignSegment(p1, p2): untyped =
+    if editor.correctionEdit.segment[0] != nil and
+       editor.correctionEdit.segment[1] != nil:
+      editor.correctionEdit.segment[0].time = p1.time
+      editor.correctionEdit.segment[0].pitch = p1.pitch
+      editor.correctionEdit.segment[1].time = p2.time
+      editor.correctionEdit.segment[1].pitch = p2.pitch
+      editor.corrections[editor.correctionEdit.pointPolyLineIndex].sort comparePitchPoint
 
   case editor.correctionEdit.state:
   of Point:
     if input.isPressed(Shift):
-      movePoint(editor.correctionEdit.movementAccumulator)
-      editor.correctionEdit.movementAccumulator = (0.Seconds, 0.Semitones)
+      assignPoint(mouse)
+      editor.resetPitchSnap(input)
     else:
       let
-        deltaTime = editor.correctionEdit.movementAccumulator.time
-        deltaPitch = editor.correctionEdit.movementAccumulator.pitch.symmetricalFloor
-      movePoint (deltaTime, deltaPitch)
-      editor.correctionEdit.movementAccumulator.time = 0.Seconds
-      if deltaPitch != 0.Semitones:
-        editor.correctionEdit.movementAccumulator.pitch = 0.Semitones
+        pitchStart = editor.correctionEdit.pointSnapStart.pitch
+        pitchDelta = mouse.pitch - pitchStart
+      assignPoint (mouse.time, pitchStart + pitchDelta.round)
   of Segment:
-    discard
-    # if input.isPressed(Shift):
-    #   assignSegment(mouse - editor.correctionEdit.segmentOffset[0],
-    #                 mouse - editor.correctionEdit.segmentOffset[1])
-    #   editor.resetPitchSnap(input)
-    # else:
-    #   let
-    #     pitchStart = editor.correctionEdit.segmentSnapStart.pitch
-    #     pitchDelta = mouse.pitch - pitchStart
-    #     snappedPosition = (mouse.time, pitchStart + pitchDelta.round)
-    #   assignSegment(snappedPosition - editor.correctionEdit.segmentOffset[0],
-    #                 snappedPosition - editor.correctionEdit.segmentOffset[1])
+    if input.isPressed(Shift):
+      assignSegment(mouse - editor.correctionEdit.segmentOffset[0],
+                    mouse - editor.correctionEdit.segmentOffset[1])
+      editor.resetPitchSnap(input)
+    else:
+      let
+        pitchStart = editor.correctionEdit.segmentSnapStart.pitch
+        pitchDelta = mouse.pitch - pitchStart
+        snappedPosition = (mouse.time, pitchStart + pitchDelta.round)
+      assignSegment(snappedPosition - editor.correctionEdit.segmentOffset[0],
+                    snappedPosition - editor.correctionEdit.segmentOffset[1])
   of None:
     discard
 
   editor.updateVisualCorrections()
 
 func onMouseMove*(editor: var PitchEditor, input: Input) =
-  editor.correctionEdit.movementAccumulator += editor.mouseDelta(input)
-
   if editor.isEditingCorrection:
     editor.handleEditMovement(input)
   else:

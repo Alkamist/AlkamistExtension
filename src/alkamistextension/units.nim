@@ -21,8 +21,8 @@ template defineFloatType(typ: typedesc): untyped =
   func `-`*(a, b: typ): typ = (a.toFloat - b.toFloat).typ
   func `-=`*(a: var typ, b: typ) = a = a - b
   func `<`*(a, b: typ): bool = a.toFloat < b.toFloat
-  func `<=`*(a, b: typ): bool = a.toFloat < b.toFloat
-  func `==`*(a, b: typ): bool = a.toFloat < b.toFloat
+  func `<=`*(a, b: typ): bool = a.toFloat <= b.toFloat
+  func `==`*(a, b: typ): bool = a.toFloat == b.toFloat
   func `*`*(a: typ, b: SomeNumber): typ = (a.float * b).typ
   func `*=`*(a: var typ, b: SomeNumber) = a = a * b
   func `/`*(a: typ, b: SomeNumber): typ = (a.float / b).typ
@@ -30,6 +30,8 @@ template defineFloatType(typ: typedesc): untyped =
   func `/`*(a, b: typ): float = a.toFloat / b.toFloat
   func abs*(a: typ): typ = a.toFloat.abs.typ
   func round*(a: typ): typ = a.toFloat.round.typ
+  func floor*(a: typ): typ = a.toFloat.floor.typ
+  func ceil*(a: typ): typ = a.toFloat.floor.typ
   func `$`*(a: typ): string = $a.toFloat
 
   {.pop.}
