@@ -125,9 +125,10 @@ func handleEditMovement(editor: var PitchEditor, input: Input) =
         point.position.time = point.editOffset.time + editStart.time + editDelta.time
         point.position.pitch = point.editOffset.pitch + editStart.pitch + editDelta.pitch.round
 
-  # for point in editor.correctionSelection.mitems:
-  #   point.timeSort()
+  for point in editor.correctionSelection.mitems:
+    point.timeSort()
 
+  editor.calculateFirstCorrectionPoint()
   editor.redraw()
 
 func handleClickSelectLogic(editor: var PitchEditor, input: Input) =
@@ -151,26 +152,26 @@ func handleClickSelectLogic(editor: var PitchEditor, input: Input) =
     of Segment:
       let bothSelected =
         mousePoint.isSelected and
-        mousePoint.nextPoint != nil and
-        mousePoint.nextPoint.isSelected
+        mousePoint.next != nil and
+        mousePoint.next.isSelected
 
       if not bothSelected:
         editingUnselectedPoint = true
 
       if input.isPressed(Control) and not input.isPressed(Shift):
         editor.setCorrectionPointSelectionState(mousePoint, not mousePoint.isSelected)
-        editor.setCorrectionPointSelectionState(mousePoint.nextPoint, not mousePoint.nextPoint.isSelected)
+        editor.setCorrectionPointSelectionState(mousePoint.next, not mousePoint.next.isSelected)
       else:
         editor.setCorrectionPointSelectionState(mousePoint, true)
-        editor.setCorrectionPointSelectionState(mousePoint.nextPoint, true)
+        editor.setCorrectionPointSelectionState(mousePoint.next, true)
 
   for point in editor.corrections.mitems:
     if point.mouseOver == PitchPointMouseOver.None:
       let
         neitherShiftNorControl = not (input.isPressed(Shift) or input.isPressed(Control))
-        previousIsNotSegment = point.previousPoint == nil or
-                               point.previousPoint != nil and
-                               point.previousPoint.mouseOver != Segment
+        previousIsNotSegment = point.previous == nil or
+                               point.previous != nil and
+                               point.previous.mouseOver != Segment
 
       if neitherShiftNorControl and previousIsNotSegment and editingUnselectedPoint:
         editor.setCorrectionPointSelectionState(point, false)
@@ -209,20 +210,20 @@ proc newPitchEditor*(position: (Inches, Inches),
   result.correctionEditDistance = (5.0 / 96.0).Inches
   result.boxSelect = newBoxSelect()
 
-  var previousPoint: PitchPoint
+  var previous: PitchPoint
   for pointId in 0 ..< 3:
     var point = newPitchPoint(
       (pointId.Seconds, rand(numKeys).Semitones),
       result.view,
     )
 
-    if previousPoint != nil:
-      previousPoint.nextPoint = point
+    if previous != nil:
+      previous.next = point
 
-    point.previousPoint = previousPoint
+    point.previous = previous
     result.corrections.add(point)
 
-    previousPoint = point
+    previous = point
 
   result.calculateFirstCorrectionPoint()
   result.redraw()

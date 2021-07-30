@@ -12,15 +12,15 @@ type
     visualPosition*: (Inches, Inches)
     isSelected*: bool
     mouseOver*: PitchPointMouseOver
-    previousPoint*, nextPoint*: PitchPoint
+    previous*, next*: PitchPoint
     view*: View[Seconds, Semitones, Inches]
 
 {.push inline.}
 
 func time*(a: PitchPoint): Seconds = a.position[0]
 func pitch*(a: PitchPoint): Semitones = a.position[1]
-func isFirstPoint*(a: PitchPoint): bool = a.previousPoint == nil
-func isLastPoint*(a: PitchPoint): bool = a.nextPoint == nil
+func isFirstPoint*(a: PitchPoint): bool = a.previous == nil
+func isLastPoint*(a: PitchPoint): bool = a.next == nil
 
 func `time=`*(a: var PitchPoint, value: Seconds) = a.position[0] = value
 func `pitch=`*(a: var PitchPoint, value: Semitones) = a.position[1] = value
@@ -49,32 +49,66 @@ template loopForward*(startPoint: PitchPoint, code: untyped): untyped =
   while true:
     code
     if point.isLastPoint: break
-    point = point.nextPoint
+    point = point.next
 
 template loopForward*(startPoint: var PitchPoint, code: untyped): untyped =
   var point {.inject.} = startPoint
   while true:
     code
     if point.isLastPoint: break
-    point = point.nextPoint
+    point = point.next
 
-func timeSort*(start: var PitchPoint) =
-  if not start.isFirstPoint and start.time < start.previousPoint.time:
+func timeSort*(point: var PitchPoint) =
+  if point.previous == nil:
+    return
+
+  if point.time < point.previous.time:
     var
-      startNext = start.nextPoint
-      point = start.previousPoint
+      a = point.previous
+      c = point.next
 
-    while true:
-      if point.isFirstPoint:
-        point.previousPoint = start
-        point.nextPoint = startNext
+    a.previous = point
+    a.next = c
 
-        start.previousPoint = nil
-        start.nextPoint = point
+    point.previous = nil
+    point.next = a
 
-        startNext.previousPoint = point
+    c.previous = a
+    c.next = nil
 
-        break
+    # while true:
+    #   if check == nil:
+    #     var
+    #       a = point
+    #       b = point.previous
+    #       c = point.next
+
+    #     if a != nil: a.next = b
+    #     if b != nil: b.previous = a
+    #     if b != nil: b.next = c
+    #     if c != nil: c.previous = b
+
+    #     break
+
+    #   elif point.time >= check.time:
+    #     var
+    #       a = check
+    #       b = point
+    #       c = check.next
+    #       d = point.previous
+    #       e = point.next
+
+    #     if a != nil: a.next = b
+    #     if b != nil: b.previous = a
+    #     if b != nil: b.next = c
+    #     if c != nil: c.previous = b
+    #     if d != nil: d.next = e
+    #     if e != nil: e.previous = d
+
+    #     if check.previous == nil:
+    #       break
+
+    #     check = check.previous
 
 func calculateVisualPositions*(start: var PitchPoint) =
   start.loopForward:
@@ -92,15 +126,15 @@ func calculateMouseOvers*(start: var PitchPoint,
   start.loopForward:
     point.mouseOver = None
 
-    if point.nextPoint != nil:
+    if point.next != nil:
       let distanceToSegment = mousePosition.distance((point.visualPosition,
-                                                      point.nextPoint.visualPosition))
+                                                      point.next.visualPosition))
 
       if point.isFirstPoint:
-        closestSegment = (point, point.nextPoint)
+        closestSegment = (point, point.next)
         closestSegmentDistance = distanceToSegment
       elif distanceToSegment < closestSegmentDistance:
-        closestSegment = (point, point.nextPoint)
+        closestSegment = (point, point.next)
         closestSegmentDistance = distanceToSegment
 
     let distanceToPoint = mousePosition.distance(point.visualPosition)
@@ -139,14 +173,14 @@ func draw*(start: PitchPoint, image: Image) =
     if not point.isLastPoint:
       image.drawLine(
         point.visualPosition,
-        point.nextPoint.visualPosition,
+        point.next.visualPosition,
         color,
       )
 
       if point.mouseOver == Segment:
         image.drawLine(
           point.visualPosition,
-          point.nextPoint.visualPosition,
+          point.next.visualPosition,
           rgb(255, 255, 255, 0.5)
         )
 
