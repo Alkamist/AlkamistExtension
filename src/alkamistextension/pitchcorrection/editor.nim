@@ -104,6 +104,11 @@ func cleanCorrectionSelection(editor: var PitchEditor) =
     x.isSelected
   )
 
+func unselectAllCorrections(editor: var PitchEditor) =
+  for point in editor.correctionSelection:
+    point.isSelected = false
+  editor.correctionSelection = @[]
+
 func handleEditMovement(editor: var PitchEditor, input: Input) =
   let
     mouse = editor.view.convert(input.mousePosition)
@@ -243,6 +248,8 @@ func onMouseRelease*(editor: var PitchEditor, input: Input) =
   case input.lastMouseRelease:
 
   of Left:
+    if not editor.isEditingCorrection:
+      editor.unselectAllCorrections()
     editor.isEditingCorrection = false
 
   of Middle:
