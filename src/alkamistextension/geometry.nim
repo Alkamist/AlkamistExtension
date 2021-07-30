@@ -4,10 +4,6 @@ type
   Vector2d[T] = (T, T)
   Segment2d[T] = ((T, T), (T, T))
 
-  # Maybe use openarray
-  PolyLine2d[T] = seq[(T, T)]
-  PolyLineGroup2d[T] = seq[seq[(T, T)]]
-
   PolyLine2dDistanceInfo*[T] = object
     closestPointIndex*: int
     closestSegmentIndex*: int
@@ -87,50 +83,3 @@ func distance*[T](point: Vector2d[T], segment: Segment2d[T]): T =
     dy = pY - yy
 
   sqrt(dx * dx + dy * dy).T
-
-func distanceInfo*[T](line: PolyLine2d[T], toPoint: Vector2d[T]): PolyLine2dDistanceInfo[T] =
-  let lastPointIndex = line.len - 1
-
-  for i, point in line:
-    if i < lastPointIndex:
-      let
-        nextPoint = line[i + 1]
-        distanceToSegment = toPoint.distance (point, nextPoint)
-
-      if i == 0:
-        result.closestSegmentIndex = 0
-        result.closestSegmentDistance = distanceToSegment
-      elif distanceToSegment < result.closestSegmentDistance:
-        result.closestSegmentIndex = i
-        result.closestSegmentDistance = distanceToSegment
-
-    let distanceToPoint = toPoint.distance point
-
-    if i == 0:
-      result.closestPointIndex = 0
-      result.closestPointDistance = distanceToPoint
-    elif distanceToPoint < result.closestPointDistance:
-      result.closestPointIndex = i
-      result.closestPointDistance = distanceToPoint
-
-func distanceInfo*[T](group: PolyLineGroup2d[T], toPoint: Vector2d[T]): PolyLineGroup2dDistanceInfo[T] =
-  for i, line in group:
-    let info = line.distanceInfo toPoint
-
-    if i == 0:
-      result.closestPointIndex = info.closestPointIndex
-      result.closestPointPolyLineIndex = i
-      result.closestPointDistance = info.closestPointDistance
-      result.closestSegmentIndex = info.closestSegmentIndex
-      result.closestSegmentPolyLineIndex = i
-      result.closestSegmentDistance = info.closestSegmentDistance
-    else:
-      if info.closestPointDistance < result.closestPointDistance:
-        result.closestPointIndex = info.closestPointIndex
-        result.closestPointPolyLineIndex = i
-        result.closestPointDistance = info.closestPointDistance
-
-      if info.closestSegmentDistance < result.closestSegmentDistance:
-        result.closestSegmentIndex = info.closestSegmentIndex
-        result.closestSegmentPolyLineIndex = i
-        result.closestSegmentDistance = info.closestSegmentDistance
