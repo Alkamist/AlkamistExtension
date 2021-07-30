@@ -43,7 +43,10 @@ func changePan*[I, E](axis: var ViewAxis[I, E], value: I) =
   axis.pan += value
 
 func changePan*[I, E](axis: var ViewAxis[I, E], value: E) =
-  axis.changePan(axis.scale(value))
+  if axis.isInverted:
+    axis.changePan(axis.scale(-value))
+  else:
+    axis.changePan(axis.scale(value))
 
 func changeZoom*[I, E](axis: var ViewAxis[I, E], value: E) =
   let

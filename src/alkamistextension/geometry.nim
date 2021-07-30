@@ -2,28 +2,6 @@ import std/math, units
 
 {.push inline.}
 
-# 2 part tuple with the same units.
-# func a*[T](a: (T, T)): T = a[0]
-# func b*[T](a: (T, T)): T = a[1]
-# func x*[T](a: (T, T)): T = a[0]
-# func y*[T](a: (T, T)): T = a[1]
-# func width*[T](a: (T, T)): T = a[0]
-# func height*[T](a: (T, T)): T = a[1]
-
-# func `a=`*[T](a: var (T, T), value: T) = a[0] = value
-# func `b=`*[T](a: var (T, T), value: T) = a[1] = value
-# func `x=`*[T](a: var (T, T), value: T) = a[0] = value
-# func `y=`*[T](a: var (T, T), value: T) = a[1] = value
-# func `width=`*[T](a: var (T, T), value: T) = a[0] = value
-# func `height=`*[T](a: var (T, T), value: T) = a[1] = value
-
-# func `+`*[A, B](a: (A, A), b: (B, B)): (A, A) = (a[0] + b[0], a[1] + b[1])
-# func `+=`*[A, B](a: var (A, A), b: (B, B)) = a = a + b
-# func `-`*[A, B](a: (A, A), b: (B, B)): (A, A) = (a[0] - b[0], a[1] - b[1])
-# func `-=`*[A, B](a: var (A, A), b: (B, B)) = a = a - b
-# func `-`*[T](a: (T, T)): (T, T) = (-a[0], -a[1])
-
-# 2 part tuple with different units.
 func a*[A, B](a: (A, B)): A = a[0]
 func b*[A, B](a: (A, B)): B = a[1]
 func x*[A, B](a: (A, B)): A = a[0]
@@ -44,12 +22,11 @@ func `-`*[A, B, C, D](a: (A, B), b: (C, D)): (A, B) = (a[0] - b[0], a[1] - b[1])
 func `-=`*[A, B, C, D](a: var (A, B), b: (C, D)) = a = a - b
 func `-`*[A, B](a: (A, B)): (A, B) = (-a[0], -a[1])
 
-# 2 part tuple of 2 part tuples with the same units.
-# func position*[T](a: ((T, T), (T, T))): (T, T) = a[0]
-# func dimensions*[T](a: ((T, T), (T, T))): (T, T) = a[1]
+func position*[A, B](a: ((A, B), (A, B))): (A, B) = a[0]
+func dimensions*[A, B](a: ((A, B), (A, B))): (A, B) = a[1]
 
-# func `position=`*[T](a: var ((T, T), (T, T)), value: (T, T)) = a[0] = value
-# func `dimensions=`*[T](a: var ((T, T), (T, T)), value: (T, T)) = a[1] = value
+func `position=`*[A, B](a: var ((A, B), (A, B)), value: (A, B)) = a[0] = value
+func `dimensions=`*[A, B](a: var ((A, B), (A, B)), value: (A, B)) = a[1] = value
 
 func distance*[T](a, b: (T, T)): T =
   let
@@ -96,12 +73,5 @@ func distance*[T](point: (T, T), segment: ((T, T), (T, T))): T =
     dy = pY - yy
 
   sqrt(dx * dx + dy * dy).T
-
-# 2 part tuple of 2 part tuples with different units.
-func position*[A, B](a: ((A, B), (A, B))): (A, B) = a[0]
-func dimensions*[A, B](a: ((A, B), (A, B))): (A, B) = a[1]
-
-func `position=`*[A, B](a: var ((A, B), (A, B)), value: (A, B)) = a[0] = value
-func `dimensions=`*[A, B](a: var ((A, B), (A, B)), value: (A, B)) = a[1] = value
 
 {.pop.}

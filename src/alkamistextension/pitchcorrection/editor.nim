@@ -23,7 +23,8 @@ type
     mouseMiddleWasPressedInside: bool
     mouseRightWasPressedInside: bool
     boxSelect: BoxSelect
-    # corrections: seq[PitchPoint]
+    corrections: seq[PitchPoint]
+    firstCorrectionPoint: PitchPoint
 
 {.push inline.}
 
@@ -48,6 +49,7 @@ func resize*(editor: var PitchEditor, dimensions: (Inches, Inches)) =
   editor.image.resize(dimensions)
 
 func redraw*(editor: var PitchEditor) =
+  editor.firstCorrectionPoint.calculateVisualPositions()
   editor.shouldRedraw = true
 
 func zoomOutXToFull*(editor: var PitchEditor) =
@@ -61,6 +63,15 @@ func positionIsInside*(editor: PitchEditor, position: (Inches, Inches)): bool =
   position.x <= editor.width and
   position.y >= 0.Inches and
   position.y <= editor.height
+
+func calculateFirstCorrectionPoint*(editor: var PitchEditor) =
+  editor.firstCorrectionPoint = nil
+  for point in editor.corrections:
+    if editor.firstCorrectionPoint == nil:
+      editor.firstCorrectionPoint = point
+    else:
+      if point.time < editor.firstCorrectionPoint.time:
+        editor.firstCorrectionPoint = point
 
 proc newPitchEditor*(position: (Inches, Inches),
                      dimensions: (Inches, Inches),
@@ -79,20 +90,22 @@ proc newPitchEditor*(position: (Inches, Inches),
   result.correctionEditDistance = (5.0 / 96.0).Inches
   result.boxSelect = newBoxSelect()
 
-  # var previousPoint: PitchPoint
-  # for pointId in 0 ..< 100:
-  #   var point = PitchPoint()
+  var previousPoint: PitchPoint
+  for pointId in 0 ..< 100:
+    var point = newPitchPoint(
+      (pointId.Seconds, rand(numKeys).Semitones),
+      result.view,
+    )
 
-  #   if previousPoint != nil:
-  #     previousPoint.nextPoint = point
+    if previousPoint != nil:
+      previousPoint.nextPoint = point
 
-  #   point.time = pointId.Seconds
-  #   point.pitch = rand(numKeys).Semitones
-  #   point.previousPoint = previousPoint
-  #   result.corrections.add point
+    point.previousPoint = previousPoint
+    result.corrections.add point
 
-  #   previousPoint = point
+    previousPoint = point
 
+  result.calculateFirstCorrectionPoint()
   result.redraw()
 
 func onMousePress*(editor: var PitchEditor, input: Input) =
@@ -122,7 +135,7 @@ func handleViewMovement*(editor: var PitchEditor, input: Input) =
   if input.isPressed(Shift):
     editor.view.changeZoom(input.mouseDelta)
   else:
-    editor.view.changePan(input.mouseDelta)
+    editor.view.changePan(-input.mouseDelta)
 
 func onMouseMove*(editor: var PitchEditor, input: Input) =
   if editor.mouseRightWasPressedInside and input.isPressed(Right):
@@ -185,4 +198,5 @@ func drawKeys(editor: PitchEditor) =
 func updateImage*(editor: PitchEditor) =
   editor.image.clear(editor.colorScheme.background)
   editor.drawKeys()
+  editor.firstCorrectionPoint.draw(editor.image)
   editor.boxSelect.draw(editor.image)
