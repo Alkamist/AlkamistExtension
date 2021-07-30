@@ -125,6 +125,9 @@ func handleEditMovement(editor: var PitchEditor, input: Input) =
         point.position.time = point.editOffset.time + editStart.time + editDelta.time
         point.position.pitch = point.editOffset.pitch + editStart.pitch + editDelta.pitch.round
 
+  # for point in editor.correctionSelection.mitems:
+  #   point.timeSort()
+
   editor.redraw()
 
 func handleClickSelectLogic(editor: var PitchEditor, input: Input) =
@@ -165,7 +168,9 @@ func handleClickSelectLogic(editor: var PitchEditor, input: Input) =
     if point.mouseOver == PitchPointMouseOver.None:
       let
         neitherShiftNorControl = not (input.isPressed(Shift) or input.isPressed(Control))
-        previousIsNotSegment = point.previousPoint != nil and point.previousPoint.mouseOver != Segment
+        previousIsNotSegment = point.previousPoint == nil or
+                               point.previousPoint != nil and
+                               point.previousPoint.mouseOver != Segment
 
       if neitherShiftNorControl and previousIsNotSegment and editingUnselectedPoint:
         editor.setCorrectionPointSelectionState(point, false)
@@ -205,7 +210,7 @@ proc newPitchEditor*(position: (Inches, Inches),
   result.boxSelect = newBoxSelect()
 
   var previousPoint: PitchPoint
-  for pointId in 0 ..< 100:
+  for pointId in 0 ..< 3:
     var point = newPitchPoint(
       (pointId.Seconds, rand(numKeys).Semitones),
       result.view,

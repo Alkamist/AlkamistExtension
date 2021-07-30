@@ -44,26 +44,40 @@ func newPitchPoint*(position: (Seconds, Semitones),
   result.position = position
   result.view = view
 
-template throughLastPoint*(startPoint: PitchPoint, code: untyped): untyped =
+template loopForward*(startPoint: PitchPoint, code: untyped): untyped =
   var point {.inject.} = startPoint
   while true:
     code
     if point.isLastPoint: break
     point = point.nextPoint
 
-template throughLastPoint*(startPoint: var PitchPoint, code: untyped): untyped =
+template loopForward*(startPoint: var PitchPoint, code: untyped): untyped =
   var point {.inject.} = startPoint
   while true:
     code
     if point.isLastPoint: break
     point = point.nextPoint
 
-proc comparePitchPoint*(x, y: PitchPoint): int =
-  if x.time < y.time: -1
-  else: 1
+func timeSort*(start: var PitchPoint) =
+  if not start.isFirstPoint and start.time < start.previousPoint.time:
+    var
+      startNext = start.nextPoint
+      point = start.previousPoint
+
+    while true:
+      if point.isFirstPoint:
+        point.previousPoint = start
+        point.nextPoint = startNext
+
+        start.previousPoint = nil
+        start.nextPoint = point
+
+        startNext.previousPoint = point
+
+        break
 
 func calculateVisualPositions*(start: var PitchPoint) =
-  start.throughLastPoint:
+  start.loopForward:
     point.visualPosition = point.view.convert(point.position)
 
 func calculateMouseOvers*(start: var PitchPoint,
@@ -75,7 +89,7 @@ func calculateMouseOvers*(start: var PitchPoint,
     closestPointDistance: Inches
     closestSegmentDistance: Inches
 
-  start.throughLastPoint:
+  start.loopForward:
     point.mouseOver = None
 
     if point.nextPoint != nil:
@@ -113,7 +127,7 @@ func calculateMouseOvers*(start: var PitchPoint,
       result = closestSegment[0]
 
 func calculateEditOffsets*(start: var PitchPoint, position: (Inches, Inches)) =
-  start.throughLastPoint:
+  start.loopForward:
     point.editOffset = point.position - point.view.convert(position)
 
 func draw*(start: PitchPoint, image: Image) =
@@ -121,7 +135,7 @@ func draw*(start: PitchPoint, image: Image) =
     r = (3.0 / 96.0).Inches
     color = rgb(109, 186, 191)
 
-  start.throughLastPoint:
+  start.loopForward:
     if not point.isLastPoint:
       image.drawLine(
         point.visualPosition,
