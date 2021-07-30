@@ -1,7 +1,7 @@
 import
   std/math,
   ../lice, ../units, ../input, ../view, ../geometry,
-  whitekeys
+  whitekeys, boxselect
 
 type
   PitchEditorColorScheme* = object
@@ -22,6 +22,7 @@ type
     isEditingCorrection: bool
     mouseMiddleWasPressedInside: bool
     mouseRightWasPressedInside: bool
+    boxSelect: BoxSelect
 
 {.push inline.}
 
@@ -36,8 +37,8 @@ func dpi*(editor: PitchEditor): Dpi = editor.image.dpi
 
 func defaultPitchEditorColorScheme*(): PitchEditorColorScheme =
   result.background = rgb(16, 16, 16)
-  result.blackKeys = rgb(60, 60, 60, 1.0)
-  result.whiteKeys = rgb(110, 110, 110, 1.0)
+  result.blackKeys = rgb(48, 48, 48, 1.0)
+  result.whiteKeys = rgb(76, 76, 76, 1.0)
   result.centerLine = rgb(255, 255, 255, 0.15)
 
 func resize*(editor: var PitchEditor, dimensions: (Inches, Inches)) =
@@ -75,19 +76,30 @@ proc newPitchEditor*(position: (Inches, Inches),
   result.colorScheme = defaultPitchEditorColorScheme()
   result.correctionPointVisualRadius = (3.0 / 96.0).Inches
   result.correctionEditDistance = (5.0 / 96.0).Inches
+  result.boxSelect = newBoxSelect()
   result.redraw()
 
 func onMousePress*(editor: var PitchEditor, input: Input) =
-  case input.lastMousePress:
-  of Middle:
-    if editor.positionIsInside(input.mousePosition):
+  if editor.positionIsInside(input.mousePosition):
+    case input.lastMousePress:
+
+    of Middle:
       editor.mouseMiddleWasPressedInside = true
       editor.view.zoomTarget = input.mousePosition
-  else: discard
+
+    of Right:
+      editor.mouseRightWasPressedInside = true
+      editor.boxSelect.isActive = true
+      editor.boxSelect.bounds = (input.mousePosition, (0.Inches, 0.Inches))
+
+    else: discard
 
 func onMouseRelease*(editor: var PitchEditor, input: Input) =
   case input.lastMouseRelease:
   of Middle: editor.mouseMiddleWasPressedInside = false
+  of Right:
+    editor.mouseRightWasPressedInside = false
+    editor.boxSelect.isActive = false
   else: discard
 
 func handleViewMovement*(editor: var PitchEditor, input: Input) =
@@ -97,6 +109,10 @@ func handleViewMovement*(editor: var PitchEditor, input: Input) =
     editor.view.changePan(input.mouseDelta)
 
 func onMouseMove*(editor: var PitchEditor, input: Input) =
+  if editor.mouseRightWasPressedInside and input.isPressed(Right):
+    editor.boxSelect.points[1] = input.mousePosition
+    editor.redraw()
+
   if editor.mouseMiddleWasPressedInside and input.isPressed(Middle):
     editor.handleViewMovement(input)
     editor.redraw()
@@ -153,3 +169,4 @@ func drawKeys(editor: PitchEditor) =
 func updateImage*(editor: PitchEditor) =
   editor.image.clear(editor.colorScheme.background)
   editor.drawKeys()
+  editor.boxSelect.draw(editor.image)
