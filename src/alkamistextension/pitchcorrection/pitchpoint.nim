@@ -66,6 +66,52 @@ func calculateVisualPositions*(start: var PitchPoint) =
   start.throughLastPoint:
     point.visualPosition = point.view.convert(point.position)
 
+func calculateMouseOvers*(start: var PitchPoint,
+                          mousePosition: (Inches, Inches),
+                          maxDistance: Inches): PitchPoint =
+  var
+    closestPoint: PitchPoint
+    closestSegment: (PitchPoint, PitchPoint)
+    closestPointDistance: Inches
+    closestSegmentDistance: Inches
+
+  start.throughLastPoint:
+    point.mouseOver = None
+
+    if point.nextPoint != nil:
+      let distanceToSegment = mousePosition.distance((point.visualPosition,
+                                                      point.nextPoint.visualPosition))
+
+      if point.isFirstPoint:
+        closestSegment = (point, point.nextPoint)
+        closestSegmentDistance = distanceToSegment
+      elif distanceToSegment < closestSegmentDistance:
+        closestSegment = (point, point.nextPoint)
+        closestSegmentDistance = distanceToSegment
+
+    let distanceToPoint = mousePosition.distance(point.visualPosition)
+
+    if point.isFirstPoint:
+      closestPoint = point
+      closestPointDistance = distanceToPoint
+    elif distanceToPoint < closestPointDistance:
+      closestPoint = point
+      closestPointDistance = distanceToPoint
+
+  let
+    isPoint = closestPointDistance <= maxDistance
+    isSegment = closestSegmentDistance <= maxDistance and not isPoint
+
+  if isPoint:
+    if closestPoint != nil:
+      closestPoint.mouseOver = Point
+      result = closestPoint
+
+  elif isSegment:
+    if closestSegment[0] != nil:
+      closestSegment[0].mouseOver = Segment
+      result = closestSegment[0]
+
 func draw*(start: PitchPoint, image: Image) =
   let
     r = (3.0 / 96.0).Inches
