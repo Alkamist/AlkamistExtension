@@ -26,6 +26,7 @@ type
     corrections: seq[PitchPoint]
     firstCorrectionPoint: PitchPoint
     correctionMouseOver: PitchPoint
+    correctionSnapStart: (Seconds, Semitones)
 
 {.push inline.}
 
@@ -79,9 +80,69 @@ func calculateCorrectionMouseOvers(editor: var PitchEditor, input: Input) =
       editor.correctionEditDistance,
     )
 
+func calculateCorrectionEditOffsets(editor: var PitchEditor, input: Input) =
+  if editor.firstCorrectionPoint != nil:
+    editor.firstCorrectionPoint.calculateEditOffsets(input.mousePosition)
+
 func redraw*(editor: var PitchEditor) =
   editor.calculateCorrectionVisualPositions()
   editor.shouldRedraw = true
+
+func handleEditMovement(editor: var PitchEditor, input: Input) =
+  let
+    mouse = editor.view.convert(input.mousePosition)
+    editStart = editor.correctionSnapStart
+    editDelta = mouse - editStart
+
+  for point in editor.corrections:
+    if point.isSelected:
+      if input.isPressed Shift:
+        point.position.time = point.editOffset.time + editStart.time + editDelta.time
+        point.position.pitch = point.editOffset.pitch + editStart.pitch + editDelta.pitch
+        editor.correctionSnapStart = mouse
+      else:
+        point.position.time = point.editOffset.time + editStart.time + editDelta.time
+        point.position.pitch = point.editOffset.pitch + editStart.pitch + editDelta.pitch.round
+
+  editor.redraw()
+
+func handleClickSelectLogic(editor: var PitchEditor, input: Input) =
+  var editingUnselectedPoint = false
+
+  template mousePoint: untyped = editor.correctionMouseOver
+
+  if mousePoint != nil:
+    case mousePoint.mouseOver:
+
+    of Point:
+      if not mousePoint.isSelected:
+        editingUnselectedPoint = true
+
+      if input.isPressed(Control) and not input.isPressed(Shift):
+        mousePoint.isSelected = not mousePoint.isSelected
+      else:
+        mousePoint.isSelected = true
+
+    of Segment:
+      if input.isPressed(Control) and not input.isPressed(Shift):
+        mousePoint.isSelected = not mousePoint.isSelected
+        if mousePoint.nextPoint != nil:
+          mousePoint.nextPoint.isSelected = not mousePoint.nextPoint.isSelected
+      else:
+        mousePoint.isSelected = true
+        if mousePoint.nextPoint != nil:
+          mousePoint.nextPoint.isSelected = true
+
+    else: discard
+
+  for point in editor.corrections.mitems:
+    if point.mouseOver == PitchPointMouseOver.None:
+      let
+        neitherShiftNorControl = not (input.isPressed(Shift) or input.isPressed(Control))
+        previousIsNotSegment = point.previousPoint != nil and point.previousPoint.mouseOver != Segment
+
+      if neitherShiftNorControl and previousIsNotSegment and editingUnselectedPoint:
+        point.isSelected = false
 
 {.pop.}
 
@@ -124,6 +185,13 @@ func onMousePress*(editor: var PitchEditor, input: Input) =
   if editor.positionIsInside(input.mousePosition):
     case input.lastMousePress:
 
+    of Left:
+      editor.isEditingCorrection = editor.correctionMouseOver != nil
+      editor.handleClickSelectLogic(input)
+      if editor.isEditingCorrection:
+        editor.correctionSnapStart = editor.view.convert(input.mousePosition)
+        editor.calculateCorrectionEditOffsets(input)
+
     of Middle:
       editor.mouseMiddleWasPressedInside = true
       editor.view.zoomTarget = input.mousePosition
@@ -137,6 +205,9 @@ func onMousePress*(editor: var PitchEditor, input: Input) =
 
 func onMouseRelease*(editor: var PitchEditor, input: Input) =
   case input.lastMouseRelease:
+
+  of Left:
+    editor.isEditingCorrection = false
 
   of Middle:
     editor.mouseMiddleWasPressedInside = false
@@ -157,7 +228,10 @@ func onMouseRelease*(editor: var PitchEditor, input: Input) =
   else: discard
 
 func onMouseMove*(editor: var PitchEditor, input: Input) =
-  editor.calculateCorrectionMouseOvers(input)
+  if editor.isEditingCorrection:
+    editor.handleEditMovement(input)
+  else:
+    editor.calculateCorrectionMouseOvers(input)
 
   if editor.mouseRightWasPressedInside and input.isPressed(Right):
     editor.boxSelect.points[1] = input.mousePosition

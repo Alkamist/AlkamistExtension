@@ -337,9 +337,9 @@ func handleEditMovement(editor: var PitchEditor, input: Input) =
 
 func onMouseMove*(editor: var PitchEditor, input: Input) =
   if editor.isEditingCorrection:
-    editor.handleEditMovement input
+    editor.handleEditMovement(input)
   else:
-    editor.calculatePointEditStates input
+    editor.calculatePointEditStates(input)
 
   if editor.mouseRightWasPressedInside and input.isPressed Right:
     editor.boxSelect.x2 = input.mousePosition.x
