@@ -1,7 +1,7 @@
 import
-  std/math,
+  std/[math, random],
   ../lice, ../units, ../input, ../view, ../geometry,
-  whitekeys, boxselect
+  whitekeys, boxselect, pitchpoint
 
 type
   PitchEditorColorScheme* = object
@@ -23,6 +23,7 @@ type
     mouseMiddleWasPressedInside: bool
     mouseRightWasPressedInside: bool
     boxSelect: BoxSelect
+    # corrections: seq[PitchPoint]
 
 {.push inline.}
 
@@ -77,6 +78,21 @@ proc newPitchEditor*(position: (Inches, Inches),
   result.correctionPointVisualRadius = (3.0 / 96.0).Inches
   result.correctionEditDistance = (5.0 / 96.0).Inches
   result.boxSelect = newBoxSelect()
+
+  # var previousPoint: PitchPoint
+  # for pointId in 0 ..< 100:
+  #   var point = PitchPoint()
+
+  #   if previousPoint != nil:
+  #     previousPoint.nextPoint = point
+
+  #   point.time = pointId.Seconds
+  #   point.pitch = rand(numKeys).Semitones
+  #   point.previousPoint = previousPoint
+  #   result.corrections.add point
+
+  #   previousPoint = point
+
   result.redraw()
 
 func onMousePress*(editor: var PitchEditor, input: Input) =

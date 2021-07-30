@@ -1,45 +1,63 @@
 import std/math, units
 
-type
-  Vector2d[T] = (T, T)
-  Segment2d[T] = ((T, T), (T, T))
-  Bounds2d[T] = ((T, T), (T, T))
-
 {.push inline.}
 
-func a*[T](a: Vector2d[T]): T = a[0]
-func `a=`*[T](a: var Vector2d[T], value: T) = a[0] = value
-func b*[T](a: Vector2d[T]): T = a[1]
-func `b=`*[T](a: var Vector2d[T], value: T) = a[1] = value
+# 2 part tuple with the same units.
+# func a*[T](a: (T, T)): T = a[0]
+# func b*[T](a: (T, T)): T = a[1]
+# func x*[T](a: (T, T)): T = a[0]
+# func y*[T](a: (T, T)): T = a[1]
+# func width*[T](a: (T, T)): T = a[0]
+# func height*[T](a: (T, T)): T = a[1]
 
-func x*[T](a: Vector2d[T]): T = a[0]
-func `x=`*[T](a: var Vector2d[T], value: T) = a[0] = value
-func y*[T](a: Vector2d[T]): T = a[1]
-func `y=`*[T](a: var Vector2d[T], value: T) = a[1] = value
+# func `a=`*[T](a: var (T, T), value: T) = a[0] = value
+# func `b=`*[T](a: var (T, T), value: T) = a[1] = value
+# func `x=`*[T](a: var (T, T), value: T) = a[0] = value
+# func `y=`*[T](a: var (T, T), value: T) = a[1] = value
+# func `width=`*[T](a: var (T, T), value: T) = a[0] = value
+# func `height=`*[T](a: var (T, T), value: T) = a[1] = value
 
-func width*[T](a: Vector2d[T]): T = a[0]
-func `width=`*[T](a: var Vector2d[T], value: T) = a[0] = value
-func height*[T](a: Vector2d[T]): T = a[1]
-func `height=`*[T](a: var Vector2d[T], value: T) = a[1] = value
+# func `+`*[A, B](a: (A, A), b: (B, B)): (A, A) = (a[0] + b[0], a[1] + b[1])
+# func `+=`*[A, B](a: var (A, A), b: (B, B)) = a = a + b
+# func `-`*[A, B](a: (A, A), b: (B, B)): (A, A) = (a[0] - b[0], a[1] - b[1])
+# func `-=`*[A, B](a: var (A, A), b: (B, B)) = a = a - b
+# func `-`*[T](a: (T, T)): (T, T) = (-a[0], -a[1])
 
-func position*[T](a: Bounds2d[T]): Vector2d[T] = a[0]
-func `position=`*[T](a: var Bounds2d[T], value: Vector2d[T]) = a[0] = value
-func dimensions*[T](a: Bounds2d[T]): Vector2d[T] = a[1]
-func `dimensions=`*[T](a: var Bounds2d[T], value: Vector2d[T]) = a[1] = value
+# 2 part tuple with different units.
+func a*[A, B](a: (A, B)): A = a[0]
+func b*[A, B](a: (A, B)): B = a[1]
+func x*[A, B](a: (A, B)): A = a[0]
+func y*[A, B](a: (A, B)): B = a[1]
+func width*[A, B](a: (A, B)): A = a[0]
+func height*[A, B](a: (A, B)): B = a[1]
 
-func `+`*[A, B](a: Vector2d[A], b: Vector2d[B]): Vector2d[A] = (a[0] + b[0], a[1] + b[1])
-func `+=`*[A, B](a: var Vector2d[A], b: Vector2d[B]) = a = a + b
-func `-`*[A, B](a: Vector2d[A], b: Vector2d[B]): Vector2d[A] = (a[0] - b[0], a[1] - b[1])
-func `-=`*[A, B](a: var Vector2d[A], b: Vector2d[B]) = a = a - b
-func `-`*[T](a: Vector2d[T]): Vector2d[T] = (-a[0], -a[1])
+func `a=`*[A, B](a: var (A, B), value: A) = a[0] = value
+func `b=`*[A, B](a: var (A, B), value: B) = a[1] = value
+func `x=`*[A, B](a: var (A, B), value: A) = a[0] = value
+func `y=`*[A, B](a: var (A, B), value: B) = a[1] = value
+func `width=`*[A, B](a: var (A, B), value: A) = a[0] = value
+func `height=`*[A, B](a: var (A, B), value: B) = a[1] = value
 
-func distance*[T](a, b: Vector2d[T]): T =
+func `+`*[A, B, C, D](a: (A, B), b: (C, D)): (A, B) = (a[0] + b[0], a[1] + b[1])
+func `+=`*[A, B, C, D](a: var (A, B), b: (C, D)) = a = a + b
+func `-`*[A, B, C, D](a: (A, B), b: (C, D)): (A, B) = (a[0] - b[0], a[1] - b[1])
+func `-=`*[A, B, C, D](a: var (A, B), b: (C, D)) = a = a - b
+func `-`*[A, B](a: (A, B)): (A, B) = (-a[0], -a[1])
+
+# 2 part tuple of 2 part tuples with the same units.
+# func position*[T](a: ((T, T), (T, T))): (T, T) = a[0]
+# func dimensions*[T](a: ((T, T), (T, T))): (T, T) = a[1]
+
+# func `position=`*[T](a: var ((T, T), (T, T)), value: (T, T)) = a[0] = value
+# func `dimensions=`*[T](a: var ((T, T), (T, T)), value: (T, T)) = a[1] = value
+
+func distance*[T](a, b: (T, T)): T =
   let
     dx = (a[0] - b[0]).toFloat
     dy = (a[1] - b[1]).toFloat
   sqrt(dx * dx + dy * dy).T
 
-func distance*[T](point: Vector2d[T], segment: Segment2d[T]): T =
+func distance*[T](point: (T, T), segment: ((T, T), (T, T))): T =
   let
     pX = point[0].toFloat
     pY = point[1].toFloat
@@ -78,5 +96,12 @@ func distance*[T](point: Vector2d[T], segment: Segment2d[T]): T =
     dy = pY - yy
 
   sqrt(dx * dx + dy * dy).T
+
+# 2 part tuple of 2 part tuples with different units.
+func position*[A, B](a: ((A, B), (A, B))): (A, B) = a[0]
+func dimensions*[A, B](a: ((A, B), (A, B))): (A, B) = a[1]
+
+func `position=`*[A, B](a: var ((A, B), (A, B)), value: (A, B)) = a[0] = value
+func `dimensions=`*[A, B](a: var ((A, B), (A, B)), value: (A, B)) = a[1] = value
 
 {.pop.}
