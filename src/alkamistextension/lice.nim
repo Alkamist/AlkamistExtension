@@ -37,7 +37,7 @@ proc LICE_CreateBitmap(mode: cint; w: cint; h: cint): ptr LICE_IBitmap {.importc
 # proc LICE_DrawCBezier(dest: ptr LICE_IBitmap; xstart: cdouble; ystart: cdouble; xctl1: cdouble; yctl1: cdouble; xctl2: cdouble; yctl2: cdouble; xend: cdouble; yend: cdouble; color: LICE_pixel; alpha: cfloat; mode: cint; aa: bool; tol: cdouble) {.importc, header: ReaperPluginFunctionsHeader.}
 # proc LICE_DrawChar(bm: ptr LICE_IBitmap; x: cint; y: cint; c: char; color: LICE_pixel; alpha: cfloat; mode: cint) {.importc, header: ReaperPluginFunctionsHeader.}
 # proc LICE_DrawGlyph(dest: ptr LICE_IBitmap; x: cint; y: cint; color: LICE_pixel; alphas: ptr LICE_pixel_chan; glyph_w: cint; glyph_h: cint; alpha: cfloat; mode: cint) {.importc, header: ReaperPluginFunctionsHeader.}
-# proc LICE_DrawRect(dest: ptr LICE_IBitmap; x: cint; y: cint; w: cint; h: cint; color: LICE_pixel; alpha: cfloat; mode: cint) {.importc, header: ReaperPluginFunctionsHeader.}
+proc LICE_DrawRect(dest: ptr LICE_IBitmap; x: cint; y: cint; w: cint; h: cint; color: LICE_pixel; alpha: cfloat; mode: cint) {.importc, header: ReaperPluginFunctionsHeader.}
 # proc LICE_DrawText(bm: ptr LICE_IBitmap; x: cint; y: cint; string: cstring; color: LICE_pixel; alpha: cfloat; mode: cint) {.importc, header: ReaperPluginFunctionsHeader.}
 # proc LICE_FillCBezier(dest: ptr LICE_IBitmap; xstart: cdouble; ystart: cdouble; xctl1: cdouble; yctl1: cdouble; xctl2: cdouble; yctl2: cdouble; xend: cdouble; yend: cdouble; yfill: cint; color: LICE_pixel; alpha: cfloat; mode: cint; aa: bool; tol: cdouble) {.importc, header: ReaperPluginFunctionsHeader.}
 proc LICE_FillCircle(dest: ptr LICE_IBitmap; cx: cfloat; cy: cfloat; r: cfloat; color: LICE_pixel; alpha: cfloat; mode: cint; aa: bool) {.importc, header: ReaperPluginFunctionsHeader.}
@@ -185,6 +185,20 @@ func fillRectangle*(image: Image,
                     mode = BlitMode.Copy) =
   if image.licePtr != nil:
     LICE_FillRect(
+      image.liceBitmap,
+      x.toInt.cint, y.toInt.cint,
+      width.toInt.cint, height.toInt.cint,
+      color.toLicePixel,
+      color.a.cfloat,
+      mode.toLiceBlitMode,
+    )
+
+func drawRectangle*(image: Image,
+                    x, y, width, height: Pixels,
+                    color: Color,
+                    mode = BlitMode.Copy) =
+  if image.licePtr != nil:
+    LICE_DrawRect(
       image.liceBitmap,
       x.toInt.cint, y.toInt.cint,
       width.toInt.cint, height.toInt.cint,

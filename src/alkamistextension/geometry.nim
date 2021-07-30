@@ -3,6 +3,8 @@ import std/math, units
 type
   Vector2d[T] = (T, T)
   Segment2d[T] = ((T, T), (T, T))
+
+  # Maybe use openarray
   PolyLine2d[T] = seq[(T, T)]
   PolyLineGroup2d[T] = seq[seq[(T, T)]]
 
