@@ -3,7 +3,7 @@ import
   reaper/[types, functions],
   winapi, window, input
 
-export types, functions
+export window, types, functions
 
 globalRaiseHook = proc(e: ref Exception): bool =
   ShowConsoleMsg("An exception was raised: " & e.msg & "\n")

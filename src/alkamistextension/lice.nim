@@ -1,7 +1,9 @@
 import
   std/options,
   reaper/types,
-  winapi, units
+  winapi, units, geometry
+
+export units, geometry
 
 type
   LICE_pixel = cuint
@@ -82,7 +84,8 @@ type
 
   Image* = object
     bitmapMode: BitmapMode
-    width, height: Pixels
+    dpi: Dpi
+    dimensions: (Inches, Inches)
     licePtr: pointer
 
 # const
@@ -127,16 +130,23 @@ func toLiceBlitMode(mode: BlitMode, filter = BlitFilter.None): cint =
   of HsvAdjust: 5 or filter.toLiceBlitFilter
   of ChannelCopy: 0xf0 or filter.toLiceBlitFilter
 
+func width*(image: Image): Inches = image.dimensions.width
+func height*(image: Image): Inches  = image.dimensions.height
+func widthPixels*(image: Image): Pixels = image.width * image.dpi
+func heightPixels*(image: Image): Pixels = image.height * image.dpi
+func dimensionsPixels*(image: Image): (Pixels, Pixels) = (image.widthPixels, image.heightPixels)
+func dpi*(image: Image): Dpi = image.dpi
+
 template liceBitmap(image: Image): untyped =
   cast[ptr LICE_IBitmap](image.licePtr)
 
-func initImage*(width, height: Pixels): Image =
-  result.width = width
-  result.height = height
+func initImage*(dpi: Dpi, dimensions: (Inches, Inches)): Image =
+  result.dpi = dpi
+  result.dimensions = dimensions
   result.bitmapMode = WithContext
   result.licePtr = LICE_CreateBitmap(result.bitmapMode.toLiceBitmapMode,
-                                     width.toInt.cint,
-                                     height.toInt.cint)
+                                     result.widthPixels.toInt.cint,
+                                     result.heightPixels.toInt.cint)
 
 func `=destroy`(image: var Image) =
   if image.licePtr != nil:
@@ -146,76 +156,79 @@ func context*(image: Image): Option[HDC] =
   if image.licePtr != nil and image.bitmapMode == WithContext:
     return some(LICE_private_GetDC(image.liceBitmap))
 
-func resize*(image: var Image, width, height: Pixels) =
-  image.width = width
-  image.height = height
+func resize*(image: var Image, dimensions: (Inches, Inches)) =
+  image.dimensions = dimensions
   if image.licePtr != nil:
     discard LICE_private_resize(image.liceBitmap,
-                                width.toInt.cint,
-                                height.toInt.cint)
-
-func width*(image: Image): Pixels =
-  image.width
-
-func height*(image: Image): Pixels  =
-  image.height
+                                image.widthPixels.toInt.cint,
+                                image.heightPixels.toInt.cint)
 
 func clear*(image: Image, color: Color) =
   if image.licePtr != nil:
     LICE_Clear(image.liceBitmap, color.toLicePixel)
 
 func drawImage*(self, other: Image,
-                 x, y = 0.Pixels,
-                 mode = BlitMode.Copy,
-                 filter = BlitFilter.None) =
+                position = (0.Inches, 0.Inches),
+                mode = BlitMode.Copy,
+                filter = BlitFilter.None) =
   if self.licePtr != nil and other.licePtr != nil:
     LICE_Blit(
       self.liceBitmap,
       other.liceBitmap,
-      x.toInt.cint, y.toInt.cint,
+      (position.x * self.dpi).toInt.cint,
+      (position.y * self.dpi).toInt.cint,
       0, 0,
-      other.width.toInt.cint, other.height.toInt.cint,
+      other.widthPixels.toInt.cint, other.heightPixels.toInt.cint,
       1.0,
       mode.toLiceBlitMode(filter),
     )
 
 func fillRectangle*(image: Image,
-                    x, y, width, height: Pixels,
+                    position: (Inches, Inches),
+                    dimensions: (Inches, Inches),
                     color: Color,
                     mode = BlitMode.Copy) =
   if image.licePtr != nil:
     LICE_FillRect(
       image.liceBitmap,
-      x.toInt.cint, y.toInt.cint,
-      width.toInt.cint, height.toInt.cint,
+      (position.x * image.dpi).toInt.cint,
+      (position.y * image.dpi).toInt.cint,
+      (dimensions.width * image.dpi).toInt.cint,
+      (dimensions.height * image.dpi).toInt.cint,
       color.toLicePixel,
       color.a.cfloat,
       mode.toLiceBlitMode,
     )
 
 func drawRectangle*(image: Image,
-                    x, y, width, height: Pixels,
+                    position: (Inches, Inches),
+                    dimensions: (Inches, Inches),
                     color: Color,
                     mode = BlitMode.Copy) =
   if image.licePtr != nil:
     LICE_DrawRect(
       image.liceBitmap,
-      x.toInt.cint, y.toInt.cint,
-      width.toInt.cint, height.toInt.cint,
+      (position.x * image.dpi).toInt.cint,
+      (position.y * image.dpi).toInt.cint,
+      (dimensions.width * image.dpi).toInt.cint,
+      (dimensions.height * image.dpi).toInt.cint,
       color.toLicePixel,
       color.a.cfloat,
       mode.toLiceBlitMode,
     )
 
 func fillCircle*(image: Image,
-                 x, y, radius: Pixels,
+                 position: (Inches, Inches),
+                 radius: Inches,
                  color: Color,
                  antiAlias = true,
                  mode = BlitMode.Copy) =
   if image.licePtr != nil:
     LICE_FillCircle(
       image.liceBitmap,
-      x.cfloat, y.cfloat, radius.cfloat,
+      (position.x * image.dpi).cfloat,
+      (position.y * image.dpi).cfloat,
+      (radius * image.dpi).cfloat,
       color.toLicePixel,
       color.a.cfloat,
       mode.toLiceBlitMode,
@@ -223,14 +236,17 @@ func fillCircle*(image: Image,
     )
 
 func drawCircle*(image: Image,
-                 x, y, radius: Pixels,
+                 position: (Inches, Inches),
+                 radius: Inches,
                  color: Color,
                  antiAlias = true,
                  mode = BlitMode.Copy) =
   if image.licePtr != nil:
     LICE_Circle(
       image.liceBitmap,
-      x.cfloat, y.cfloat, radius.cfloat,
+      (position.x * image.dpi).cfloat,
+      (position.y * image.dpi).cfloat,
+      (radius * image.dpi).cfloat,
       color.toLicePixel,
       color.a.cfloat,
       mode.toLiceBlitMode,
@@ -238,14 +254,16 @@ func drawCircle*(image: Image,
     )
 
 func drawLine*(image: Image,
-               x1, y1, x2, y2: Pixels,
+               start, finish: (Inches, Inches),
                color: Color,
                mode = BlitMode.Copy) =
   if image.licePtr != nil:
     LICE_Line(
       image.liceBitmap,
-      x1.cfloat, y1.cfloat,
-      x2.cfloat, y2.cfloat,
+      (start.x * image.dpi).cfloat,
+      (start.y * image.dpi).cfloat,
+      (finish.x * image.dpi).cfloat,
+      (finish.y * image.dpi).cfloat,
       color.toLicePixel,
       color.a.cfloat,
       mode.toLiceBlitMode,

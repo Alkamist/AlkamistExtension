@@ -1,15 +1,20 @@
 import std/math, units
 
 type
-  ViewAxis*[I, E] = object
+  ViewAxis*[I, E] = ref object
     pan*, zoomTarget*: I
     externalSize*: E
     zoom*, zoomSensitivity*: float
     isInverted*: bool
 
+  View*[Ix, Iy, E] = ref object
+    x*: ViewAxis[Ix, E]
+    y*: ViewAxis[Iy, E]
+
 {.push inline.}
 
-func initViewAxis*[I, E](): ViewAxis[I, E] =
+func newViewAxis*[I, E](): ViewAxis[I, E] =
+  result = ViewAxis[I, E]()
   result.pan = 0.I
   result.zoomTarget = 0.I
   result.externalSize = 1.E
@@ -53,5 +58,42 @@ func changeZoom*[I, E](axis: var ViewAxis[I, E], value: E) =
     sizeChange = currentSize - previousSize
 
   axis.pan -= sizeChange * zoomRatio
+
+func newView*[Ix, Iy, E](): View[Ix, Iy, E] =
+  result = View[Ix, Iy, E]()
+  result.x = newViewAxis[Ix, E]()
+  result.y = newViewAxis[Iy, E]()
+
+func scale*[Ix, Iy, E](view: View[Ix, Iy, E], value: (E, E)): (Ix, Iy) =
+  (view.x.scale(value.x),
+   view.y.scale(value.y))
+
+func scale*[Ix, Iy, E](view: View[Ix, Iy, E], value: (Ix, Iy)): (E, E) =
+  (view.x.scale(value.x),
+   view.y.scale(value.y))
+
+func convert*[Ix, Iy, E](view: View[Ix, Iy, E], value: (E, E)): (Ix, Iy) =
+  (view.x.convert(value.x),
+   view.y.convert(value.y))
+
+func convert*[Ix, Iy, E](view: View[Ix, Iy, E], value: (Ix, Iy)): (E, E) =
+  (view.x.convert(value.x),
+   view.y.convert(value.y))
+
+func changePan*[Ix, Iy, E](view: View[Ix, Iy, E], value: (E, E)) =
+  view.x.changePan(value.x)
+  view.y.changePan(value.y)
+
+func changePan*[Ix, Iy, E](view: View[Ix, Iy, E], value: (Ix, Iy)) =
+  view.x.changePan(value.x)
+  view.y.changePan(value.y)
+
+func changeZoom*[Ix, Iy, E](view: View[Ix, Iy, E], value: (E, E)) =
+  view.x.changeZoom(value.x)
+  view.y.changeZoom(value.y)
+
+func `zoomTarget=`*[Ix, Iy, E](view: var View[Ix, Iy, E], value: (E, E)) =
+  view.x.zoomTarget = view.x.convert(value.x)
+  view.y.zoomTarget = view.y.convert(value.y)
 
 {.pop.}

@@ -3,32 +3,29 @@ import std/math, units
 type
   Vector2d[T] = (T, T)
   Segment2d[T] = ((T, T), (T, T))
-
-  PolyLine2dDistanceInfo*[T] = object
-    closestPointIndex*: int
-    closestSegmentIndex*: int
-    closestPointDistance*: T
-    closestSegmentDistance*: T
-
-  PolyLineGroup2dDistanceInfo*[T] = object
-    closestPointIndex*: int
-    closestSegmentIndex*: int
-    closestPointPolyLineIndex*: int
-    closestSegmentPolyLineIndex*: int
-    closestPointDistance*: T
-    closestSegmentDistance*: T
+  Bounds2d[T] = ((T, T), (T, T))
 
 {.push inline.}
 
-func `a`*[T](a: Vector2d[T]): T = a[0]
+func a*[T](a: Vector2d[T]): T = a[0]
 func `a=`*[T](a: var Vector2d[T], value: T) = a[0] = value
-func `b`*[T](a: Vector2d[T]): T = a[1]
+func b*[T](a: Vector2d[T]): T = a[1]
 func `b=`*[T](a: var Vector2d[T], value: T) = a[1] = value
 
-func `x`*[T](a: Vector2d[T]): T = a[0]
+func x*[T](a: Vector2d[T]): T = a[0]
 func `x=`*[T](a: var Vector2d[T], value: T) = a[0] = value
-func `y`*[T](a: Vector2d[T]): T = a[1]
+func y*[T](a: Vector2d[T]): T = a[1]
 func `y=`*[T](a: var Vector2d[T], value: T) = a[1] = value
+
+func width*[T](a: Vector2d[T]): T = a[0]
+func `width=`*[T](a: var Vector2d[T], value: T) = a[0] = value
+func height*[T](a: Vector2d[T]): T = a[1]
+func `height=`*[T](a: var Vector2d[T], value: T) = a[1] = value
+
+func position*[T](a: Bounds2d[T]): Vector2d[T] = a[0]
+func `position=`*[T](a: var Bounds2d[T], value: Vector2d[T]) = a[0] = value
+func dimensions*[T](a: Bounds2d[T]): Vector2d[T] = a[1]
+func `dimensions=`*[T](a: var Bounds2d[T], value: Vector2d[T]) = a[1] = value
 
 func `+`*[A, B](a: Vector2d[A], b: Vector2d[B]): Vector2d[A] = (a[0] + b[0], a[1] + b[1])
 func `+=`*[A, B](a: var Vector2d[A], b: Vector2d[B]) = a = a + b
@@ -41,8 +38,6 @@ func distance*[T](a, b: Vector2d[T]): T =
     dx = (a[0] - b[0]).toFloat
     dy = (a[1] - b[1]).toFloat
   sqrt(dx * dx + dy * dy).T
-
-{.pop.}
 
 func distance*[T](point: Vector2d[T], segment: Segment2d[T]): T =
   let
@@ -83,3 +78,5 @@ func distance*[T](point: Vector2d[T], segment: Segment2d[T]): T =
     dy = pY - yy
 
   sqrt(dx * dx + dy * dy).T
+
+{.pop.}

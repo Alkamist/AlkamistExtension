@@ -7,12 +7,12 @@ proc pitchCorrectionMain*() =
 
   window.title = "Pitch Correction"
   window.backgroundColor = rgb(16, 16, 16)
-  window.setBounds(4.Inches, 2.Inches, 12.Inches, 8.Inches)
+  window.bounds = ((4.Inches, 2.Inches),
+                   (12.Inches, 8.Inches))
 
-  var editor = initPitchEditor(
+  var editor = newPitchEditor(
     position = (0.Inches, 0.Inches),
-    width = window.clientWidth,
-    height = window.clientHeight,
+    dimensions = (window.clientWidth, window.clientHeight),
     dpi = window.dpi,
   )
 
@@ -37,16 +37,12 @@ proc pitchCorrectionMain*() =
     redrawIfNeeded()
 
   window.onResize = proc() =
-    editor.onResize(window.clientWidth, window.clientHeight)
+    editor.onResize(window.clientDimensions)
     redrawIfNeeded()
 
   window.onDraw = proc() =
     editor.updateImage()
-    window.image.drawImage(
-      editor.image,
-      editor.x * window.dpi,
-      editor.y * window.dpi,
-    )
+    window.image.drawImage(editor.image, editor.position)
 
   window.onKeyPress = proc() =
     case window.input.lastKeyPress:

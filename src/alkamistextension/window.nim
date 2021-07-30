@@ -33,75 +33,46 @@ var hWndWindows = initTable[HWND, Window]()
 
 {.push inline.}
 
-func title*(window: Window): string =
-  window.title
+func title*(window: Window): string = window.title
+func left*(window: Window): Inches = window.rect.left.Pixels / window.dpi
+func right*(window: Window): Inches = window.rect.right.Pixels / window.dpi
+func top*(window: Window): Inches = window.rect.top.Pixels / window.dpi
+func bottom*(window: Window): Inches = window.rect.bottom.Pixels / window.dpi
+func x*(window: Window): Inches = window.left
+func y*(window: Window): Inches = window.top
+func position*(window: Window): (Inches, Inches) = (window.x, window.y)
+func width*(window: Window): Inches = abs(window.right - window.left)
+func height*(window: Window): Inches = abs(window.bottom - window.top)
+func dimensions*(window: Window): (Inches, Inches) = (window.width, window.height)
+func bounds*(window: Window): ((Inches, Inches), (Inches, Inches)) = (window.position, window.dimensions)
+func clientLeft*(window: Window): Inches = window.clientRect.left.Pixels / window.dpi
+func clientRight*(window: Window): Inches = window.clientRect.right.Pixels / window.dpi
+func clientTop*(window: Window): Inches = window.clientRect.top.Pixels / window.dpi
+func clientBottom*(window: Window): Inches = window.clientRect.bottom.Pixels / window.dpi
+func clientX*(window: Window): Inches = window.clientLeft
+func clientY*(window: Window): Inches = window.clientRight
+func clientPosition*(window: Window): (Inches, Inches) = (window.clientX, window.clientY)
+func clientWidth*(window: Window): Inches = abs(window.clientRight - window.clientLeft)
+func clientHeight*(window: Window): Inches = abs(window.clientBottom - window.clientTop)
+func clientDimensions*(window: Window): (Inches, Inches) = (window.clientWidth, window.clientHeight)
+func clientBounds*(window: Window): ((Inches, Inches), (Inches, Inches)) = (window.clientPosition, window.clientDimensions)
 
 func `title=`*(window: var Window, value: string) =
   window.title = value
   discard SetWindowText(window.hWnd, value)
-
-func left*(window: Window): Inches =
-  window.rect.left.Pixels / window.dpi
-
-func right*(window: Window): Inches =
-  window.rect.right.Pixels / window.dpi
-
-func top*(window: Window): Inches =
-  window.rect.top.Pixels / window.dpi
-
-func bottom*(window: Window): Inches =
-  window.rect.bottom.Pixels / window.dpi
-
-func x*(window: Window): Inches =
-  window.left
-
-func y*(window: Window): Inches =
-  window.top
-
-func position*(window: Window): (Inches, Inches) =
-  result.x = window.x
-  result.y = window.y
-
-func width*(window: Window): Inches =
-  abs(window.right - window.left)
-
-func height*(window: Window): Inches =
-  abs(window.bottom - window.top)
-
-func clientLeft*(window: Window): Inches =
-  window.clientRect.left.Pixels / window.dpi
-
-func clientRight*(window: Window): Inches =
-  window.clientRect.right.Pixels / window.dpi
-
-func clientTop*(window: Window): Inches =
-  window.clientRect.top.Pixels / window.dpi
-
-func clientBottom*(window: Window): Inches =
-  window.clientRect.bottom.Pixels / window.dpi
-
-func clientX*(window: Window): Inches =
-  window.clientLeft
-
-func clientY*(window: Window): Inches =
-  window.clientRight
-
-func clientPosition*(window: Window): (Inches, Inches) =
-  result.x = window.clientX
-  result.y = window.clientY
-
-func clientWidth*(window: Window): Inches =
-  abs(window.clientRight - window.clientLeft)
-
-func clientHeight*(window: Window): Inches =
-  abs(window.clientBottom - window.clientTop)
+func `bounds=`*(window: Window, value: ((Inches, Inches), (Inches, Inches))) =
+  template toNative(inches: Inches): cint =
+    (inches * window.dpi).cint
+  discard SetWindowPos(
+    window.hWnd, HWND_TOP,
+    value.position.x.toNative,
+    value.position.y.toNative,
+    value.dimensions.width.toNative,
+    value.dimensions.height.toNative,
+    SWP_NOZORDER,
+  )
 
 {.pop.}
-
-func setBounds*(window: Window, x, y, width, height: Inches) =
-  template toCint(inches: Inches): cint =
-    (inches * window.dpi).cint
-  discard SetWindowPos(window.hWnd, HWND_TOP, x.toCint, y.toCint, width.toCint, height.toCint, SWP_NOZORDER)
 
 func enableUpdateLoop*(window: var Window, loopEvery: UINT) =
   discard SetTimer(window.hWnd, 1, loopEvery, nil)
@@ -160,8 +131,7 @@ proc windowProc(hWnd: HWND, msg: UINT, wParam: WPARAM, lParam: LPARAM): INT_PTR 
   of WM_SIZE:
     ifWindow:
       window.updateBounds()
-      window.image.resize(window.width * window.dpi,
-                          window.height * window.dpi)
+      window.image.resize((window.clientWidth, window.clientHeight))
       if window.onResize != nil:
         window.onResize()
 
@@ -248,8 +218,8 @@ proc newWindow*(hInstance: HINSTANCE, parent: HWND): Window =
     result.title = "Unnamed Window"
     result.updateBounds()
     result.backgroundColor = rgb(0, 0, 0)
-    result.image = initImage(0.Pixels, 0.Pixels)
     result.input = initInput()
     result.dpi = 96.0.Dpi
+    result.image = initImage(result.dpi, (0.Inches, 0.Inches))
     hWndWindows[result.hWnd] = result
     discard ShowWindow(result.hWnd, SW_SHOW)
