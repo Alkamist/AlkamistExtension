@@ -186,6 +186,30 @@ func handleDoubleClick(editor: var PitchEditor, input: Input) =
       point.pitch += pitchChange
     editor.redraw()
 
+func handleCorrectionPointMouseCreation(editor: var PitchEditor, input: Input) =
+  let mouse = editor.view.convert(input.mousePosition)
+
+  editor.unselectAllCorrections()
+
+  var point = PitchPoint()
+
+  point.view = editor.view
+  point.isActive = true
+
+  if input.isPressed(Shift):
+    point.position = mouse
+  else:
+    point.position = (mouse.time, mouse.pitch.round)
+
+  editor.corrections.add(point)
+  editor.corrections.timeSort()
+
+  if input.isPressed(Alt) and point.previous != nil:
+    point.previous.isActive = false
+
+  editor.setCorrectionPointSelectionState(point, true)
+  editor.redraw()
+
 {.pop.}
 
 proc newPitchEditor*(position: (Inches, Inches),
@@ -205,22 +229,22 @@ proc newPitchEditor*(position: (Inches, Inches),
   result.correctionEditDistance = (5.0 / 96.0).Inches
   result.boxSelect = newBoxSelect()
 
-  var previous: PitchPoint
-  for pointId in 0 ..< 10000:
-    var point = newPitchPoint(
-      (pointId.Seconds, rand(numKeys).Semitones),
-      result.view,
-    )
+  # var previous: PitchPoint
+  # for pointId in 0 ..< 10000:
+  #   var point = newPitchPoint(
+  #     (pointId.Seconds, rand(numKeys).Semitones),
+  #     result.view,
+  #   )
 
-    point.isActive = rand(1.0) > 0.5
+  #   point.isActive = rand(1.0) > 0.5
 
-    if previous != nil:
-      previous.next = point
-    point.previous = previous
+  #   if previous != nil:
+  #     previous.next = point
+  #   point.previous = previous
 
-    result.corrections.add(point)
+  #   result.corrections.add(point)
 
-    previous = point
+  #   previous = point
 
   result.redraw()
 
@@ -229,17 +253,20 @@ func onMousePress*(editor: var PitchEditor, input: Input) =
     case input.lastMousePress:
 
     of Left:
-      editor.isEditingCorrection = editor.correctionMouseOver != nil
       editor.handleClickSelectLogic(input)
 
-      if editor.isEditingCorrection:
+      if editor.correctionMouseOver != nil:
         if input.isPressed(Alt):
           editor.toggleCorrectionPointActivations()
         elif input.lastMousePressWasDoubleClick:
           editor.handleDoubleClick(input)
 
-        editor.correctionSnapStart = editor.view.convert(input.mousePosition)
-        editor.corrections.calculateEditOffsets(input.mousePosition)
+      else:
+        editor.handleCorrectionPointMouseCreation(input)
+
+      editor.correctionSnapStart = editor.view.convert(input.mousePosition)
+      editor.corrections.calculateEditOffsets(input.mousePosition)
+      editor.isEditingCorrection = true
 
     of Middle:
       editor.mouseMiddleWasPressedInside = true

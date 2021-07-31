@@ -74,9 +74,9 @@ func lastPoint*(points: openArray[PitchPoint]): PitchPoint =
 func timeSort*(points: var openArray[PitchPoint]) =
   points.sort(compareTime)
   let lastId = points.len - 1
-  for i in 1 ..< lastId:
-    points[i].previous = points[i - 1]
-    points[i].next = points[i + 1]
+  for i, point in points:
+    if i > 0: point.previous = points[i - 1]
+    if i < lastId: point.next = points[i + 1]
 
 func calculateVisualPositions*(points: openArray[PitchPoint]) =
   for point in points:
