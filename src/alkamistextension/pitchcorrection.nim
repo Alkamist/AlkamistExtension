@@ -45,6 +45,7 @@ proc pitchCorrectionMain*() =
     window.image.drawImage(editor.image, editor.position)
 
   window.onKeyPress = proc() =
-    case window.input.lastKeyPress:
-    of Space: Main_OnCommandEx(40044, 0, nil)
-    else: discard
+    if window.input.lastKeyPress == Space:
+      Main_OnCommandEx(40044, 0, nil)
+    editor.onKeyPress(editorInput)
+    redrawIfNeeded()
