@@ -4,6 +4,20 @@ const yinThreshold = 0.2
 
 {.push inline.}
 
+func toPitch(frequency: float): float =
+  69.0 + 12.0 * ln(frequency / 440.0) / ln(2.0)
+
+func toSamples(time, sampleRate: float): int =
+  (time * sampleRate).floor.int
+
+func dbToAmplitude(dB: float): float =
+  exp(dB * 0.11512925464970228420089957273422)
+
+func rootMeanSquare[T](buffer: openArray[T]): T =
+  for sample in buffer:
+    result += sample.abs
+  result /= buffer.len.toFloat
+
 func parabolicInterpolation[T](buffer: openArray[T], index: int): T =
   let
     i1 = index - 1
@@ -56,7 +70,9 @@ func locationOfFirstMinimum[T](buffer: openArray[T]): T =
 
 {.pop.}
 
-func calculateFrequency*[T](buffer: openArray[T], sampleRate, minFrequency, maxFrequency: float): T =
+func calculateFrequency*[T](buffer: openArray[T],
+                            sampleRate: float,
+                            minFrequency, maxFrequency: float): T =
   let
     minLook = floor(sampleRate / maxFrequency).toInt
     maxLook = floor(min(sampleRate / minFrequency, buffer.len.float)).toInt
@@ -70,23 +86,59 @@ func calculateFrequency*[T](buffer: openArray[T], sampleRate, minFrequency, maxF
   if location > -1:
     return sampleRate / (minLook.T + location)
 
+func detectPitch*[T](buffer: openArray[T],
+                     sampleRate: float,
+                     minFrequency, maxFrequency: float,
+                     timeWindow: float,
+                     startTime = 0.0,
+                     windowStep = 0.04, windowOverlap = 2.0,
+                     minRms = -60.0): seq[(T, T)] =
+  let
+    minRmsAmp = minRms.dbToAmplitude
+    windowSamples = windowStep.toSamples(sampleRate)
+    bufferEnd = buffer.len - 1
 
+  var seekTime = startTime
 
-# timeWindow = 0.04
-# windowOverlap = 2.0
-# lowRMSLimitdB = -60.0
-# lowRMSLimit = exp(lowRMSLimitdB * 0.11512925464970228420089957273422)
+  while true:
+    let
+      seekSamples = seekTime.toSamples(sampleRate)
+      seekEnd = min(bufferEnd, seekSamples + windowSamples)
+
+    var subBuffer = buffer[seekSamples .. seekEnd]
+
+    let rms = subBuffer.rootMeanSquare
+    if rms >= minRmsAmp:
+      let frequency = subBuffer.calculateFrequency(sampleRate, minFrequency, maxFrequency)
+
+      if frequency > 0.0:
+        let pitch = frequency.toPitch
+        result.add((seekTime, pitch))
+
+    seekTime += windowStep / windowOverlap
+
+    if seekTime >= startTime + timeWindow:
+      break
 
 when isMainModule:
+  import std/times
+
   let
-    sampleRate = 44100.0
+    sampleRate = 8000.0
     sineFrequency = 441.0
     sineSampleLength = sampleRate / sineFrequency
 
   var sineWave: seq[float]
 
-  for i in 0 ..< 1000:
+  for i in 0 ..< 44100:
     let phase = 2.0 * PI * i.toFloat / sineSampleLength
     sineWave.add(sin(phase))
 
-  echo sineWave.calculateFrequency(sampleRate, 80.0, 1000.0)
+  let t0 = cpuTime()
+  let points = sineWave.detectPitch(sampleRate, 80.0, 1000.0, 1.0)
+  let t1 = cpuTime()
+
+  for point in points:
+    echo "t: " & $point[0] & " " & "p: " & $point[1]
+
+  echo "Total time: " & $(t1 - t0)
