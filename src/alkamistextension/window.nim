@@ -178,6 +178,10 @@ proc windowProc(hWnd: HWND, msg: UINT, wParam: WPARAM, lParam: LPARAM): INT_PTR 
         window.input.mouseButtonStates[button.get] = true
         if window.onMousePress != nil:
           window.input.lastMousePress = button.get
+          window.input.lastMousePressWasDoubleClick = msg in [WM_LBUTTONDBLCLK,
+                                                              WM_MBUTTONDBLCLK,
+                                                              WM_RBUTTONDBLCLK,
+                                                              WM_XBUTTONDBLCLK]
           window.onMousePress()
 
   of WM_LBUTTONUP, WM_MBUTTONUP, WM_RBUTTONUP, WM_XBUTTONUP:

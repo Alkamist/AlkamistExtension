@@ -1,6 +1,7 @@
 import
   std/[math, random, sequtils],
   ../lice, ../units, ../input, ../view, ../geometry,
+  ../reaper/functions,
   whitekeys, boxselect, pitchpoint
 
 type
@@ -71,6 +72,7 @@ func setCorrectionPointSelectionState(editor: var PitchEditor,
     if state:
       point.isSelected = true
       editor.correctionSelection.add(point)
+      editor.correctionSelection = editor.correctionSelection.deduplicate()
     else:
       point.isSelected = false
 
@@ -90,15 +92,15 @@ func handleEditMovement(editor: var PitchEditor, input: Input) =
     editStart = editor.correctionSnapStart
     editDelta = mouse - editStart
 
-  for point in editor.correctionSelection:
+  for point in editor.correctionSelection.mitems:
     if point.isSelected:
       if input.isPressed(Shift):
-        point.position.time = point.editOffset.time + editStart.time + editDelta.time
-        point.position.pitch = point.editOffset.pitch + editStart.pitch + editDelta.pitch
+        point.time = point.editOffset.time + editStart.time + editDelta.time
+        point.pitch = point.editOffset.pitch + editStart.pitch + editDelta.pitch
         editor.correctionSnapStart = mouse
       else:
-        point.position.time = point.editOffset.time + editStart.time + editDelta.time
-        point.position.pitch = point.editOffset.pitch + editStart.pitch + editDelta.pitch.round
+        point.time = point.editOffset.time + editStart.time + editDelta.time
+        point.pitch = point.editOffset.pitch + editStart.pitch + editDelta.pitch.round
 
   editor.corrections.timeSort()
   editor.redraw()
@@ -161,6 +163,14 @@ func handleBoxSelectLogic(editor: var PitchEditor, input: Input) =
 
   editor.cleanCorrectionSelection()
 
+func handleDoubleClick(editor: var PitchEditor, input: Input) =
+  template mouse: untyped = editor.correctionMouseOver
+  if mouse != nil:
+    let pitchChange = mouse.pitch.round - mouse.pitch
+    for point in editor.correctionSelection.mitems:
+      point.pitch += pitchChange
+    editor.redraw()
+
 {.pop.}
 
 proc newPitchEditor*(position: (Inches, Inches),
@@ -207,6 +217,8 @@ func onMousePress*(editor: var PitchEditor, input: Input) =
       editor.isEditingCorrection = editor.correctionMouseOver != nil
       editor.handleClickSelectLogic(input)
       if editor.isEditingCorrection:
+        if input.lastMousePressWasDoubleClick:
+          editor.handleDoubleClick(input)
         editor.correctionSnapStart = editor.view.convert(input.mousePosition)
         editor.corrections.calculateEditOffsets(input.mousePosition)
 

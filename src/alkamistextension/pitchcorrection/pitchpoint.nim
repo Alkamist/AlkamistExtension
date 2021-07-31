@@ -21,13 +21,17 @@ type
 {.push inline.}
 
 func time*(a: PitchPoint): Seconds = a.position[0]
+func time*(a: var PitchPoint): var Seconds = a.position[0]
 func pitch*(a: PitchPoint): Semitones = a.position[1]
+func pitch*(a: var PitchPoint): var Semitones = a.position[1]
 
 func `time=`*(a: var PitchPoint, value: Seconds) = a.position[0] = value
 func `pitch=`*(a: var PitchPoint, value: Semitones) = a.position[1] = value
 
 func time*(a: (Seconds, Semitones)): Seconds = a[0]
+func time*(a: var (Seconds, Semitones)): var Seconds = a[0]
 func pitch*(a: (Seconds, Semitones)): Semitones = a[1]
+func pitch*(a: var (Seconds, Semitones)): var Semitones = a[1]
 
 func `time=`*(a: var (Seconds, Semitones), value: Seconds) = a[0] = value
 func `pitch=`*(a: var (Seconds, Semitones), value: Semitones) = a[1] = value

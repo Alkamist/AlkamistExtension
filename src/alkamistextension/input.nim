@@ -167,6 +167,7 @@ type
     lastKeyRelease*: KeyboardKey
     lastMousePress*: MouseButton
     lastMouseRelease*: MouseButton
+    lastMousePressWasDoubleClick*: bool
     mousePosition*: (Inches, Inches)
     previousMousePosition*: (Inches, Inches)
     keyStates*: array[KeyboardKey, bool]
