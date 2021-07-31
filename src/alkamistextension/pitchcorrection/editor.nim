@@ -25,7 +25,6 @@ type
     boxSelect: BoxSelect
     corrections: seq[PitchPoint]
     correctionSelection: seq[PitchPoint]
-    firstCorrectionPoint: PitchPoint
     correctionMouseOver: PitchPoint
     correctionSnapStart: (Seconds, Semitones)
 
@@ -50,10 +49,6 @@ func zoomOutXToFull*(editor: var PitchEditor) =
 func zoomOutYToFull*(editor: var PitchEditor) =
   editor.view.y.zoom = editor.height.toFloat / numKeys.toFloat
 
-func calculateCorrectionVisualPositions(editor: var PitchEditor) =
-  if editor.firstCorrectionPoint != nil:
-    editor.firstCorrectionPoint.calculateVisualPositions()
-
 func resize*(editor: var PitchEditor, dimensions: (Inches, Inches)) =
   editor.view.x.externalSize = dimensions.width
   editor.view.y.externalSize = dimensions.height
@@ -65,28 +60,8 @@ func positionIsInside*(editor: PitchEditor, position: (Inches, Inches)): bool =
   position.y >= 0.Inches and
   position.y <= editor.height
 
-func calculateFirstCorrectionPoint(editor: var PitchEditor) =
-  editor.firstCorrectionPoint = nil
-  for point in editor.corrections:
-    if editor.firstCorrectionPoint == nil:
-      editor.firstCorrectionPoint = point
-    else:
-      if point.time < editor.firstCorrectionPoint.time:
-        editor.firstCorrectionPoint = point
-
-func calculateCorrectionMouseOvers(editor: var PitchEditor, input: Input) =
-  if editor.firstCorrectionPoint != nil:
-    editor.correctionMouseOver = editor.firstCorrectionPoint.calculateMouseOvers(
-      input.mousePosition,
-      editor.correctionEditDistance,
-    )
-
-func calculateCorrectionEditOffsets(editor: var PitchEditor, input: Input) =
-  if editor.firstCorrectionPoint != nil:
-    editor.firstCorrectionPoint.calculateEditOffsets(input.mousePosition)
-
 func redraw*(editor: var PitchEditor) =
-  editor.calculateCorrectionVisualPositions()
+  editor.corrections.calculateVisualPositions()
   editor.shouldRedraw = true
 
 func setCorrectionPointSelectionState(editor: var PitchEditor,
@@ -125,55 +100,51 @@ func handleEditMovement(editor: var PitchEditor, input: Input) =
         point.position.time = point.editOffset.time + editStart.time + editDelta.time
         point.position.pitch = point.editOffset.pitch + editStart.pitch + editDelta.pitch.round
 
-  editor.correctionSelection.timeSort()
-
-  editor.calculateFirstCorrectionPoint()
+  editor.corrections.timeSort()
   editor.redraw()
 
 func handleClickSelectLogic(editor: var PitchEditor, input: Input) =
-  var editingUnselectedPoint = false
+  template mouse: untyped = editor.correctionMouseOver
 
-  template mousePoint: untyped = editor.correctionMouseOver
+  let
+    editingSelectedPoint = mouse != nil and mouse.mouseOver == Point and mouse.isSelected
+    editingSelectedSegment = mouse != nil and mouse.mouseOver == Segment and mouse.isSelected and
+                             mouse.next != nil and mouse.next.isSelected
+    editingSelected = editingSelectedPoint or editingSelectedSegment
 
-  if mousePoint != nil:
-    case mousePoint.mouseOver:
-    of PitchPointMouseOver.None: discard
+  var
+    previous: PitchPoint
+    lastId = editor.corrections.len - 1
+
+  for i, point in editor.corrections.mpairs:
+    case point.mouseOver:
 
     of Point:
-      if not mousePoint.isSelected:
-        editingUnselectedPoint = true
-
       if input.isPressed(Control) and not input.isPressed(Shift):
-        editor.setCorrectionPointSelectionState(mousePoint, not mousePoint.isSelected)
+        editor.setCorrectionPointSelectionState(point, not point.isSelected)
       else:
-        editor.setCorrectionPointSelectionState(mousePoint, true)
+        editor.setCorrectionPointSelectionState(point, true)
 
     of Segment:
-      let bothSelected =
-        mousePoint.isSelected and
-        mousePoint.next != nil and
-        mousePoint.next.isSelected
+      if i < lastId:
+        let next = editor.corrections[i + 1]
 
-      if not bothSelected:
-        editingUnselectedPoint = true
+        if input.isPressed(Control) and not input.isPressed(Shift):
+          editor.setCorrectionPointSelectionState(point, not point.isSelected)
+          editor.setCorrectionPointSelectionState(next, not next.isSelected)
+        else:
+          editor.setCorrectionPointSelectionState(point, true)
+          editor.setCorrectionPointSelectionState(next, true)
 
-      if input.isPressed(Control) and not input.isPressed(Shift):
-        editor.setCorrectionPointSelectionState(mousePoint, not mousePoint.isSelected)
-        editor.setCorrectionPointSelectionState(mousePoint.next, not mousePoint.next.isSelected)
-      else:
-        editor.setCorrectionPointSelectionState(mousePoint, true)
-        editor.setCorrectionPointSelectionState(mousePoint.next, true)
-
-  for point in editor.corrections.mitems:
-    if point.mouseOver == PitchPointMouseOver.None:
+    of PitchPointMouseOver.None:
       let
         neitherShiftNorControl = not (input.isPressed(Shift) or input.isPressed(Control))
-        previousIsNotSegment = point.previous == nil or
-                               point.previous != nil and
-                               point.previous.mouseOver != Segment
+        previousIsNotSegment = previous == nil or previous != nil and previous.mouseOver != Segment
 
-      if neitherShiftNorControl and previousIsNotSegment and editingUnselectedPoint:
+      if neitherShiftNorControl and previousIsNotSegment and not editingSelected:
         editor.setCorrectionPointSelectionState(point, false)
+
+    previous = point
 
   editor.cleanCorrectionSelection()
 
@@ -216,15 +187,16 @@ proc newPitchEditor*(position: (Inches, Inches),
       result.view,
     )
 
+    point.isActive = rand(1.0) > 0.5
+
     if previous != nil:
       previous.next = point
-
     point.previous = previous
+
     result.corrections.add(point)
 
     previous = point
 
-  result.calculateFirstCorrectionPoint()
   result.redraw()
 
 func onMousePress*(editor: var PitchEditor, input: Input) =
@@ -236,7 +208,7 @@ func onMousePress*(editor: var PitchEditor, input: Input) =
       editor.handleClickSelectLogic(input)
       if editor.isEditingCorrection:
         editor.correctionSnapStart = editor.view.convert(input.mousePosition)
-        editor.calculateCorrectionEditOffsets(input)
+        editor.corrections.calculateEditOffsets(input.mousePosition)
 
     of Middle:
       editor.mouseMiddleWasPressedInside = true
@@ -271,7 +243,10 @@ func onMouseMove*(editor: var PitchEditor, input: Input) =
   if editor.isEditingCorrection:
     editor.handleEditMovement(input)
   else:
-    editor.calculateCorrectionMouseOvers(input)
+    editor.correctionMouseOver = editor.corrections.calculateMouseOvers(
+      input.mousePosition,
+      editor.correctionEditDistance,
+    )
 
   if editor.mouseRightWasPressedInside and input.isPressed(Right):
     editor.boxSelect.points[1] = input.mousePosition
@@ -331,12 +306,8 @@ func drawKeys(editor: PitchEditor) {.inline.} =
 
     keyColorPrevious = keyColor
 
-func drawCorrections(editor: PitchEditor) {.inline.} =
-  if editor.firstCorrectionPoint != nil:
-    editor.firstCorrectionPoint.draw(editor.image)
-
 func updateImage*(editor: PitchEditor) =
   editor.image.clear(editor.colorScheme.background)
   editor.drawKeys()
-  editor.drawCorrections()
+  editor.corrections.draw(editor.image)
   editor.boxSelect.draw(editor.image)

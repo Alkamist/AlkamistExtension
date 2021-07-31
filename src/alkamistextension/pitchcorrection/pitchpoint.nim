@@ -13,6 +13,7 @@ type
     editOffset*: (Seconds, Semitones)
     visualPosition*: (Inches, Inches)
     isSelected*: bool
+    isActive*: bool
     mouseOver*: PitchPointMouseOver
     previous*, next*: PitchPoint
     view*: View[Seconds, Semitones, Inches]
@@ -21,8 +22,6 @@ type
 
 func time*(a: PitchPoint): Seconds = a.position[0]
 func pitch*(a: PitchPoint): Semitones = a.position[1]
-func isFirstPoint*(a: PitchPoint): bool = a.previous == nil
-func isLastPoint*(a: PitchPoint): bool = a.next == nil
 
 func `time=`*(a: var PitchPoint, value: Seconds) = a.position[0] = value
 func `pitch=`*(a: var PitchPoint, value: Semitones) = a.position[1] = value
@@ -44,21 +43,13 @@ func newPitchPoint*(position: (Seconds, Semitones),
                     view: View[Seconds, Semitones, Inches]): PitchPoint =
   result = PitchPoint()
   result.position = position
+  result.isActive = true
   result.view = view
 
-template loopForward*(startPoint: PitchPoint, code: untyped): untyped =
-  var point {.inject.} = startPoint
-  while true:
-    code
-    if point.isLastPoint: break
-    point = point.next
-
-template loopForward*(startPoint: var PitchPoint, code: untyped): untyped =
-  var point {.inject.} = startPoint
-  while true:
-    code
-    if point.isLastPoint: break
-    point = point.next
+func compareTime*(x, y: PitchPoint): int =
+  if x.time < y.time: -1
+  elif x.time == y.time: 0
+  else: 1
 
 func firstPoint*(points: openArray[PitchPoint]): PitchPoint =
   for point in points:
@@ -76,123 +67,46 @@ func lastPoint*(points: openArray[PitchPoint]): PitchPoint =
       if point.time > result.time:
         result = point
 
-func becomePrevious*(point: var PitchPoint, ofPoint: var PitchPoint) =
-  var
-    a = ofPoint
-    b = point
-    c = ofPoint.previous
-    d = point.next
-    e = point.previous
-  a.previous = b
-  b.next = a
-  b.previous = c
-  if c != nil: c.next = b
-  if d != nil: d.previous = e
-  if e != nil: e.next = d
-
-func becomeNext*(point: var PitchPoint, ofPoint: var PitchPoint) =
-  var
-    a = ofPoint
-    b = point
-    c = ofPoint.next
-    d = point.previous
-    e = point.next
-  a.next = b
-  b.previous = a
-  b.next = c
-  if c != nil: c.previous = b
-  if d != nil: d.next = e
-  if e != nil: e.previous = d
-
-func timeSortPrevious*(point: var PitchPoint) =
-  if point.previous == nil:
-    return
-
-  if point.time < point.previous.time:
-    var check = point.previous.previous
-
-    while true:
-      if check == nil:
-        point.becomePrevious(point.previous)
-        return
-
-      elif point.time >= check.time:
-        point.becomeNext(check)
-        return
-
-      check = check.previous
-
-func timeSortNext*(point: var PitchPoint) =
-  if point.next == nil:
-    return
-
-  if point.time > point.next.time:
-    var check = point.next.next
-
-    while true:
-      if check == nil:
-        point.becomeNext(point.next)
-        return
-
-      elif point.time <= check.time:
-        point.becomePrevious(check)
-        return
-
-      check = check.next
-
-func timeSort*(point: var PitchPoint) {.inline.} =
-  point.timeSortPrevious()
-  point.timeSortNext()
-
 func timeSort*(points: var openArray[PitchPoint]) =
-  points.sort(proc (x, y: PitchPoint): int =
-    if x.time > y.time: -1
-    elif x.time == y.time: 0
-    else: 1
-  )
+  points.sort(compareTime)
+  let lastId = points.len - 1
+  for i in 1 ..< lastId:
+    points[i].previous = points[i - 1]
+    points[i].next = points[i + 1]
 
-  for point in points.mitems:
-    point.timeSortNext()
-
-  points.sort(proc (x, y: PitchPoint): int =
-    if x.time < y.time: -1
-    elif x.time == y.time: 0
-    else: 1
-  )
-
-  for point in points.mitems:
-    point.timeSortPrevious()
-
-func calculateVisualPositions*(start: var PitchPoint) =
-  start.loopForward:
+func calculateVisualPositions*(points: openArray[PitchPoint]) =
+  for point in points:
     point.visualPosition = point.view.convert(point.position)
 
-func calculateMouseOvers*(start: var PitchPoint,
+func calculateMouseOvers*(points: openArray[PitchPoint],
                           mousePosition: (Inches, Inches),
                           maxDistance: Inches): PitchPoint =
+  let lastId = points.len - 1
   var
     closestPoint: PitchPoint
     closestSegment: (PitchPoint, PitchPoint)
     closestPointDistance: Inches
     closestSegmentDistance: Inches
 
-  start.loopForward:
+  for i, point in points:
     point.mouseOver = None
 
-    if point.next != nil:
-      let distanceToSegment = mousePosition.distance((point.visualPosition,
-                                                      point.next.visualPosition))
+    if point.isActive and i < lastId:
+      let
+        next = points[i + 1]
+        distanceToSegment = mousePosition.distance((point.visualPosition,
+                                                    next.visualPosition))
 
-      if point.isFirstPoint:
-        closestSegment = (point, point.next)
+      if closestSegment[0] == nil:
+        closestSegment = (point, next)
         closestSegmentDistance = distanceToSegment
       elif distanceToSegment < closestSegmentDistance:
-        closestSegment = (point, point.next)
+        closestSegment = (point, next)
         closestSegmentDistance = distanceToSegment
 
     let distanceToPoint = mousePosition.distance(point.visualPosition)
 
-    if point.isFirstPoint:
+    if closestPoint == nil:
       closestPoint = point
       closestPointDistance = distanceToPoint
     elif distanceToPoint < closestPointDistance:
@@ -213,27 +127,30 @@ func calculateMouseOvers*(start: var PitchPoint,
       closestSegment[0].mouseOver = Segment
       result = closestSegment[0]
 
-func calculateEditOffsets*(start: var PitchPoint, position: (Inches, Inches)) =
-  start.loopForward:
+func calculateEditOffsets*(points: openArray[PitchPoint], position: (Inches, Inches)) =
+  for point in points:
     point.editOffset = point.position - point.view.convert(position)
 
-func draw*(start: PitchPoint, image: Image) =
+func draw*(points: openArray[PitchPoint], image: Image) =
   let
     r = (3.0 / 96.0).Inches
     color = rgb(109, 186, 191)
+    lastId = points.len - 1
 
-  start.loopForward:
-    if not point.isLastPoint:
+  for i, point in points:
+    if point.isActive and i < lastId:
+      let next = points[i + 1]
+
       image.drawLine(
         point.visualPosition,
-        point.next.visualPosition,
+        next.visualPosition,
         color,
       )
 
       if point.mouseOver == Segment:
         image.drawLine(
           point.visualPosition,
-          point.next.visualPosition,
+          next.visualPosition,
           rgb(255, 255, 255, 0.5)
         )
 
@@ -245,31 +162,3 @@ func draw*(start: PitchPoint, image: Image) =
 
     if point.mouseOver == Point:
       image.fillCircle(point.visualPosition, r, rgb(255, 255, 255, 0.5))
-
-
-
-
-
-
-
-# func handleEditMovement(points: var openArray[PitchPoint],
-#                         snapStart: var (Seconds, Semitones),
-#                         view: View[Seconds, Semitones],
-#                         mousePosition: (Inches, Inches),
-#                         disableSnap: bool) =
-#   let
-#     mouse = view.convert mousePosition
-#     editStart = editor.editSnapStart
-#     editDelta = mouse - editStart
-
-#   for point in points:
-#     if point.isSelected:
-#       if disableSnap:
-#         point.position.time = point.editOffset.time + editStart.time + editDelta.time
-#         point.position.pitch = point.editOffset.pitch + editStart.pitch + editDelta.pitch
-#         snapStart = editor.mousePosition input
-#       else:
-#         point.position.time = point.editOffset.time + editStart.time + editDelta.time
-#         point.position.pitch = point.editOffset.pitch + editStart.pitch + editDelta.pitch.round
-
-#   editor.redraw()
