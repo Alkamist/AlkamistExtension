@@ -1,4 +1,6 @@
-import ../units, ../geometry, ../view, ../lice
+import
+  std/algorithm,
+  ../units, ../geometry, ../view, ../lice
 
 type
   PitchPointMouseOver* = enum
@@ -58,57 +60,108 @@ template loopForward*(startPoint: var PitchPoint, code: untyped): untyped =
     if point.isLastPoint: break
     point = point.next
 
-func timeSort*(point: var PitchPoint) =
+func firstPoint*(points: openArray[PitchPoint]): PitchPoint =
+  for point in points:
+    if result == nil:
+      result = point
+    else:
+      if point.time < result.time:
+        result = point
+
+func lastPoint*(points: openArray[PitchPoint]): PitchPoint =
+  for point in points:
+    if result == nil:
+      result = point
+    else:
+      if point.time > result.time:
+        result = point
+
+func becomePrevious*(point: var PitchPoint, ofPoint: var PitchPoint) =
+  var
+    a = ofPoint
+    b = point
+    c = ofPoint.previous
+    d = point.next
+    e = point.previous
+  a.previous = b
+  b.next = a
+  b.previous = c
+  if c != nil: c.next = b
+  if d != nil: d.previous = e
+  if e != nil: e.next = d
+
+func becomeNext*(point: var PitchPoint, ofPoint: var PitchPoint) =
+  var
+    a = ofPoint
+    b = point
+    c = ofPoint.next
+    d = point.previous
+    e = point.next
+  a.next = b
+  b.previous = a
+  b.next = c
+  if c != nil: c.previous = b
+  if d != nil: d.next = e
+  if e != nil: e.previous = d
+
+func timeSortPrevious*(point: var PitchPoint) =
   if point.previous == nil:
     return
 
   if point.time < point.previous.time:
-    var
-      a = point.previous
-      c = point.next
+    var check = point.previous.previous
 
-    a.previous = point
-    a.next = c
+    while true:
+      if check == nil:
+        point.becomePrevious(point.previous)
+        return
 
-    point.previous = nil
-    point.next = a
+      elif point.time >= check.time:
+        point.becomeNext(check)
+        return
 
-    c.previous = a
-    c.next = nil
+      check = check.previous
 
-    # while true:
-    #   if check == nil:
-    #     var
-    #       a = point
-    #       b = point.previous
-    #       c = point.next
+func timeSortNext*(point: var PitchPoint) =
+  if point.next == nil:
+    return
 
-    #     if a != nil: a.next = b
-    #     if b != nil: b.previous = a
-    #     if b != nil: b.next = c
-    #     if c != nil: c.previous = b
+  if point.time > point.next.time:
+    var check = point.next.next
 
-    #     break
+    while true:
+      if check == nil:
+        point.becomeNext(point.next)
+        return
 
-    #   elif point.time >= check.time:
-    #     var
-    #       a = check
-    #       b = point
-    #       c = check.next
-    #       d = point.previous
-    #       e = point.next
+      elif point.time <= check.time:
+        point.becomePrevious(check)
+        return
 
-    #     if a != nil: a.next = b
-    #     if b != nil: b.previous = a
-    #     if b != nil: b.next = c
-    #     if c != nil: c.previous = b
-    #     if d != nil: d.next = e
-    #     if e != nil: e.previous = d
+      check = check.next
 
-    #     if check.previous == nil:
-    #       break
+func timeSort*(point: var PitchPoint) {.inline.} =
+  point.timeSortPrevious()
+  point.timeSortNext()
 
-    #     check = check.previous
+func timeSort*(points: var openArray[PitchPoint]) =
+  points.sort(proc (x, y: PitchPoint): int =
+    if x.time > y.time: -1
+    elif x.time == y.time: 0
+    else: 1
+  )
+
+  for point in points.mitems:
+    point.timeSortNext()
+
+  points.sort(proc (x, y: PitchPoint): int =
+    if x.time < y.time: -1
+    elif x.time == y.time: 0
+    else: 1
+  )
+
+  for point in points.mitems:
+    point.timeSortPrevious()
 
 func calculateVisualPositions*(start: var PitchPoint) =
   start.loopForward:

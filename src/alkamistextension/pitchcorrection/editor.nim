@@ -125,8 +125,7 @@ func handleEditMovement(editor: var PitchEditor, input: Input) =
         point.position.time = point.editOffset.time + editStart.time + editDelta.time
         point.position.pitch = point.editOffset.pitch + editStart.pitch + editDelta.pitch.round
 
-  for point in editor.correctionSelection.mitems:
-    point.timeSort()
+  editor.correctionSelection.timeSort()
 
   editor.calculateFirstCorrectionPoint()
   editor.redraw()
@@ -211,7 +210,7 @@ proc newPitchEditor*(position: (Inches, Inches),
   result.boxSelect = newBoxSelect()
 
   var previous: PitchPoint
-  for pointId in 0 ..< 3:
+  for pointId in 0 ..< 10000:
     var point = newPitchPoint(
       (pointId.Seconds, rand(numKeys).Semitones),
       result.view,
