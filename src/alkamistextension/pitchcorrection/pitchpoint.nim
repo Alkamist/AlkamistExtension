@@ -135,11 +135,15 @@ func calculateEditOffsets*(points: openArray[PitchPoint], position: (Inches, Inc
   for point in points:
     point.editOffset = point.position - point.view.convert(position)
 
-func draw*(points: openArray[PitchPoint], image: Image) =
+func drawWithCirclePoints*(points: openArray[PitchPoint],
+                           image: Image,
+                           activeColor, inactiveColor: Color) =
   let
     r = (3.0 / 96.0).Inches
-    color = rgb(109, 186, 191)
     lastId = points.len - 1
+    activeColorDark = (activeColor * 0.3).redistribute
+    inactiveColorDark = (inactiveColor * 0.3).redistribute
+    highlight = rgb(255, 255, 255, 0.5)
 
   for i, point in points:
     if point.isActive and i < lastId:
@@ -148,21 +152,28 @@ func draw*(points: openArray[PitchPoint], image: Image) =
       image.drawLine(
         point.visualPosition,
         next.visualPosition,
-        color,
+        activeColor,
       )
 
       if point.mouseOver == Segment:
         image.drawLine(
           point.visualPosition,
           next.visualPosition,
-          rgb(255, 255, 255, 0.5)
+          highlight,
         )
 
-    image.fillCircle(point.visualPosition, r, rgb(29, 81, 84))
-    image.drawCircle(point.visualPosition, r, color)
-
     if point.isSelected:
-      image.fillCircle(point.visualPosition, r, rgb(255, 255, 255, 0.5))
+      if point.isActive:
+        image.fillCircle(point.visualPosition, r, activeColor)
+      else:
+        image.fillCircle(point.visualPosition, r, inactiveColor)
+    else:
+      if point.isActive:
+        image.fillCircle(point.visualPosition, r, activeColorDark)
+        image.drawCircle(point.visualPosition, r, activeColor)
+      else:
+        image.fillCircle(point.visualPosition, r, inactiveColorDark)
+        image.drawCircle(point.visualPosition, r, inactiveColor)
 
     if point.mouseOver == Point:
-      image.fillCircle(point.visualPosition, r, rgb(255, 255, 255, 0.5))
+      image.fillCircle(point.visualPosition, r, highlight)

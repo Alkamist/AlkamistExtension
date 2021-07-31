@@ -42,7 +42,7 @@ func defaultPitchEditorColorScheme*(): PitchEditorColorScheme =
   result.background = rgb(16, 16, 16)
   result.blackKeys = rgb(48, 48, 48, 1.0)
   result.whiteKeys = rgb(76, 76, 76, 1.0)
-  result.centerLine = rgb(255, 255, 255, 0.15)
+  result.centerLine = rgb(255, 255, 255, 0.10)
 
 func zoomOutXToFull*(editor: var PitchEditor) =
   editor.view.x.zoom = editor.width.toFloat / editor.timeLength.toFloat
@@ -334,16 +334,19 @@ func drawKeys(editor: PitchEditor) {.inline.} =
         editor.colorScheme.blackKeys,
       )
 
-    editor.image.drawLine(
-      (keyLeftInches, keyCenterInches),
-      (keyWidthInches, keyCenterInches),
-      editor.colorScheme.centerLine,
-    )
+    if keyHeightInches * editor.dpi > 16.Pixels:
+      editor.image.drawLine(
+        (keyLeftInches, keyCenterInches),
+        (keyWidthInches, keyCenterInches),
+        editor.colorScheme.centerLine,
+      )
 
     keyColorPrevious = keyColor
 
 func updateImage*(editor: PitchEditor) =
   editor.image.clear(editor.colorScheme.background)
   editor.drawKeys()
-  editor.corrections.draw(editor.image)
+  editor.corrections.drawWithCirclePoints(editor.image,
+                                          rgb(51, 214, 255),
+                                          rgb(255, 46, 112))
   editor.boxSelect.draw(editor.image)
