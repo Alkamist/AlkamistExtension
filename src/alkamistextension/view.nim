@@ -47,7 +47,7 @@ func changePanExternally*(axis: var ViewAxis, value: float) =
   if axis.isInverted:
     axis.changePanInternally(axis.scaleToInternal(-value))
   else:
-    axis.changePanInternally(axis.scaleToExternal(value))
+    axis.changePanInternally(axis.scaleToInternal(value))
 
 func changeZoom*(axis: var ViewAxis, value: float) =
   let

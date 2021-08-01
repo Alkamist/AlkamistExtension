@@ -1,6 +1,6 @@
 import
   std/algorithm,
-  ../units, ../geometry, ../view, ../lice
+  ../view, ../lice, ../vector
 
 type
   PitchPointMouseOver* = enum
@@ -9,42 +9,34 @@ type
     Segment,
 
   PitchPoint* = ref object
-    position*: (Seconds, Semitones)
-    editOffset*: (Seconds, Semitones)
-    visualPosition*: (Inches, Inches)
+    position*: (float, float)
+    editOffset*: (float, float)
+    visualPosition*: (float, float)
     isSelected*: bool
     isActive*: bool
     mouseOver*: PitchPointMouseOver
     previous*, next*: PitchPoint
-    view*: View[Seconds, Semitones, Inches]
+    view*: View
 
 {.push inline.}
 
-func time*(a: PitchPoint): Seconds = a.position[0]
-func time*(a: var PitchPoint): var Seconds = a.position[0]
-func pitch*(a: PitchPoint): Semitones = a.position[1]
-func pitch*(a: var PitchPoint): var Semitones = a.position[1]
+func time*(a: PitchPoint): float = a.position[0]
+func time*(a: var PitchPoint): var float = a.position[0]
+func `time=`*(a: var PitchPoint, value: float) = a.position[0] = value
+func pitch*(a: PitchPoint): float = a.position[1]
+func pitch*(a: var PitchPoint): var float = a.position[1]
+func `pitch=`*(a: var PitchPoint, value: float) = a.position[1] = value
 
-func `time=`*(a: var PitchPoint, value: Seconds) = a.position[0] = value
-func `pitch=`*(a: var PitchPoint, value: Semitones) = a.position[1] = value
-
-func time*(a: (Seconds, Semitones)): Seconds = a[0]
-func time*(a: var (Seconds, Semitones)): var Seconds = a[0]
-func pitch*(a: (Seconds, Semitones)): Semitones = a[1]
-func pitch*(a: var (Seconds, Semitones)): var Semitones = a[1]
-
-func `time=`*(a: var (Seconds, Semitones), value: Seconds) = a[0] = value
-func `pitch=`*(a: var (Seconds, Semitones), value: Semitones) = a[1] = value
-func `+`*(a, b: (Seconds, Semitones)): (Seconds, Semitones) = (a[0] + b[0], a[1] + b[1])
-func `+=`*(a: var (Seconds, Semitones), b: (Seconds, Semitones)) = a = a + b
-func `-`*(a, b: (Seconds, Semitones)): (Seconds, Semitones) = (a[0] - b[0], a[1] - b[1])
-func `-=`*(a: var (Seconds, Semitones), b: (Seconds, Semitones)) = a = a - b
-func `-`*(a: (Seconds, Semitones)): (Seconds, Semitones) = (-a[0], -a[1])
+func time*(a: (float, float)): float = a[0]
+func time*(a: var (float, float)): var float = a[0]
+func `time=`*(a: var (float, float), value: float) = a[0] = value
+func pitch*(a: (float, float)): float = a[1]
+func pitch*(a: var (float, float)): var float = a[1]
+func `pitch=`*(a: var (float, float), value: float) = a[1] = value
 
 {.pop.}
 
-func newPitchPoint*(position: (Seconds, Semitones),
-                    view: View[Seconds, Semitones, Inches]): PitchPoint =
+func newPitchPoint*(position: (float, float), view: View): PitchPoint =
   result = PitchPoint()
   result.position = position
   result.isActive = true
@@ -80,17 +72,17 @@ func timeSort*(points: var openArray[PitchPoint]) =
 
 func calculateVisualPositions*(points: openArray[PitchPoint]) =
   for point in points:
-    point.visualPosition = point.view.convert(point.position)
+    point.visualPosition = point.view.convertToExternal(point.position)
 
 func calculateMouseOvers*(points: openArray[PitchPoint],
-                          mousePosition: (Inches, Inches),
-                          maxDistance: Inches): PitchPoint =
+                          mousePosition: (float, float),
+                          maxDistance: float): PitchPoint =
   let lastId = points.len - 1
   var
     closestPoint: PitchPoint
     closestSegment: (PitchPoint, PitchPoint)
-    closestPointDistance: Inches
-    closestSegmentDistance: Inches
+    closestPointDistance: float
+    closestSegmentDistance: float
 
   for i, point in points:
     point.mouseOver = None
@@ -131,15 +123,15 @@ func calculateMouseOvers*(points: openArray[PitchPoint],
       closestSegment[0].mouseOver = Segment
       result = closestSegment[0]
 
-func calculateEditOffsets*(points: openArray[PitchPoint], position: (Inches, Inches)) =
+func calculateEditOffsets*(points: openArray[PitchPoint], externalPosition: (float, float)) =
   for point in points:
-    point.editOffset = point.position - point.view.convert(position)
+    point.editOffset = point.position - point.view.convertToInternal(externalPosition)
 
 func drawWithCirclePoints*(points: openArray[PitchPoint],
                            image: Image,
                            activeColor, inactiveColor: Color) =
   let
-    r = (3.0 / 96.0).Inches
+    r = (3.0 / 96.0).float
     lastId = points.len - 1
     activeColorDark = (activeColor * 0.3).redistribute
     inactiveColorDark = (inactiveColor * 0.3).redistribute
