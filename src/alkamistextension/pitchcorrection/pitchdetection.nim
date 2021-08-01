@@ -4,13 +4,13 @@ const yinThreshold = 0.2
 
 {.push inline.}
 
-func toPitch(frequency: float): float =
+func toPitch[T](frequency: T): T =
   69.0 + 12.0 * ln(frequency / 440.0) / ln(2.0)
 
-func toSamples(time, sampleRate: float): int =
+func toSamples[A, B](time: A, sampleRate: B): int =
   (time * sampleRate).floor.int
 
-func dbToAmplitude(dB: float): float =
+func dbToAmplitude[T](dB: T): T =
   exp(dB * 0.11512925464970228420089957273422)
 
 func rootMeanSquare[T](buffer: openArray[T]): T =
