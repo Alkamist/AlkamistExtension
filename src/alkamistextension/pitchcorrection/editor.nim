@@ -2,7 +2,7 @@ import
   # std/[math, random, sequtils],
   ../lice, ../input, ../view, ../vector,
   # ../reaper/functions,
-  whitekeys#, boxselect, pitchpoint
+  whitekeys, boxselect#, pitchpoint
 
 type
   PitchEditorColorScheme* = object
@@ -24,7 +24,7 @@ type
     isEditingCorrection: bool
     mouseMiddleWasPressedInside: bool
     mouseRightWasPressedInside: bool
-    # boxSelect: BoxSelect
+    boxSelect: BoxSelect
     # corrections: seq[PitchPoint]
     # correctionSelection: seq[PitchPoint]
     # correctionMouseOver: PitchPoint
@@ -242,7 +242,7 @@ proc newPitchEditor*(position: (float, float),
   result.colorScheme = defaultPitchEditorColorScheme()
   result.correctionPointVisualRadius = 3.0 / 96.0
   result.correctionEditDistance = 5.0 / 96.0
-  # result.boxSelect = newBoxSelect()
+  result.boxSelect = newBoxSelect()
 
   # var previous: PitchPoint
   # for pointId in 0 ..< 10000:
@@ -287,10 +287,10 @@ func onMousePress*(editor: var PitchEditor) =
       editor.mouseMiddleWasPressedInside = true
       editor.view.setZoomTargetExternally(editor.mousePosition)
 
-    # of Right:
-    #   editor.mouseRightWasPressedInside = true
-    #   editor.boxSelect.isActive = true
-    #   editor.boxSelect.bounds = (editor.mousePosition, (0.Inches, 0.Inches))
+    of Right:
+      editor.mouseRightWasPressedInside = true
+      editor.boxSelect.isActive = true
+      editor.boxSelect.bounds = (editor.mousePosition, (0.0, 0.0))
 
     else: discard
 
@@ -305,10 +305,10 @@ func onMouseRelease*(editor: var PitchEditor) =
   of Middle:
     editor.mouseMiddleWasPressedInside = false
 
-  # of Right:
-  #   editor.handleBoxSelectLogic(input)
-  #   editor.mouseRightWasPressedInside = false
-  #   editor.boxSelect.isActive = false
+  of Right:
+    # editor.handleBoxSelectLogic(input)
+    editor.mouseRightWasPressedInside = false
+    editor.boxSelect.isActive = false
 
   else: discard
 
@@ -321,9 +321,9 @@ func onMouseMove*(editor: var PitchEditor) =
   #     editor.correctionEditDistance,
   #   )
 
-  # if editor.mouseRightWasPressedInside and editor.isPressed(Right):
-  #   editor.boxSelect.points[1] = editor.mousePosition
-  #   editor.redraw()
+  if editor.mouseRightWasPressedInside and editor.isPressed(Right):
+    editor.boxSelect.points[1] = editor.mousePosition
+    editor.redraw()
 
   if editor.mouseMiddleWasPressedInside and editor.isPressed(Middle):
     if editor.isPressed(Shift): editor.view.changeZoom(editor.mouseDelta)
@@ -391,4 +391,4 @@ func updateImage*(editor: PitchEditor) =
   # editor.corrections.drawWithCirclePoints(editor.image,
   #                                         rgb(51, 214, 255),
   #                                         rgb(255, 46, 112))
-  # editor.boxSelect.draw(editor.image)
+  editor.boxSelect.draw(editor.image)
