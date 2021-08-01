@@ -9,7 +9,7 @@ export
 
 type
   PitchLine* = ref object
-    position*: (float, float)
+    parentPosition*: (float, float)
     maxEditDistance*: float
     mousePoint*: PitchPoint
     first*, last*: PitchPoint
@@ -22,7 +22,7 @@ type
     selection: seq[PitchPoint]
     snapStart: (float, float)
 
-defineRelativeInput(PitchLine)
+defineInputProcs(PitchLine, parentPosition)
 
 {.push inline.}
 
@@ -262,8 +262,8 @@ func drawWithCirclePoints*(line: PitchLine, image: Image) =
   let
     r = (3.0 / 96.0).float
     lastId = line.points.len - 1
-    activeColorDark = (line.activeColor * 0.3).redistribute
-    inactiveColorDark = (line.inactiveColor * 0.3).redistribute
+    activeColorDark = (line.activeColor * 0.2).redistribute
+    inactiveColorDark = (line.inactiveColor * 0.2).redistribute
     highlight = rgb(255, 255, 255, 0.5)
 
   for i, point in line.points:
@@ -299,10 +299,12 @@ func drawWithCirclePoints*(line: PitchLine, image: Image) =
     if point.mouseOver == Point:
       image.fillCircle(point.visualPosition, r, highlight)
 
-func newPitchLine*(view: View,
+func newPitchLine*(parentPosition: (float, float),
+                   view: View,
                    input: Input,
                    boxSelect: BoxSelect): PitchLine =
   result = PitchLine()
+  result.parentPosition = parentPosition
   result.view = view
   result.input = input
   result.boxSelect = boxSelect

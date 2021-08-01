@@ -191,10 +191,10 @@ func isPressed*(input: Input, button: MouseButton): bool =
 
 {.pop.}
 
-template defineRelativeInput*(T: untyped): untyped =
+template defineInputProcs*(T, offset: untyped): untyped =
   {.push inline.}
-  func mousePosition*(self: T): (float, float) = self.input.mousePosition - self.position
-  func previousMousePosition*(self: T): (float, float) = self.input.previousMousePosition - self.position
+  func mousePosition*(self: T): (float, float) = self.input.mousePosition - self.offset
+  func previousMousePosition*(self: T): (float, float) = self.input.previousMousePosition - self.offset
   func mouseDelta*(self: T): (float, float) = self.input.mouseDelta
   func lastKeyPress*(self: T): KeyboardKey = self.input.lastKeyPress
   func lastKeyRelease*(self: T): KeyboardKey = self.input.lastKeyRelease

@@ -23,7 +23,7 @@ type
     boxSelect: BoxSelect
     correctionLine: PitchLine
 
-defineRelativeInput(PitchEditor)
+defineInputProcs(PitchEditor, position)
 
 {.push inline.}
 
@@ -39,7 +39,7 @@ func position*(editor: PitchEditor): (float, float) = editor.position
 
 func `position=`*(editor: PitchEditor, value: (float, float)) =
   editor.position = value
-  editor.correctionLine.position = value
+  editor.correctionLine.parentPosition = value
 
 func defaultPitchEditorColorScheme*(): PitchEditorColorScheme =
   result.background = rgb(16, 16, 16)
@@ -193,9 +193,9 @@ func newPitchEditor*(position: (float, float),
   result.image = initImage(dpi, dimensions)
   result.colorScheme = defaultPitchEditorColorScheme()
   result.boxSelect = newBoxSelect()
-  result.correctionLine = newPitchLine(result.view,
+  result.correctionLine = newPitchLine(position,
+                                       result.view,
                                        result.input,
                                        result.boxSelect)
-  result.correctionLine.position = position
   result.position = position
   result.redraw()

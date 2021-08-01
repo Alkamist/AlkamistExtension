@@ -9,9 +9,13 @@ proc pitchCorrectionMain*() =
   window.backgroundColor = rgb(16, 16, 16)
   window.bounds = ((4.0, 2.0), (12.0, 8.0))
 
+  template editorDimensions: untyped =
+    (window.clientWidth - 0.6,
+     window.clientHeight - 0.6)
+
   var editor = newPitchEditor(
     position = (0.3, 0.3),
-    dimensions = (window.clientWidth - 0.6, window.clientHeight - 0.6),
+    dimensions = editorDimensions,
     dpi = window.dpi,
     input = window.input,
   )
@@ -34,7 +38,7 @@ proc pitchCorrectionMain*() =
     redrawIfNeeded()
 
   window.onResize = proc() =
-    editor.onResize(window.clientDimensions)
+    editor.onResize(editorDimensions)
     redrawIfNeeded()
 
   window.onDraw = proc() =
