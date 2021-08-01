@@ -1,6 +1,6 @@
 import
   ../lice, ../input, ../view, ../vector,
-  # ../reaper/functions,
+  ../reaper/functions,
   whitekeys, boxselect, pitchline
 
 type
@@ -11,17 +11,19 @@ type
     centerLine*: Color
 
   PitchEditor* = ref object
-    position*: (float, float)
     timeLength*: float
     image*: Image
     colorScheme*: PitchEditorColorScheme
     shouldRedraw*: bool
+    position: (float, float)
     input: Input
     view: View
     mouseMiddleWasPressedInside: bool
     mouseRightWasPressedInside: bool
     boxSelect: BoxSelect
     correctionLine: PitchLine
+
+defineRelativeInput(PitchEditor)
 
 {.push inline.}
 
@@ -33,17 +35,11 @@ func width*(editor: PitchEditor): float = editor.view.x.externalSize
 func height*(editor: PitchEditor): float = editor.view.y.externalSize
 func dimensions*(editor: PitchEditor): (float, float) = (editor.width, editor.height)
 func dpi*(editor: PitchEditor): float = editor.image.dpi
+func position*(editor: PitchEditor): (float, float) = editor.position
 
-func mousePosition*(editor: PitchEditor): (float, float) = editor.input.mousePosition - editor.position
-func previousMousePosition*(editor: PitchEditor): (float, float) = editor.input.previousMousePosition - editor.position
-func mouseDelta*(editor: PitchEditor): (float, float) = editor.input.mouseDelta
-func lastKeyPress*(editor: PitchEditor): KeyboardKey = editor.input.lastKeyPress
-func lastKeyRelease*(editor: PitchEditor): KeyboardKey = editor.input.lastKeyRelease
-func lastMousePress*(editor: PitchEditor): MouseButton = editor.input.lastMousePress
-func lastMouseRelease*(editor: PitchEditor): MouseButton = editor.input.lastMouseRelease
-func lastMousePressWasDoubleClick*(editor: PitchEditor): bool = editor.input.lastMousePressWasDoubleClick
-func isPressed*(editor: PitchEditor, key: KeyboardKey): bool = editor.input.isPressed(key)
-func isPressed*(editor: PitchEditor, button: MouseButton): bool = editor.input.isPressed(button)
+func `position=`*(editor: PitchEditor, value: (float, float)) =
+  editor.position = value
+  editor.correctionLine.position = value
 
 func defaultPitchEditorColorScheme*(): PitchEditorColorScheme =
   result.background = rgb(16, 16, 16)
@@ -88,6 +84,10 @@ func onMousePress*(editor: var PitchEditor) =
       editor.boxSelect.bounds = (editor.mousePosition, (0.0, 0.0))
     else:
       discard
+
+  # let mouseInternal = editor.view.convertToInternal(editor.mousePosition)
+  # ShowConsoleMsg($mouseInternal & "\n")
+  # ShowConsoleMsg($editor.view.convertToExternal(mouseInternal) & "\n")
 
 func onMouseRelease*(editor: var PitchEditor) =
   case editor.lastMouseRelease:
@@ -184,7 +184,6 @@ func newPitchEditor*(position: (float, float),
                      input: Input): PitchEditor =
   result = PitchEditor()
   result.input = input
-  result.position = position
   result.timeLength = 10.0
   result.view = newView()
   result.view.y.isInverted = true
@@ -197,4 +196,6 @@ func newPitchEditor*(position: (float, float),
   result.correctionLine = newPitchLine(result.view,
                                        result.input,
                                        result.boxSelect)
+  result.correctionLine.position = position
+  result.position = position
   result.redraw()

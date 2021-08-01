@@ -191,6 +191,20 @@ func isPressed*(input: Input, button: MouseButton): bool =
 
 {.pop.}
 
+template defineRelativeInput*(T: untyped): untyped =
+  {.push inline.}
+  func mousePosition*(self: T): (float, float) = self.input.mousePosition - self.position
+  func previousMousePosition*(self: T): (float, float) = self.input.previousMousePosition - self.position
+  func mouseDelta*(self: T): (float, float) = self.input.mouseDelta
+  func lastKeyPress*(self: T): KeyboardKey = self.input.lastKeyPress
+  func lastKeyRelease*(self: T): KeyboardKey = self.input.lastKeyRelease
+  func lastMousePress*(self: T): MouseButton = self.input.lastMousePress
+  func lastMouseRelease*(self: T): MouseButton = self.input.lastMouseRelease
+  func lastMousePressWasDoubleClick*(self: T): bool = self.input.lastMousePressWasDoubleClick
+  func isPressed*(self: T, key: KeyboardKey): bool = self.input.isPressed(key)
+  func isPressed*(self: T, button: MouseButton): bool = self.input.isPressed(button)
+  {.pop.}
+
 func toKeyboardKey*(keyCode: int): Option[KeyboardKey] =
   case keyCode:
   of 3: some(KeyboardKey.ControlBreak)

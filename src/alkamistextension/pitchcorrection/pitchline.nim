@@ -22,18 +22,9 @@ type
     selection: seq[PitchPoint]
     snapStart: (float, float)
 
-{.push inline.}
+defineRelativeInput(PitchLine)
 
-func mousePosition*(line: PitchLine): (float, float) = line.input.mousePosition - line.position
-func previousMousePosition*(line: PitchLine): (float, float) = line.input.previousMousePosition - line.position
-func mouseDelta*(line: PitchLine): (float, float) = line.input.mouseDelta
-func lastKeyPress*(line: PitchLine): KeyboardKey = line.input.lastKeyPress
-func lastKeyRelease*(line: PitchLine): KeyboardKey = line.input.lastKeyRelease
-func lastMousePress*(line: PitchLine): MouseButton = line.input.lastMousePress
-func lastMouseRelease*(line: PitchLine): MouseButton = line.input.lastMouseRelease
-func lastMousePressWasDoubleClick*(line: PitchLine): bool = line.input.lastMousePressWasDoubleClick
-func isPressed*(line: PitchLine, key: KeyboardKey): bool = line.input.isPressed(key)
-func isPressed*(line: PitchLine, button: MouseButton): bool = line.input.isPressed(button)
+{.push inline.}
 
 func updateVisualPositions*(line: var PitchLine) =
   for point in line.points.mitems:
@@ -131,16 +122,16 @@ template doubleClickLogic(line: var PitchLine): untyped =
       point.pitch += pitchChange
 
 template pointCreationLogic*(line: var PitchLine): untyped =
-  let mouse = line.view.convertToInternal(line.mousePosition)
+  let mouseInternal = line.view.convertToInternal(line.mousePosition)
 
   line.unselectAll()
 
   var point = newPitchPoint()
 
   if line.isPressed(Shift):
-    point.position = mouse
+    point.position = mouseInternal
   else:
-    point.position = (mouse.time, mouse.pitch.round)
+    point.position = (mouseInternal.time, mouseInternal.pitch.round)
 
   line.points.add(point)
   line.timeSort()

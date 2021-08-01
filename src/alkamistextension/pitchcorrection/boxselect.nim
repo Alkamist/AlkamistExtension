@@ -80,18 +80,18 @@ func `bounds=`*(box: var BoxSelect, value: ((float, float), (float, float))) =
   box.position = value.position
   box.dimensions = value.dimensions
 
-func newBoxSelect*(): BoxSelect =
-  BoxSelect()
-
-func isInside*(position: (float, float), box: BoxSelect): bool =
-  position.x >= box.left and
-  position.x <= box.left + box.width and
-  position.y >= box.top and
-  position.y <= box.top + box.height
+func isInside*(point: (float, float), box: BoxSelect): bool =
+  point.x >= box.left and
+  point.x <= box.left + box.width and
+  point.y >= box.top and
+  point.y <= box.top + box.height
 
 func draw*(box: BoxSelect, image: Image) =
   if box.isActive:
     image.fillRectangle(box.position, box.dimensions, rgb(0, 0, 0, 0.3))
     image.drawRectangle(box.position, box.dimensions, rgb(255, 255, 255, 0.6))
+
+func newBoxSelect*(): BoxSelect =
+  BoxSelect()
 
 {.pop.}
