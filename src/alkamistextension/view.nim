@@ -1,102 +1,103 @@
-import std/math, units
+import std/math, vector
+
+export vector
 
 type
-  ViewAxis*[I, E] = ref object
-    pan*, zoomTarget*: I
-    externalSize*: E
+  ViewAxis* = ref object
+    pan*, zoomTarget*: float
+    externalSize*: float
     zoom*, zoomSensitivity*: float
     isInverted*: bool
 
-  View*[Ix, Iy, E] = ref object
-    x*: ViewAxis[Ix, E]
-    y*: ViewAxis[Iy, E]
+  View* = ref object
+    x*, y*: ViewAxis
 
 {.push inline.}
 
-func newViewAxis*[I, E](): ViewAxis[I, E] =
-  result = ViewAxis[I, E]()
-  result.pan = 0.I
-  result.zoomTarget = 0.I
-  result.externalSize = 1.E
+func newViewAxis*(): ViewAxis =
+  result = ViewAxis()
+  result.pan = 0.0
+  result.zoomTarget = 0.0
+  result.externalSize = 1.0
   result.zoom = 1.0
   result.zoomSensitivity = 0.5
 
-func scale*[I, E](axis: ViewAxis[I, E], value: E): I =
-  (value.toFloat / axis.zoom).I
+func scaleToInternal*(axis: ViewAxis, value: float): float =
+  value / axis.zoom
 
-func scale*[I, E](axis: ViewAxis[I, E], value: I): E =
-  (value.toFloat * axis.zoom).E
+func scaleToExternal*(axis: ViewAxis, value: float): float =
+  value * axis.zoom
 
-func convert*[I, E](axis: ViewAxis[I, E], value: E): I =
+func convertToInternal*(axis: ViewAxis, value: float): float =
   if axis.isInverted:
-    axis.pan - axis.scale(value - axis.externalSize)
+    axis.pan - axis.scaleToInternal(value - axis.externalSize)
   else:
-    axis.pan + axis.scale(value)
+    axis.pan + axis.scaleToInternal(value)
 
-func convert*[I, E](axis: ViewAxis[I, E], value: I): E =
+func convertToExternal*(axis: ViewAxis, value: float): float =
   if axis.isInverted:
-    axis.scale(axis.pan - value) + axis.externalSize
+    axis.scaleToExternal(axis.pan - value) + axis.externalSize
   else:
-    axis.scale(value - axis.pan)
+    axis.scaleToExternal(value - axis.pan)
 
-func changePan*[I, E](axis: var ViewAxis[I, E], value: I) =
+func changePanInternally*(axis: var ViewAxis, value: float) =
   axis.pan += value
 
-func changePan*[I, E](axis: var ViewAxis[I, E], value: E) =
+func changePanExternally*(axis: var ViewAxis, value: float) =
   if axis.isInverted:
-    axis.changePan(axis.scale(-value))
+    axis.changePanInternally(axis.scaleToInternal(-value))
   else:
-    axis.changePan(axis.scale(value))
+    axis.changePanInternally(axis.scaleToExternal(value))
 
-func changeZoom*[I, E](axis: var ViewAxis[I, E], value: E) =
+func changeZoom*(axis: var ViewAxis, value: float) =
   let
-    previousSize = axis.scale(axis.externalSize)
-    zoomMultiplier = 2.0.pow(axis.zoomSensitivity * value.toFloat)
+    previousSize = axis.scaleToInternal(axis.externalSize)
+    zoomMultiplier = 2.0.pow(axis.zoomSensitivity * value)
 
   axis.zoom *= zoomMultiplier
 
   let
-    currentSize = axis.scale(axis.externalSize)
+    currentSize = axis.scaleToInternal(axis.externalSize)
     zoomRatio = (axis.zoomTarget - axis.pan) / currentSize
     sizeChange = currentSize - previousSize
 
   axis.pan -= sizeChange * zoomRatio
 
-func newView*[Ix, Iy, E](): View[Ix, Iy, E] =
-  result = View[Ix, Iy, E]()
-  result.x = newViewAxis[Ix, E]()
-  result.y = newViewAxis[Iy, E]()
+func newView*(): View =
+  result = View()
+  result.x = newViewAxis()
+  result.y = newViewAxis()
 
-func scale*[Ix, Iy, E](view: View[Ix, Iy, E], value: (E, E)): (Ix, Iy) =
-  (view.x.scale(value.x),
-   view.y.scale(value.y))
+func scaleToInternal*(view: View, value: (float, float)): (float, float) =
+  (view.x.scaleToInternal(value.x),
+   view.y.scaleToInternal(value.y))
 
-func scale*[Ix, Iy, E](view: View[Ix, Iy, E], value: (Ix, Iy)): (E, E) =
-  (view.x.scale(value.x),
-   view.y.scale(value.y))
+func scaleToExternal*(view: View, value: (float, float)): (float, float) =
+  (view.x.scaleToExternal(value.x),
+   view.y.scaleToExternal(value.y))
 
-func convert*[Ix, Iy, E](view: View[Ix, Iy, E], value: (E, E)): (Ix, Iy) =
-  (view.x.convert(value.x),
-   view.y.convert(value.y))
+func convertToInternal*(view: View, value: (float, float)): (float, float) =
+  (view.x.convertToInternal(value.x),
+   view.y.convertToInternal(value.y))
 
-func convert*[Ix, Iy, E](view: View[Ix, Iy, E], value: (Ix, Iy)): (E, E) =
-  (view.x.convert(value.x),
-   view.y.convert(value.y))
+func convertToExternal*(view: View, value: (float, float)): (float, float) =
+  (view.x.convertToExternal(value.x),
+   view.y.convertToExternal(value.y))
 
-func changePan*[Ix, Iy, E](view: View[Ix, Iy, E], value: (E, E)) =
-  view.x.changePan(value.x)
-  view.y.changePan(value.y)
+func changePanInternally*(view: View, value: (float, float)) =
+  view.x.changePanInternally(value.x)
+  view.y.changePanInternally(value.y)
 
-func changePan*[Ix, Iy, E](view: View[Ix, Iy, E], value: (Ix, Iy)) =
-  view.x.changePan(value.x)
-  view.y.changePan(value.y)
+func changePanExternally*(view: View, value: (float, float)) =
+  view.x.changePanExternally(value.x)
+  view.y.changePanExternally(value.y)
 
-func changeZoom*[Ix, Iy, E](view: View[Ix, Iy, E], value: (E, E)) =
+func changeZoom*(view: View, value: (float, float)) =
   view.x.changeZoom(value.x)
   view.y.changeZoom(value.y)
 
-func `zoomTarget=`*[Ix, Iy, E](view: var View[Ix, Iy, E], value: (E, E)) =
-  view.x.zoomTarget = view.x.convert(value.x)
-  view.y.zoomTarget = view.y.convert(value.y)
+func setZoomTargetExternally*(view: var View, value: (float, float)) =
+  view.x.zoomTarget = view.x.convertToInternal(value.x)
+  view.y.zoomTarget = view.y.convertToInternal(value.y)
 
 {.pop.}

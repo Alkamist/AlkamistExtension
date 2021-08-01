@@ -16,5 +16,4 @@ createExtension:
 #   var window = newWindow()
 
 #   window.title = "Pitch Correction"
-#   window.bounds = ((4.Inches, 2.Inches),
-#                    (12.Inches, 8.Inches))
+#   window.bounds = ((4.0, 2.0), (12.0, 8.0))

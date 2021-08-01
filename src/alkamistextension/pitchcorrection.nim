@@ -7,17 +7,14 @@ proc pitchCorrectionMain*() =
 
   window.title = "Pitch Correction"
   window.backgroundColor = rgb(16, 16, 16)
-  window.bounds = ((4.Inches, 2.Inches),
-                   (12.Inches, 8.Inches))
+  window.bounds = ((4.0, 2.0), (12.0, 8.0))
 
   var editor = newPitchEditor(
-    position = (0.Inches, 0.Inches),
+    position = (0.0, 0.0),
     dimensions = (window.clientWidth, window.clientHeight),
     dpi = window.dpi,
+    input = window.input,
   )
-
-  template editorInput: Input =
-    window.input.withMousePositionOffset(-editor.position)
 
   template redrawIfNeeded(): untyped =
     if editor.shouldRedraw:
@@ -25,15 +22,15 @@ proc pitchCorrectionMain*() =
       editor.shouldRedraw = false
 
   window.onMousePress = proc() =
-    editor.onMousePress(editorInput)
+    editor.onMousePress()
     redrawIfNeeded()
 
   window.onMouseRelease = proc() =
-    editor.onMouseRelease(editorInput)
+    editor.onMouseRelease()
     redrawIfNeeded()
 
   window.onMouseMove = proc() =
-    editor.onMouseMove(editorInput)
+    editor.onMouseMove()
     redrawIfNeeded()
 
   window.onResize = proc() =
@@ -47,5 +44,5 @@ proc pitchCorrectionMain*() =
   window.onKeyPress = proc() =
     if window.input.lastKeyPress == Space:
       Main_OnCommandEx(40044, 0, nil)
-    editor.onKeyPress(editorInput)
+    editor.onKeyPress()
     redrawIfNeeded()

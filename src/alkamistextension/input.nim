@@ -1,4 +1,6 @@
-import std/options, units, geometry
+import std/options, vector
+
+export vector
 
 type
   MouseButton* = enum
@@ -162,23 +164,23 @@ type
     Apostrophe,
     IMEProcess,
 
-  Input* = object
+  Input* = ref object
     lastKeyPress*: KeyboardKey
     lastKeyRelease*: KeyboardKey
     lastMousePress*: MouseButton
     lastMouseRelease*: MouseButton
     lastMousePressWasDoubleClick*: bool
-    mousePosition*: (Inches, Inches)
-    previousMousePosition*: (Inches, Inches)
+    mousePosition*: (float, float)
+    previousMousePosition*: (float, float)
     keyStates*: array[KeyboardKey, bool]
     mouseButtonStates*: array[MouseButton, bool]
 
 {.push inline.}
 
-func initInput*(): Input =
+func newInput*(): Input =
   result = Input()
 
-func mouseDelta*(input: Input): (Inches, Inches) =
+func mouseDelta*(input: Input): (float, float) =
   input.mousePosition - input.previousMousePosition
 
 func isPressed*(input: Input, key: KeyboardKey): bool =
@@ -186,11 +188,6 @@ func isPressed*(input: Input, key: KeyboardKey): bool =
 
 func isPressed*(input: Input, button: MouseButton): bool =
   input.mouseButtonStates[button]
-
-func withMousePositionOffset*(input: Input, offset: (Inches, Inches)): Input =
-  result = input
-  result.mousePosition += offset
-  result.previousMousePosition += offset
 
 {.pop.}
 

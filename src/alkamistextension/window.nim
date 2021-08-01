@@ -1,15 +1,15 @@
 import
   std/[tables, options],
-  winapi, units, geometry, lice, input
+  winapi, lice, input, vector
 
-export units, geometry, lice, input
+export lice, input, vector
 
 type
   Window* = ref object
     image*: Image
     backgroundColor*: Color
     input*: Input
-    dpi*: Dpi
+    dpi*: float
     onUpdate*: proc()
     onDraw*: proc()
     onResize*: proc()
@@ -34,34 +34,34 @@ var hWndWindows = initTable[HWND, Window]()
 {.push inline.}
 
 func title*(window: Window): string = window.title
-func left*(window: Window): Inches = window.rect.left.Pixels / window.dpi
-func right*(window: Window): Inches = window.rect.right.Pixels / window.dpi
-func top*(window: Window): Inches = window.rect.top.Pixels / window.dpi
-func bottom*(window: Window): Inches = window.rect.bottom.Pixels / window.dpi
-func x*(window: Window): Inches = window.left
-func y*(window: Window): Inches = window.top
-func position*(window: Window): (Inches, Inches) = (window.x, window.y)
-func width*(window: Window): Inches = abs(window.right - window.left)
-func height*(window: Window): Inches = abs(window.bottom - window.top)
-func dimensions*(window: Window): (Inches, Inches) = (window.width, window.height)
-func bounds*(window: Window): ((Inches, Inches), (Inches, Inches)) = (window.position, window.dimensions)
-func clientLeft*(window: Window): Inches = window.clientRect.left.Pixels / window.dpi
-func clientRight*(window: Window): Inches = window.clientRect.right.Pixels / window.dpi
-func clientTop*(window: Window): Inches = window.clientRect.top.Pixels / window.dpi
-func clientBottom*(window: Window): Inches = window.clientRect.bottom.Pixels / window.dpi
-func clientX*(window: Window): Inches = window.clientLeft
-func clientY*(window: Window): Inches = window.clientRight
-func clientPosition*(window: Window): (Inches, Inches) = (window.clientX, window.clientY)
-func clientWidth*(window: Window): Inches = abs(window.clientRight - window.clientLeft)
-func clientHeight*(window: Window): Inches = abs(window.clientBottom - window.clientTop)
-func clientDimensions*(window: Window): (Inches, Inches) = (window.clientWidth, window.clientHeight)
-func clientBounds*(window: Window): ((Inches, Inches), (Inches, Inches)) = (window.clientPosition, window.clientDimensions)
+func left*(window: Window): float = window.rect.left.float / window.dpi
+func right*(window: Window): float = window.rect.right.float / window.dpi
+func top*(window: Window): float = window.rect.top.float / window.dpi
+func bottom*(window: Window): float = window.rect.bottom.float / window.dpi
+func x*(window: Window): float = window.left
+func y*(window: Window): float = window.top
+func position*(window: Window): (float, float) = (window.x, window.y)
+func width*(window: Window): float = abs(window.right - window.left)
+func height*(window: Window): float = abs(window.bottom - window.top)
+func dimensions*(window: Window): (float, float) = (window.width, window.height)
+func bounds*(window: Window): ((float, float), (float, float)) = (window.position, window.dimensions)
+func clientLeft*(window: Window): float = window.clientRect.left.float / window.dpi
+func clientRight*(window: Window): float = window.clientRect.right.float / window.dpi
+func clientTop*(window: Window): float = window.clientRect.top.float / window.dpi
+func clientBottom*(window: Window): float = window.clientRect.bottom.float / window.dpi
+func clientX*(window: Window): float = window.clientLeft
+func clientY*(window: Window): float = window.clientRight
+func clientPosition*(window: Window): (float, float) = (window.clientX, window.clientY)
+func clientWidth*(window: Window): float = abs(window.clientRight - window.clientLeft)
+func clientHeight*(window: Window): float = abs(window.clientBottom - window.clientTop)
+func clientDimensions*(window: Window): (float, float) = (window.clientWidth, window.clientHeight)
+func clientBounds*(window: Window): ((float, float), (float, float)) = (window.clientPosition, window.clientDimensions)
 
 func `title=`*(window: var Window, value: string) =
   window.title = value
   discard SetWindowText(window.hWnd, value)
-func `bounds=`*(window: Window, value: ((Inches, Inches), (Inches, Inches))) =
-  template toNative(inches: Inches): cint =
+func `bounds=`*(window: Window, value: ((float, float), (float, float))) =
+  template toNative(inches: float): cint =
     (inches * window.dpi).cint
   discard SetWindowPos(
     window.hWnd, HWND_TOP,
@@ -118,8 +118,8 @@ proc windowProc(hWnd: HWND, msg: UINT, wParam: WPARAM, lParam: LPARAM): INT_PTR 
     ifWindow:
       window.input.previousMousePosition.x = window.input.mousePosition.x
       window.input.previousMousePosition.y = window.input.mousePosition.y
-      window.input.mousePosition.x = GET_X_LPARAM(lParam).Pixels / window.dpi
-      window.input.mousePosition.y = GET_Y_LPARAM(lParam).Pixels / window.dpi
+      window.input.mousePosition.x = GET_X_LPARAM(lParam).float / window.dpi
+      window.input.mousePosition.y = GET_Y_LPARAM(lParam).float / window.dpi
       if window.onMouseMove != nil:
         window.onMouseMove()
 
@@ -222,8 +222,8 @@ proc newWindow*(hInstance: HINSTANCE, parent: HWND): Window =
     result.title = "Unnamed Window"
     result.updateBounds()
     result.backgroundColor = rgb(0, 0, 0)
-    result.input = initInput()
-    result.dpi = 96.0.Dpi
-    result.image = initImage(result.dpi, (0.Inches, 0.Inches))
+    result.input = newInput()
+    result.dpi = 96.0
+    result.image = initImage(result.dpi, (0.0, 0.0))
     hWndWindows[result.hWnd] = result
     discard ShowWindow(result.hWnd, SW_SHOW)
