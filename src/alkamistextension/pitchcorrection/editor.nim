@@ -56,6 +56,7 @@ func zoomOutYToFull*(editor: var PitchEditor) =
 func resize*(editor: var PitchEditor, dimensions: (float, float)) =
   editor.view.x.externalSize = dimensions.width
   editor.view.y.externalSize = dimensions.height
+  editor.correctionLine.updateVisualPositions()
   editor.image.resize(dimensions)
 
 func mouseIsInside*(editor: PitchEditor): bool =
@@ -187,9 +188,6 @@ func newPitchEditor*(position: (float, float),
   result.timeLength = 10.0
   result.view = newView()
   result.view.y.isInverted = true
-  result.resize(dimensions)
-  result.zoomOutXToFull()
-  result.zoomOutYToFull()
   result.image = initImage(dpi, dimensions)
   result.colorScheme = defaultPitchEditorColorScheme()
   result.boxSelect = newBoxSelect()
@@ -198,4 +196,7 @@ func newPitchEditor*(position: (float, float),
                                        result.input,
                                        result.boxSelect)
   result.position = position
+  result.resize(dimensions)
+  result.zoomOutXToFull()
+  result.zoomOutYToFull()
   result.redraw()

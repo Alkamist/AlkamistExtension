@@ -129,6 +129,7 @@ const
   WM_SIZE* {.windowsHeader.} = 0x0005
   WM_MOVE* {.windowsHeader.} = 0x0003
   WM_TIMER* {.windowsHeader.} =  0x0113
+  WM_DPICHANGED* {.windowsHeader.} = 0x02E0
   MK_CONTROL* {.windowsHeader.} = 0x0008
   MK_LBUTTON* {.windowsHeader.} = 0x0001
   MK_MBUTTON* {.windowsHeader.} = 0x0010
@@ -195,6 +196,7 @@ proc ShowWindow*(hWnd: HINSTANCE, nCmdShow: int): BOOL {.stdcall, windowsHeader.
 proc DestroyWindow*(hWnd: HWND): BOOL {.stdcall, windowsHeader.}
 proc GetWindowRect*(hWnd: HWND, lpRect: ptr Rect): BOOL {.stdcall, windowsHeader.}
 proc GetClientRect*(hWnd: HWND, lpRect: ptr Rect): BOOL {.stdcall, windowsHeader.}
+proc GetDpiForWindow*(hWnd: HWND): UINT {.stdcall, windowsHeader.}
 proc SetWindowText*(hWnd: HWND, lpString: LPCSTR): BOOL {.stdcall, windowsHeader.}
 proc SetWindowPos*(hWnd, hWndInsertAfter: HWND; X, Y, cx, cy: int; uFlags: UINT): BOOL {.stdcall, windowsHeader.}
 proc SetTimer*(hWnd: HWND, nIDEvent: UINT_PTR, uElapse: UINT, lpTimerFunc: TIMERPROC): UINT_PTR {.stdcall, windowsHeader.}
