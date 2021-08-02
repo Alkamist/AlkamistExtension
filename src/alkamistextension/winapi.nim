@@ -196,6 +196,7 @@ proc ShowWindow*(hWnd: HINSTANCE, nCmdShow: int): BOOL {.stdcall, windowsHeader.
 proc DestroyWindow*(hWnd: HWND): BOOL {.stdcall, windowsHeader.}
 proc GetWindowRect*(hWnd: HWND, lpRect: ptr Rect): BOOL {.stdcall, windowsHeader.}
 proc GetClientRect*(hWnd: HWND, lpRect: ptr Rect): BOOL {.stdcall, windowsHeader.}
+proc SetFocus*(hWnd: HWND): HWND {.stdcall, windowsHeader.}
 proc GetDpiForWindow*(hWnd: HWND): UINT {.stdcall, windowsHeader.}
 proc SetWindowText*(hWnd: HWND, lpString: LPCSTR): BOOL {.stdcall, windowsHeader.}
 proc SetWindowPos*(hWnd, hWndInsertAfter: HWND; X, Y, cx, cy: int; uFlags: UINT): BOOL {.stdcall, windowsHeader.}

@@ -1,5 +1,6 @@
 import
   std/[tables, options],
+  reaper/functions,
   winapi, lice, input, vector
 
 export lice, input, vector
@@ -108,10 +109,16 @@ proc windowProc(hWnd: HWND, msg: UINT, wParam: WPARAM, lParam: LPARAM): INT_PTR 
 
   case msg:
 
-  of WM_ERASEBKGND:
+  of WM_INITDIALOG:
+    discard SetFocus(hWnd)
     ifWindow:
       window.image.clear(window.backgroundColor)
       window.redraw()
+    return 0
+
+  of WM_ERASEBKGND:
+    ifWindow:
+      window.image.clear(window.backgroundColor)
       return 1
 
   of WM_MOUSEMOVE:

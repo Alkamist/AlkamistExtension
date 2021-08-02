@@ -54,8 +54,7 @@ func zoomOutYToFull*(editor: var PitchEditor) =
   editor.view.y.zoom = editor.height / numKeys.toFloat
 
 func resize*(editor: var PitchEditor, dimensions: (float, float)) =
-  editor.view.x.externalSize = dimensions.width
-  editor.view.y.externalSize = dimensions.height
+  editor.view.resize(dimensions)
   editor.correctionLine.updateVisualPositions()
   editor.image.resize(dimensions)
 
