@@ -34,16 +34,16 @@ func convertToExternal*(axis: ViewAxis, value: float): float =
   else:
     axis.scaleToExternal(value - axis.pan)
 
-func changePanInternally*(axis: var ViewAxis, value: float) =
+func changePanInternally*(axis: ViewAxis, value: float) =
   axis.pan += value
 
-func changePanExternally*(axis: var ViewAxis, value: float) =
+func changePanExternally*(axis: ViewAxis, value: float) =
   if axis.isInverted:
     axis.changePanInternally(axis.scaleToInternal(-value))
   else:
     axis.changePanInternally(axis.scaleToInternal(value))
 
-template zoomToTarget(axis: var ViewAxis, zoomChangeCode: untyped): untyped =
+template zoomToTarget(axis: ViewAxis, zoomChangeCode: untyped): untyped =
   let previousSize = axis.scaleToInternal(axis.externalSize)
 
   zoomChangeCode
@@ -55,11 +55,11 @@ template zoomToTarget(axis: var ViewAxis, zoomChangeCode: untyped): untyped =
 
   axis.pan -= sizeChange * zoomRatio
 
-func changeZoom*(axis: var ViewAxis, value: float) =
+func changeZoom*(axis: ViewAxis, value: float) =
   axis.zoomToTarget:
     axis.zoom *= 2.0.pow(value * axis.zoomSensitivity)
 
-func resize*(axis: var ViewAxis, externalSize: float) =
+func resize*(axis: ViewAxis, externalSize: float) =
   let delta = externalSize - axis.previousExternalSize
   axis.externalSize = externalSize
   if axis.isInverted:
@@ -94,11 +94,11 @@ func changeZoom*(view: View, value: (float, float)) =
   view.x.changeZoom(value.x)
   view.y.changeZoom(value.y)
 
-func setZoomTargetExternally*(view: var View, value: (float, float)) =
+func setZoomTargetExternally*(view: View, value: (float, float)) =
   view.x.zoomTarget = view.x.convertToInternal(value.x)
   view.y.zoomTarget = view.y.convertToInternal(value.y)
 
-func resize*(view: var View, externalDimensions: (float, float)) =
+func resize*(view: View, externalDimensions: (float, float)) =
   view.x.resize(externalDimensions.width)
   view.y.resize(externalDimensions.height)
 

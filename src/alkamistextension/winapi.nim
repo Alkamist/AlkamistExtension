@@ -92,9 +92,9 @@ type
     rgbReserved*: array[32, BYTE]
   LPPAINTSTRUCT* = ptr PAINTSTRUCT
 
-  WNDPROC* {.windowsHeader.} = proc (hWnd: HWND, msg: UINT, wParam: WPARAM, lParam: LPARAM): LRESULT {.stdcall.}
+  WNDPROC* {.windowsHeader.} = proc(hWnd: HWND, msg: UINT, wParam: WPARAM, lParam: LPARAM): LRESULT {.stdcall.}
   DLGPROC* {.windowsHeader.} = proc(hWnd: HWND, msg: UINT, wParam: WPARAM, lParam: LPARAM): INT_PTR {.stdcall.}
-  TIMERPROC* {.windowsHeader.} = proc (P1: HWND, P2: UINT, P3: UINT_PTR, P4: DWORD): VOID {.stdcall.}
+  TIMERPROC* {.windowsHeader.} = proc(P1: HWND, P2: UINT, P3: UINT_PTR, P4: DWORD): VOID {.stdcall.}
 
   COLORREF* {.windowsHeader.} = DWORD
 

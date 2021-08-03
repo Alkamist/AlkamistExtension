@@ -28,11 +28,11 @@ defineInputProcs(PitchLine, parentPosition)
 
 {.push inline.}
 
-func updateVisualPositions*(line: var PitchLine) =
+func updateVisualPositions*(line: PitchLine) =
   for point in line.points.mitems:
     point.visualPosition = line.view.convertToExternal(point.position)
 
-func timeSort(line: var PitchLine) =
+func timeSort(line: PitchLine) =
   line.points.sort(compareTime)
   line.first = nil
   line.last = nil
@@ -43,7 +43,7 @@ func timeSort(line: var PitchLine) =
     if i > 0: point.previous = line.points[i - 1]
     if i < lastId: point.next = line.points[i + 1]
 
-func select*(line: var PitchLine, point: PitchPoint, state: bool) =
+func select*(line: PitchLine, point: PitchPoint, state: bool) =
   if point != nil:
     if state:
       if not point.isSelected:
@@ -52,25 +52,25 @@ func select*(line: var PitchLine, point: PitchPoint, state: bool) =
     else:
       point.isSelected = false
 
-func unselectAll*(line: var PitchLine) =
+func unselectAll*(line: PitchLine) =
   for point in line.selection:
     point.isSelected = false
   line.selection = @[]
 
-func cleanSelection*(line: var PitchLine) =
+func cleanSelection*(line: PitchLine) =
   line.selection.keepIf(proc(x: PitchPoint): bool = x.isSelected)
   line.selection = line.selection.deduplicate()
 
-func toggleSelectionActivations*(line: var PitchLine) =
+func toggleSelectionActivations*(line: PitchLine) =
   for point in line.selection.mitems:
     point.isActive = not point.isActive
 
-func deleteSelection*(line: var PitchLine) =
+func deleteSelection*(line: PitchLine) =
   line.selection = @[]
   line.points.keepIf(proc(x: PitchPoint): bool = not x.isSelected)
   line.timeSort()
 
-func addPoints*(line: var PitchLine, points: seq[tuple[time, pitch: float]]) =
+func addPoints*(line: PitchLine, points: seq[tuple[time, pitch: float]]) =
   for point in points:
     var pitchPoint = newPitchPoint()
     pitchPoint.time = point.time
@@ -79,7 +79,7 @@ func addPoints*(line: var PitchLine, points: seq[tuple[time, pitch: float]]) =
   line.timeSort()
   line.updateVisualPositions()
 
-func deactivatePointsSpreadByTime*(line: var PitchLine, timeThreshold: float) =
+func deactivatePointsSpreadByTime*(line: PitchLine, timeThreshold: float) =
   let lastId = line.points.len - 1
 
   for pointId, point in line.points.mpairs:
@@ -92,7 +92,7 @@ func deactivatePointsSpreadByTime*(line: var PitchLine, timeThreshold: float) =
 
 {.pop.}
 
-template clickSelectLogic(line: var PitchLine): untyped =
+template clickSelectLogic(line: PitchLine): untyped =
   let
     editingSelectedPoint = line.mousePoint != nil and line.mousePoint.mouseOver == Point and line.mousePoint.isSelected
     editingSelectedSegment = line.mousePoint != nil and line.mousePoint.mouseOver == Segment and line.mousePoint.isSelected and
@@ -137,13 +137,13 @@ template clickSelectLogic(line: var PitchLine): untyped =
 
   line.cleanSelection()
 
-template doubleClickLogic(line: var PitchLine): untyped =
+template doubleClickLogic(line: PitchLine): untyped =
   if line.mousePoint != nil:
     let pitchChange = line.mousePoint.pitch.round - line.mousePoint.pitch
     for point in line.selection.mitems:
       point.pitch += pitchChange
 
-template mouseCreationLogic(line: var PitchLine): untyped =
+template mouseCreationLogic(line: PitchLine): untyped =
   let mouseInternal = line.view.convertToInternal(line.mousePosition)
 
   line.unselectAll()
@@ -165,7 +165,7 @@ template mouseCreationLogic(line: var PitchLine): untyped =
 
   line.select(point, true)
 
-template boxSelectLogic(line: var PitchLine): untyped =
+template boxSelectLogic(line: PitchLine): untyped =
   for point in line.points.mitems:
     if point.visualPosition.isInside(line.boxSelect):
       if line.isPressed(Control) and not line.isPressed(Shift):
@@ -178,7 +178,7 @@ template boxSelectLogic(line: var PitchLine): untyped =
 
   line.cleanSelection()
 
-template editMovementLogic(line: var PitchLine): untyped =
+template editMovementLogic(line: PitchLine): untyped =
   let
     internalMouse = line.view.convertToInternal(line.mousePosition)
     editStart = line.snapStart
@@ -196,7 +196,7 @@ template editMovementLogic(line: var PitchLine): untyped =
 
   line.timeSort()
 
-template updateMouseOvers(line: var PitchLine): untyped =
+template updateMouseOvers(line: PitchLine): untyped =
   let lastId = line.points.len - 1
   var
     closestPoint: PitchPoint
@@ -245,7 +245,7 @@ template updateMouseOvers(line: var PitchLine): untyped =
       closestSegment[0].mouseOver = Segment
       line.mousePoint = closestSegment[0]
 
-func onLeftPress*(line: var PitchLine) =
+func onLeftPress*(line: PitchLine) =
   if line.editingIsEnabled:
     line.clickSelectLogic()
 
@@ -267,17 +267,17 @@ func onLeftPress*(line: var PitchLine) =
     line.isEditingPoint = true
     line.updateVisualPositions()
 
-func onLeftRelease*(line: var PitchLine) =
+func onLeftRelease*(line: PitchLine) =
   if line.editingIsEnabled:
     if not line.isEditingPoint:
       line.unselectAll()
   line.isEditingPoint = false
 
-func onRightRelease*(line: var PitchLine) =
+func onRightRelease*(line: PitchLine) =
   if line.editingIsEnabled:
     line.boxSelectLogic()
 
-func onMouseMove*(line: var PitchLine) =
+func onMouseMove*(line: PitchLine) =
   if line.editingIsEnabled:
     if line.isEditingPoint:
       line.editMovementLogic()

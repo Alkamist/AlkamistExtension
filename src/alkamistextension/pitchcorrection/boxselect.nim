@@ -22,61 +22,61 @@ func position*(box: BoxSelect): (float, float) = (box.left, box.top)
 func dimensions*(box: BoxSelect): (float, float) = (box.width, box.height)
 func bounds*(box: BoxSelect): ((float, float), (float, float)) = (box.position, box.dimensions)
 
-func `left=`*(box: var BoxSelect, value: float) =
+func `left=`*(box: BoxSelect, value: float) =
   if p0.x <= p1.x:
     p0.x = value
   else:
     p1.x = value
 
-func `right=`*(box: var BoxSelect, value: float) =
+func `right=`*(box: BoxSelect, value: float) =
   if p0.x > p1.x:
     p0.x = value
   else:
     p1.x = value
 
-func `bottom=`*(box: var BoxSelect, value: float) =
+func `bottom=`*(box: BoxSelect, value: float) =
   if p0.y >= p1.y:
     p0.y = value
   else:
     p1.y = value
 
-func `top=`*(box: var BoxSelect, value: float) =
+func `top=`*(box: BoxSelect, value: float) =
   if p0.y < p1.y:
     p0.y = value
   else:
     p1.y = value
 
-func `x=`*(box: var BoxSelect, value: float) =
+func `x=`*(box: BoxSelect, value: float) =
   let width = box.width
   p0.x = value
   p1.x = value + width
 
-func `y=`*(box: var BoxSelect, value: float) =
+func `y=`*(box: BoxSelect, value: float) =
   let height = box.height
   p0.y = value
   p1.y = value + height
 
-func `width=`*(box: var BoxSelect, value: float) =
+func `width=`*(box: BoxSelect, value: float) =
   if p0.x <= p1.x:
     p1.x = p0.x + value
   else:
     p0.x = p1.x + value
 
-func `height=`*(box: var BoxSelect, value: float) =
+func `height=`*(box: BoxSelect, value: float) =
   if p0.y >= p1.y:
     p0.y = p1.y + value
   else:
     p1.y = p0.y + value
 
-func `position=`*(box: var BoxSelect, value: (float, float)) =
+func `position=`*(box: BoxSelect, value: (float, float)) =
   box.x = value.x
   box.y = value.y
 
-func `dimensions=`*(box: var BoxSelect, value: (float, float)) =
+func `dimensions=`*(box: BoxSelect, value: (float, float)) =
   box.width = value.width
   box.height = value.height
 
-func `bounds=`*(box: var BoxSelect, value: ((float, float), (float, float))) =
+func `bounds=`*(box: BoxSelect, value: ((float, float), (float, float))) =
   box.position = value.position
   box.dimensions = value.dimensions
 

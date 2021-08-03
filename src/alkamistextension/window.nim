@@ -57,7 +57,7 @@ func clientHeight*(window: Window): float = abs(window.clientBottom - window.cli
 func clientDimensions*(window: Window): (float, float) = (window.clientWidth, window.clientHeight)
 func clientBounds*(window: Window): ((float, float), (float, float)) = (window.clientPosition, window.clientDimensions)
 
-func `title=`*(window: var Window, value: string) =
+func `title=`*(window: Window, value: string) =
   window.title = value
   discard SetWindowText(window.hWnd, value)
 func `bounds=`*(window: Window, value: ((float, float), (float, float))) =
@@ -74,11 +74,11 @@ func `bounds=`*(window: Window, value: ((float, float), (float, float))) =
 
 {.pop.}
 
-func enableUpdateLoop*(window: var Window, loopEvery: UINT) =
+func enableUpdateLoop*(window: Window, loopEvery: UINT) =
   discard SetTimer(window.hWnd, 1, loopEvery, nil)
   window.hasUpdateLoop = true
 
-func disableUpdateLoop*(window: var Window) =
+func disableUpdateLoop*(window: Window) =
   if window.hasUpdateLoop:
     discard KillTimer(window.hWnd, 1)
     window.hasUpdateLoop = false
@@ -86,7 +86,7 @@ func disableUpdateLoop*(window: var Window) =
 func redraw*(window: Window) =
   discard InvalidateRect(window.hWnd, nil, 1)
 
-template updateBounds(window: var Window): untyped =
+template updateBounds(window: Window): untyped =
   discard GetClientRect(window.hWnd, addr window.clientRect)
   discard GetWindowRect(window.hWnd, addr window.rect)
 

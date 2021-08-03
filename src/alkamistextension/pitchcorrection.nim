@@ -8,6 +8,7 @@ proc pitchCorrectionMain*() =
   window.title = "Pitch Correction"
   window.backgroundColor = rgb(16, 16, 16)
   window.bounds = ((4.0, 2.0), (12.0, 8.0))
+  window.enableUpdateLoop(17)
 
   template editorDimensions: untyped =
     (window.clientWidth - 0.6,
@@ -24,6 +25,10 @@ proc pitchCorrectionMain*() =
     if editor.shouldRedraw:
       window.redraw()
       editor.shouldRedraw = false
+
+  window.onUpdate = proc() =
+    # editor.onUpdate()
+    redrawIfNeeded()
 
   window.onMousePress = proc() =
     editor.onMousePress()

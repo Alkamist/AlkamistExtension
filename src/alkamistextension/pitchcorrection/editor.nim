@@ -1,6 +1,7 @@
 import
+  # std/asyncdispatch,
   ../lice, ../input, ../view, ../vector, ../reaper,
-  whitekeys, boxselect, pitchline, pitchdetection
+  whitekeys, boxselect, pitchline#, pitchdetection
 
 type
   PitchEditorColorScheme* = object
@@ -22,6 +23,7 @@ type
     boxSelect: BoxSelect
     pitchLine: PitchLine
     correctionLine: PitchLine
+    isAnalyzingPitch: bool
 
 defineInputProcs(PitchEditor, position)
 
@@ -48,13 +50,13 @@ func defaultPitchEditorColorScheme*(): PitchEditorColorScheme =
   result.whiteKeys = rgb(76, 76, 76, 1.0)
   result.centerLine = rgb(255, 255, 255, 0.10)
 
-func zoomOutXToFull*(editor: var PitchEditor) =
+func zoomOutXToFull*(editor: PitchEditor) =
   editor.view.x.zoom = editor.width / editor.timeLength
 
-func zoomOutYToFull*(editor: var PitchEditor) =
+func zoomOutYToFull*(editor: PitchEditor) =
   editor.view.y.zoom = editor.height / numKeys.toFloat
 
-func resize*(editor: var PitchEditor, dimensions: (float, float)) =
+func resize*(editor: PitchEditor, dimensions: (float, float)) =
   editor.view.resize(dimensions)
   editor.pitchLine.updateVisualPositions()
   editor.correctionLine.updateVisualPositions()
@@ -66,29 +68,36 @@ func mouseIsInside*(editor: PitchEditor): bool =
   editor.mousePosition.y >= 0.0 and
   editor.mousePosition.y <= editor.height
 
-func redraw*(editor: var PitchEditor) =
+func redraw*(editor: PitchEditor) =
   editor.shouldRedraw = true
-
-proc detectPitch(editor: var PitchEditor) =
-  let take = currentProject().selectedItem(0).activeTake
-  if take.kind == Audio:
-    let
-      source = take.source
-      sampleRate = 8000.0
-      lengthSeconds = 5.0
-      peaks = source.peaks(0.0, lengthSeconds, sampleRate).toMono
-
-    var audio = newSeq[float64](peaks.len)
-    for sampleId, peakSample in peaks:
-      audio[sampleId] = 0.5 * (peakSample.minimum + peakSample.maximum)
-
-    let pitchBuffer = audio.detectPitch(sampleRate, 80.0, 5000.0, lengthSeconds)
-    editor.pitchLine.addPoints(pitchBuffer)
-    editor.pitchLine.deactivatePointsSpreadByTime(0.05)
 
 {.pop.}
 
-func onMousePress*(editor: var PitchEditor) =
+# proc analyzePitch(editor: PitchEditor) {.async.} =
+#   let take = currentProject().selectedItem(0).activeTake
+#   if take.kind == Audio:
+#     let
+#       source = take.source
+#       sampleRate = 8000.0
+#       lengthSeconds = 5.0
+#       peaks = source.peaks(0.0, lengthSeconds, sampleRate).toMono
+
+#     var audio = newSeq[float64](peaks.len)
+#     for sampleId, peakSample in peaks:
+#       audio[sampleId] = 0.5 * (peakSample.minimum + peakSample.maximum)
+
+#     let pitchBuffer = audio.detectPitch(sampleRate, 80.0, 5000.0, lengthSeconds)
+#     editor.pitchLine.addPoints(pitchBuffer)
+#     editor.pitchLine.deactivatePointsSpreadByTime(0.05)
+
+#     editor.isAnalyzingPitch = false
+#     editor.redraw()
+
+# proc onUpdate*(editor: var PitchEditor) =
+#   if editor.isAnalyzingPitch:
+#     poll()
+
+func onMousePress*(editor: PitchEditor) =
   if editor.mouseIsInside:
     case editor.lastMousePress:
     of Left:
@@ -105,7 +114,7 @@ func onMousePress*(editor: var PitchEditor) =
     else:
       discard
 
-func onMouseRelease*(editor: var PitchEditor) =
+func onMouseRelease*(editor: PitchEditor) =
   case editor.lastMouseRelease:
   of Left:
     editor.pitchLine.onLeftRelease()
@@ -121,7 +130,7 @@ func onMouseRelease*(editor: var PitchEditor) =
   else:
     discard
 
-func onMouseMove*(editor: var PitchEditor) =
+func onMouseMove*(editor: PitchEditor) =
   editor.pitchLine.onMouseMove()
   editor.correctionLine.onMouseMove()
 
@@ -134,10 +143,11 @@ func onMouseMove*(editor: var PitchEditor) =
 
   editor.redraw()
 
-proc onKeyPress*(editor: var PitchEditor) =
+func onKeyPress*(editor: PitchEditor) =
   case editor.lastKeyPress:
   of R:
-    editor.detectPitch()
+    editor.isAnalyzingPitch = true
+    # asyncCheck(editor.analyzePitch())
     editor.redraw()
   of Delete:
     if editor.pitchLine.editingIsEnabled:
@@ -147,7 +157,7 @@ proc onKeyPress*(editor: var PitchEditor) =
     editor.redraw()
   else: discard
 
-func onResize*(editor: var PitchEditor, dimensions: (float, float)) =
+func onResize*(editor: PitchEditor, dimensions: (float, float)) =
   editor.resize(dimensions)
   editor.redraw()
 

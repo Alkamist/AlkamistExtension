@@ -28,10 +28,10 @@ func `pitch=`*(point: var (float, float), value: float) = point.y = value
 
 func time*(point: PitchPoint): float = point.position.time
 func time*(point: var PitchPoint): var float = point.position.time
-func `time=`*(point: var PitchPoint, value: float) = point.position.time = value
+func `time=`*(point: PitchPoint, value: float) = point.position.time = value
 func pitch*(point: PitchPoint): float = point.position.pitch
 func pitch*(point: var PitchPoint): var float = point.position.pitch
-func `pitch=`*(point: var PitchPoint, value: float) = point.position.pitch = value
+func `pitch=`*(point: PitchPoint, value: float) = point.position.pitch = value
 
 {.pop.}
 
