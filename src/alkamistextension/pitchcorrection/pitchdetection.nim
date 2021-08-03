@@ -125,14 +125,14 @@ when isMainModule:
 
   let
     sampleRate = 8000.0
+    sineLengthSamples = sampleRate.toInt
     sineFrequency = 441.0
-    sineSampleLength = sampleRate / sineFrequency
+    sinePeriodLengthSamples = sampleRate / sineFrequency
 
-  var sineWave: seq[float]
-
-  for i in 0 ..< 44100:
-    let phase = 2.0 * PI * i.toFloat / sineSampleLength
-    sineWave.add(sin(phase))
+  var sineWave = newSeq[float64](sineLengthSamples)
+  for i in 0 ..< sineLengthSamples:
+    let phase = 2.0 * PI * i.toFloat / sinePeriodLengthSamples
+    sineWave[i] = sin(phase)
 
   let t0 = cpuTime()
   let points = sineWave.detectPitch(sampleRate, 80.0, 1000.0, 1.0)

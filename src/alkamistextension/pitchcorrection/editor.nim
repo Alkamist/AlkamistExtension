@@ -69,7 +69,7 @@ func mouseIsInside*(editor: PitchEditor): bool =
 func redraw*(editor: var PitchEditor) =
   editor.shouldRedraw = true
 
-proc analyzePitch(editor: var PitchEditor) =
+proc detectPitch(editor: var PitchEditor) =
   let take = currentProject().selectedItem(0).activeTake
   if take.kind == Audio:
     let
@@ -137,7 +137,7 @@ func onMouseMove*(editor: var PitchEditor) =
 proc onKeyPress*(editor: var PitchEditor) =
   case editor.lastKeyPress:
   of R:
-    editor.analyzePitch()
+    editor.detectPitch()
     editor.redraw()
   of Delete:
     if editor.pitchLine.editingIsEnabled:
