@@ -89,20 +89,20 @@ func calculateFrequency*[T](buffer: openArray[T],
 func detectPitch*[T](buffer: openArray[T],
                      sampleRate: float,
                      minFrequency, maxFrequency: float,
-                     timeWindow: float,
-                     startTime = 0.0,
+                     lengthSeconds: float,
+                     startSeconds = 0.0,
                      windowStep = 0.04, windowOverlap = 2.0,
-                     minRms = -60.0): seq[(T, T)] =
+                     minRms = -60.0): seq[tuple[time: T, pitch: T]] =
   let
     minRmsAmp = minRms.dbToAmplitude
     windowSamples = windowStep.toSamples(sampleRate)
     bufferEnd = buffer.len - 1
 
-  var seekTime = startTime
+  var seekSeconds = startSeconds
 
   while true:
     let
-      seekSamples = seekTime.toSamples(sampleRate)
+      seekSamples = seekSeconds.toSamples(sampleRate)
       seekEnd = min(bufferEnd, seekSamples + windowSamples)
 
     var subBuffer = buffer[seekSamples .. seekEnd]
@@ -113,11 +113,11 @@ func detectPitch*[T](buffer: openArray[T],
 
       if frequency > 0.0:
         let pitch = frequency.toPitch
-        result.add((seekTime, pitch))
+        result.add((seekSeconds, pitch))
 
-    seekTime += windowStep / windowOverlap
+    seekSeconds += windowStep / windowOverlap
 
-    if seekTime >= startTime + timeWindow:
+    if seekSeconds >= startSeconds + lengthSeconds:
       break
 
 when isMainModule:
@@ -139,6 +139,6 @@ when isMainModule:
   let t1 = cpuTime()
 
   for point in points:
-    echo "t: " & $point[0] & " " & "p: " & $point[1]
+    echo "t: " & $point.time & " " & "p: " & $point.pitch
 
   echo "Total time: " & $(t1 - t0)

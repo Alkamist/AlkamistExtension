@@ -14,6 +14,8 @@ type
     mousePoint*: PitchPoint
     first*, last*: PitchPoint
     activeColor*, inactiveColor*: Color
+    editingIsEnabled*: bool
+    editingActivationsIsEnabled*: bool
     isEditingPoint: bool
     points: seq[PitchPoint]
     view: View
@@ -68,9 +70,29 @@ func deleteSelection*(line: var PitchLine) =
   line.points.keepIf(proc(x: PitchPoint): bool = not x.isSelected)
   line.timeSort()
 
+func addPoints*(line: var PitchLine, points: seq[tuple[time, pitch: float]]) =
+  for point in points:
+    var pitchPoint = newPitchPoint()
+    pitchPoint.time = point.time
+    pitchPoint.pitch = point.pitch
+    line.points.add(pitchPoint)
+  line.timeSort()
+  line.updateVisualPositions()
+
+func deactivatePointsSpreadByTime*(line: var PitchLine, timeThreshold: float) =
+  let lastId = line.points.len - 1
+
+  for pointId, point in line.points.mpairs:
+    if point.previous != nil and
+       point.time - point.previous.time >= timeThreshold:
+      point.previous.isActive = false
+
+    if pointId == lastId:
+      point.isActive = false
+
 {.pop.}
 
-template clickSelectLogic*(line: var PitchLine): untyped =
+template clickSelectLogic(line: var PitchLine): untyped =
   let
     editingSelectedPoint = line.mousePoint != nil and line.mousePoint.mouseOver == Point and line.mousePoint.isSelected
     editingSelectedSegment = line.mousePoint != nil and line.mousePoint.mouseOver == Segment and line.mousePoint.isSelected and
@@ -121,7 +143,7 @@ template doubleClickLogic(line: var PitchLine): untyped =
     for point in line.selection.mitems:
       point.pitch += pitchChange
 
-template pointCreationLogic*(line: var PitchLine): untyped =
+template mouseCreationLogic(line: var PitchLine): untyped =
   let mouseInternal = line.view.convertToInternal(line.mousePosition)
 
   line.unselectAll()
@@ -136,7 +158,9 @@ template pointCreationLogic*(line: var PitchLine): untyped =
   line.points.add(point)
   line.timeSort()
 
-  if line.isPressed(Alt) and point.previous != nil:
+  if line.editingActivationsIsEnabled and
+     line.isPressed(Alt) and
+     point.previous != nil:
     point.previous.isActive = false
 
   line.select(point, true)
@@ -172,7 +196,7 @@ template editMovementLogic(line: var PitchLine): untyped =
 
   line.timeSort()
 
-template updateMouseOvers*(line: var PitchLine): untyped =
+template updateMouseOvers(line: var PitchLine): untyped =
   let lastId = line.points.len - 1
   var
     closestPoint: PitchPoint
@@ -222,51 +246,54 @@ template updateMouseOvers*(line: var PitchLine): untyped =
       line.mousePoint = closestSegment[0]
 
 func onLeftPress*(line: var PitchLine) =
-  line.clickSelectLogic()
+  if line.editingIsEnabled:
+    line.clickSelectLogic()
 
-  if line.mousePoint != nil:
-    if line.isPressed(Alt):
-      line.toggleSelectionActivations()
-    elif line.lastMousePressWasDoubleClick:
-      line.doubleClickLogic()
+    if line.mousePoint != nil:
+      if line.editingActivationsIsEnabled and line.isPressed(Alt):
+        line.toggleSelectionActivations()
+      elif line.lastMousePressWasDoubleClick:
+        line.doubleClickLogic()
 
-  else:
-    line.pointCreationLogic()
+    else:
+      line.mouseCreationLogic()
 
-  let internalMouse = line.view.convertToInternal(line.mousePosition)
+    let internalMouse = line.view.convertToInternal(line.mousePosition)
 
-  line.snapStart = internalMouse
-  for point in line.points.mitems:
-    point.editOffset = point.position - internalMouse
+    line.snapStart = internalMouse
+    for point in line.points.mitems:
+      point.editOffset = point.position - internalMouse
 
-  line.isEditingPoint = true
-  line.updateVisualPositions()
+    line.isEditingPoint = true
+    line.updateVisualPositions()
 
 func onLeftRelease*(line: var PitchLine) =
-  if not line.isEditingPoint:
-    line.unselectAll()
+  if line.editingIsEnabled:
+    if not line.isEditingPoint:
+      line.unselectAll()
   line.isEditingPoint = false
 
 func onRightRelease*(line: var PitchLine) =
-  line.boxSelectLogic()
+  if line.editingIsEnabled:
+    line.boxSelectLogic()
 
 func onMouseMove*(line: var PitchLine) =
-  if line.isEditingPoint:
-    line.editMovementLogic()
-  else:
-    line.updateMouseOvers()
+  if line.editingIsEnabled:
+    if line.isEditingPoint:
+      line.editMovementLogic()
+    else:
+      line.updateMouseOvers()
 
   line.updateVisualPositions()
 
-func drawWithCirclePoints*(line: PitchLine, image: Image) =
+template drawPitchLine(drawPoint: untyped): untyped =
   let
-    r = (3.0 / 96.0).float
     lastId = line.points.len - 1
-    activeColorDark = (line.activeColor * 0.2).redistribute
-    inactiveColorDark = (line.inactiveColor * 0.2).redistribute
-    highlight = rgb(255, 255, 255, 0.5)
+    activeColorDark {.inject.} = (line.activeColor * 0.2).redistribute
+    inactiveColorDark {.inject.} = (line.inactiveColor * 0.2).redistribute
+    highlight {.inject.} = rgb(255, 255, 255, 0.5)
 
-  for i, point in line.points:
+  for i, point {.inject.} in line.points:
     if point.isActive and i < lastId:
       let next = line.points[i + 1]
 
@@ -283,6 +310,12 @@ func drawWithCirclePoints*(line: PitchLine, image: Image) =
           highlight,
         )
 
+    drawPoint
+
+func drawWithCirclePoints*(line: PitchLine, image: Image) =
+  let r = (3.0 / 96.0).float
+
+  drawPitchLine:
     if point.isSelected:
       if point.isActive:
         image.fillCircle(point.visualPosition, r, line.activeColor)
@@ -298,6 +331,34 @@ func drawWithCirclePoints*(line: PitchLine, image: Image) =
 
     if point.mouseOver == Point:
       image.fillCircle(point.visualPosition, r, highlight)
+
+func drawWithSquarePoints*(line: PitchLine, image: Image) =
+  let
+    r = (3.0 / 96.0).float
+    dimensions = (r, r)
+    dimensionsHalf = (r * 0.5, r * 0.5)
+
+  drawPitchLine:
+    let position = point.visualPosition - dimensionsHalf
+
+    if point.isSelected:
+      if point.isActive:
+        image.fillRectangle(position, dimensions, line.activeColor)
+        image.drawRectangle(position, dimensions, line.activeColor)
+      else:
+        image.fillRectangle(position, dimensions, line.inactiveColor)
+        image.drawRectangle(position, dimensions, line.inactiveColor)
+    else:
+      if point.isActive:
+        image.fillRectangle(position, dimensions, activeColorDark)
+        image.drawRectangle(position, dimensions, line.activeColor)
+      else:
+        image.fillRectangle(position, dimensions, inactiveColorDark)
+        image.drawRectangle(position, dimensions, line.inactiveColor)
+
+    if point.mouseOver == Point:
+      image.fillRectangle(position, dimensions, highlight)
+      image.drawRectangle(position, dimensions, highlight)
 
 func newPitchLine*(parentPosition: (float, float),
                    view: View,

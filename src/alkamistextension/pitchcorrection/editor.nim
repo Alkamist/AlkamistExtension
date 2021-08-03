@@ -1,6 +1,6 @@
 import
-  ../lice, ../input, ../view, ../vector,
-  whitekeys, boxselect, pitchline
+  ../lice, ../input, ../view, ../vector, ../reaper,
+  whitekeys, boxselect, pitchline, pitchdetection
 
 type
   PitchEditorColorScheme* = object
@@ -39,8 +39,8 @@ func position*(editor: PitchEditor): (float, float) = editor.position
 
 func `position=`*(editor: PitchEditor, value: (float, float)) =
   editor.position = value
-  editor.correctionLine.parentPosition = value
   editor.pitchLine.parentPosition = value
+  editor.correctionLine.parentPosition = value
 
 func defaultPitchEditorColorScheme*(): PitchEditorColorScheme =
   result.background = rgb(16, 16, 16)
@@ -56,8 +56,8 @@ func zoomOutYToFull*(editor: var PitchEditor) =
 
 func resize*(editor: var PitchEditor, dimensions: (float, float)) =
   editor.view.resize(dimensions)
-  editor.correctionLine.updateVisualPositions()
   editor.pitchLine.updateVisualPositions()
+  editor.correctionLine.updateVisualPositions()
   editor.image.resize(dimensions)
 
 func mouseIsInside*(editor: PitchEditor): bool =
@@ -69,43 +69,22 @@ func mouseIsInside*(editor: PitchEditor): bool =
 func redraw*(editor: var PitchEditor) =
   editor.shouldRedraw = true
 
-# proc analyzePitch(editor: var PitchEditor) =
-#   let sampleLength = 1000
+proc analyzePitch(editor: var PitchEditor) =
+  let take = currentProject().selectedItem(0).activeTake
+  if take.kind == Audio:
+    let
+      source = take.source
+      sampleRate = 8000.0
+      lengthSeconds = 5.0
+      peaks = source.peaks(0.0, lengthSeconds, sampleRate).toMono
 
-#   let item = GetSelectedMediaItem(nil, 0)
-#   if item == nil: return
-#   let take = GetActiveTake(item)
-#   if take == nil: return
-#   if TakeIsMIDI(take): return
-#   let source = GetMediaItemTake_Source(take)
-#   if source == nil: return
+    var audio = newSeq[float64](peaks.len)
+    for sampleId, peakSample in peaks:
+      audio[sampleId] = 0.5 * (peakSample.minimum + peakSample.maximum)
 
-#   let sampleRate = GetMediaSourceSampleRate(source)
-
-#   var
-#     rawMemory = alloc0(sampleLength)
-#     rawBufferPtr = cast[ptr cdouble](rawMemory)
-
-#   discard PCM_Source_GetPeaks(
-#     src = source,
-#     peakrate = sampleRate.cdouble,
-#     starttime = 0.0,
-#     numchannels = 2,
-#     numsamplesperchannel = sampleLength.cint,
-#     want_extra_type = 0,
-#     buf = rawBufferPtr,
-#   )
-
-#   # var
-#     # buffer: seq[float64]
-#     # uncheckedBuffer = cast[ptr UncheckedArray[cdouble]](rawMemory)
-
-#   # for i in 0 ..< sampleLength:
-#   #   discard uncheckedBuffer[i]
-#     # ShowConsoleMsg($uncheckedBuffer[i] & "\n")
-#     # buffer.add(uncheckedBuffer[i])
-
-#   dealloc(rawMemory)
+    let pitchBuffer = audio.detectPitch(sampleRate, 80.0, 5000.0, lengthSeconds)
+    editor.pitchLine.addPoints(pitchBuffer)
+    editor.pitchLine.deactivatePointsSpreadByTime(0.05)
 
 {.pop.}
 
@@ -113,6 +92,7 @@ func onMousePress*(editor: var PitchEditor) =
   if editor.mouseIsInside:
     case editor.lastMousePress:
     of Left:
+      editor.pitchLine.onLeftPress()
       editor.correctionLine.onLeftPress()
       editor.redraw()
     of Middle:
@@ -125,18 +105,16 @@ func onMousePress*(editor: var PitchEditor) =
     else:
       discard
 
-  # let mouseInternal = editor.view.convertToInternal(editor.mousePosition)
-  # ShowConsoleMsg($mouseInternal & "\n")
-  # ShowConsoleMsg($editor.view.convertToExternal(mouseInternal) & "\n")
-
 func onMouseRelease*(editor: var PitchEditor) =
   case editor.lastMouseRelease:
   of Left:
+    editor.pitchLine.onLeftRelease()
     editor.correctionLine.onLeftRelease()
     editor.redraw()
   of Middle:
     editor.mouseMiddleWasPressedInside = false
   of Right:
+    editor.pitchLine.onRightRelease()
     editor.correctionLine.onRightRelease()
     editor.mouseRightWasPressedInside = false
     editor.boxSelect.isActive = false
@@ -144,6 +122,7 @@ func onMouseRelease*(editor: var PitchEditor) =
     discard
 
 func onMouseMove*(editor: var PitchEditor) =
+  editor.pitchLine.onMouseMove()
   editor.correctionLine.onMouseMove()
 
   if editor.mouseRightWasPressedInside and editor.isPressed(Right):
@@ -158,10 +137,13 @@ func onMouseMove*(editor: var PitchEditor) =
 proc onKeyPress*(editor: var PitchEditor) =
   case editor.lastKeyPress:
   of R:
-    # editor.analyzePitch()
+    editor.analyzePitch()
     editor.redraw()
   of Delete:
-    editor.correctionLine.deleteSelection()
+    if editor.pitchLine.editingIsEnabled:
+      editor.pitchLine.deleteSelection()
+    if editor.correctionLine.editingIsEnabled:
+      editor.correctionLine.deleteSelection()
     editor.redraw()
   else: discard
 
@@ -218,7 +200,7 @@ func drawKeys(editor: PitchEditor) {.inline.} =
 func updateImage*(editor: PitchEditor) =
   editor.image.clear(editor.colorScheme.background)
   editor.drawKeys()
-  editor.pitchLine.drawWithCirclePoints(editor.image)
+  editor.pitchLine.drawWithSquarePoints(editor.image)
   editor.correctionLine.drawWithCirclePoints(editor.image)
   editor.boxSelect.draw(editor.image)
 
@@ -234,14 +216,23 @@ func newPitchEditor*(position: (float, float),
   result.image = initImage(dpi, dimensions)
   result.colorScheme = defaultPitchEditorColorScheme()
   result.boxSelect = newBoxSelect()
+
   result.correctionLine = newPitchLine(position,
                                        result.view,
                                        result.input,
                                        result.boxSelect)
+  result.correctionLine.editingIsEnabled = true
+  result.correctionLine.editingActivationsIsEnabled = true
+  result.correctionLine.activeColor = rgb(51, 214, 255)
+  result.correctionLine.inactiveColor = rgb(255, 46, 112)
+
   result.pitchLine = newPitchLine(position,
                                   result.view,
                                   result.input,
                                   result.boxSelect)
+  result.pitchLine.activeColor = rgb(41, 148, 25)
+  result.pitchLine.inactiveColor = result.pitchLine.activeColor
+
   result.position = position
   result.resize(dimensions)
   result.zoomOutXToFull()
