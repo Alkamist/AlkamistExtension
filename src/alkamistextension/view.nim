@@ -2,8 +2,6 @@ import std/math, vector
 
 export vector
 
-# TODO: fix view wandering on zoom change
-
 type
   ViewAxis* = ref object
     pan*, zoomTarget*: float
@@ -52,7 +50,7 @@ template zoomToTarget(axis: var ViewAxis, zoomChangeCode: untyped): untyped =
 
   let
     currentSize = axis.scaleToInternal(axis.externalSize)
-    zoomRatio = (axis.zoomTarget - axis.pan) / currentSize
+    zoomRatio = (axis.zoomTarget - axis.pan) / previousSize
     sizeChange = currentSize - previousSize
 
   axis.pan -= sizeChange * zoomRatio

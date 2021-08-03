@@ -1,10 +1,10 @@
 # addAction("Alkamist: Test Action", "ALKAMIST_TEST_ACTION", testActionFn)
 
 
-# import alkamistextension/[reaper, pitchcorrection]
+import alkamistextension/[reaper, pitchcorrection]
 
-# createExtension:
-#   pitchCorrectionMain()
+createExtension:
+  pitchCorrectionMain()
 
 
 
@@ -27,7 +27,7 @@
 
 
 
-import alkamistextension/[reaper, peakviewer]
+# import alkamistextension/[reaper, peakviewer]
 
-createExtension:
-  addAction("Alkamist: Test Action", "ALKAMIST_TEST_ACTION", peakViewerMain)
+# createExtension:
+#   addAction("Alkamist: Test Action", "ALKAMIST_TEST_ACTION", peakViewerMain)
