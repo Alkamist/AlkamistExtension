@@ -4,14 +4,14 @@ proc peakViewerMain*() =
   var
     window = newWindow()
     view = newView()
-    peaks: seq[seq[float64]]
+    peaks: MonoPeaks
 
   view.y.isInverted = true
 
   let take = currentProject().selectedItem(0).activeTake
   if take.kind == Audio:
     var source = take.source
-    peaks = source.peaks(0.0, 15.0)
+    peaks = source.peaks(0.0, 15.0, 1000.0).toMono
 
   window.title = "Pitch Correction"
   window.bounds = ((4.0, 2.0), (12.0, 8.0))
@@ -37,15 +37,17 @@ proc peakViewerMain*() =
       window.redraw()
 
   window.onDraw = proc() =
-    for channelBuffer in peaks:
-      for sampleId, sample in channelBuffer:
-        if sampleId > 0:
-          let
-            previousId = sampleId - 1
-            previousSample = channelBuffer[previousId]
+    let minWidth = 1.0 / window.dpi
+    for sampleId, sample in peaks:
+      let
+        x = view.x.convertToExternal(0.1 + sampleId.toFloat)
+        top = view.y.convertToExternal(sample.maximum)
+        bottom = view.y.convertToExternal(sample.minimum)
+        width = max(minWidth, view.x.scaleToExternal(0.8))
+        height = (bottom - top).abs
 
-          window.image.drawLine(
-            view.convertToExternal((sampleId.toFloat, sample)),
-            view.convertToExternal((previousId.toFloat, previousSample)),
-            rgb(255, 255, 255),
-          )
+      window.image.fillRectangle(
+        (x, top),
+        (width, height),
+        rgb(220, 220, 220),
+      )

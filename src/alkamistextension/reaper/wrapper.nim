@@ -1,6 +1,4 @@
-import
-  std/math,
-  apitypes, apifunctions
+import apitypes, apifunctions
 
 type
   Project* = object
@@ -19,13 +17,16 @@ type
   Source* = object
     reaperPtr*: ptr PCM_source
 
-const peakBlockSamples = 128
+  PeakSample* = tuple[minimum, maximum: float64]
+  PeakChannelBuffer* = seq[PeakSample]
+  MonoPeaks* = PeakChannelBuffer
+  Peaks* = seq[PeakChannelBuffer]
 
-template toSamples(time: float, sampleRate: int): int =
-  (time * sampleRate.toFloat).toInt
+template toSamples(time, sampleRate: float): int =
+  (time * sampleRate).toInt
 
-template toTime(numSamples, sampleRate: int): float =
-  numSamples.toFloat / sampleRate.toFloat
+# template toTime(numSamples: int, sampleRate: float): float =
+#   numSamples.toFloat / sampleRate
 
 {.push inline.}
 
@@ -60,70 +61,69 @@ func timeLength*(source: Source): float =
   #if lengthIsInQuarterNotes:
     # Fix here
 
-proc getPeakBlock(source: Source,
-                  startTime: float,
-                  sampleRate, numChannels: int,
-                  memory: pointer): seq[array[peakBlockSamples, float64]] =
-  result = newSeq[array[peakBlockSamples, float64]](numChannels)
+func numChannels*(peaks: Peaks): int =
+  peaks.len
+
+func sampleLength*(peaks: Peaks): int =
+  if peaks.len > 0:
+    peaks[0].len
+  else:
+    0
+
+{.pop.}
+
+func toMono*(peaks: Peaks): MonoPeaks =
+  result = newSeq[PeakSample](peaks.sampleLength)
+
+  for channelBuffer in peaks:
+    for sampleId, sample in channelBuffer:
+      result[sampleId].minimum += sample.minimum
+      result[sampleId].maximum += sample.maximum
+
+  let numChannels = peaks.numChannels
+  for sample in result.mitems:
+    sample.minimum /= numChannels.toFloat
+    sample.maximum /= numChannels.toFloat
+
+proc peaks*(source: Source,
+            startSeconds, lengthSeconds: float,
+            sampleRate: float): Peaks =
+  let
+    numChannels = source.numChannels
+    lengthSamples = lengthSeconds.toSamples(sampleRate)
+
+  for _ in 0 ..< numChannels:
+    result.add(newSeq[PeakSample](lengthSamples))
+
+  const
+    bytesPerCDouble = 8
+    maxReaperPeakBlocks = 3
+
+  let bytesToAlloc = lengthSamples * bytesPerCDouble *
+                     numChannels * maxReaperPeakBlocks
+
+  var memory = alloc(bytesToAlloc)
 
   discard PCM_Source_GetPeaks(
     src = source.reaperPtr,
     peakrate = sampleRate.cdouble,
-    starttime = startTime,
+    starttime = startSeconds,
     numchannels = numChannels.cint,
-    numsamplesperchannel = peakBlockSamples.cint,
+    numsamplesperchannel = lengthSamples.cint,
     want_extra_type = 0,
     buf = cast[ptr cdouble](memory),
   )
 
-  var buffer = cast[ptr UncheckedArray[cdouble]](memory)
+  var rawBuffer = cast[ptr UncheckedArray[cdouble]](memory)
 
-  for sampleId in 0 ..< peakBlockSamples:
-    for channelId in 0 ..< numChannels:
-      result[channelId][sampleId] = buffer[numChannels * sampleId + channelId]
-
-{.pop.}
-
-proc peaks*(source: Source, start, length: float): seq[seq[float64]] =
-  let
-    sampleRate = source.sampleRate
-    numChannels = source.numChannels
-    lengthSamples = length.toSamples(sampleRate)
-    numPeakBlocks = (lengthSamples / peakBlockSamples).ceil.int
-
-  result = newSeq[seq[float64]](numChannels)
-
-  const
-    bytesPerCDouble = 8
-    maxReaperBlocksPerPeakRequest = 3
-
-  let bytesToAlloc = bytesPerCDouble * peakBlockSamples *
-                     numChannels * maxReaperBlocksPerPeakRequest
-
-  var
-    seekSample = start.toSamples(sampleRate)
-    memory = alloc(bytesToAlloc)
-
-  for _ in 0 ..< numPeakBlocks - 1:
-    let
-      seekTime = seekSample.toTime(sampleRate)
-      peaks = source.getPeakBlock(seekTime, sampleRate, numChannels, memory)
-
-    for channelId, channelBuffer in peaks:
-      for sampleId, sample in channelBuffer:
-        result[channelId].add(sample)
-
-    seekSample += peakBlockSamples
-
-  let
-    samplesLeftOver = lengthSamples mod peakBlockSamples
-    seekTime = seekSample.toTime(sampleRate)
-    finalBlock = source.getPeakBlock(seekTime, sampleRate, numChannels, memory)
-
-  for channelId, channelBuffer in finalBlock:
-    for sampleId, sample in channelBuffer:
-      if sampleId >= samplesLeftOver:
-        break
-      result[channelId].add(sample)
+  for channelId, channelBuffer in result.mpairs:
+    for sampleId in 0 ..< lengthSamples:
+      let
+        readOffset = numChannels * sampleId + channelId
+        blockOffset = numChannels * lengthSamples
+      channelBuffer[sampleId] = (
+        minimum: rawBuffer[blockOffset + readOffset],
+        maximum: rawBuffer[readOffset].float64,
+      )
 
   dealloc(memory)
