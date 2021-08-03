@@ -1,6 +1,5 @@
 import
   std/[tables, options],
-  reaper/functions,
   winapi, lice, input, vector
 
 export lice, input, vector

@@ -2,6 +2,8 @@ import std/math, vector
 
 export vector
 
+# TODO: fix view wandering on zoom change
+
 type
   ViewAxis* = ref object
     pan*, zoomTarget*: float

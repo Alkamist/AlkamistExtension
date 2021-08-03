@@ -10,6 +10,8 @@ type
   MediaItem* {.importc, header: ReaperPluginHeader.} = object
   MediaItem_Take* {.importc, header: ReaperPluginHeader.} = object
   TrackEnvelope* {.importc, header: ReaperPluginHeader.} = object
+  PCM_source* {.importc, header: ReaperPluginHeader.} = object
+
   AudioAccessor* {.importc, header: ReaperPluginFunctionsHeader.} = object
 
   WDL_VirtualWnd_BGCfg* {.importc, header: ReaperPluginFunctionsHeader.} = object

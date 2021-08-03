@@ -1,4 +1,4 @@
-import ../winapi, types
+import ../winapi, apitypes
 
 {.pragma: ReaperAPI, importc, header: ReaperPluginFunctionsHeader.}
 
@@ -224,24 +224,24 @@ proc GetMasterTrack*(proj: ptr ReaProject): ptr MediaTrack {.ReaperAPI.}
 proc GetMasterTrackVisibility*(): cint {.ReaperAPI.}
 proc GetMaxMidiInputs*(): cint {.ReaperAPI.}
 proc GetMaxMidiOutputs*(): cint {.ReaperAPI.}
-# proc GetMediaFileMetadata*(mediaSource: ptr PCM_source; identifier: cstring; bufOutNeedBig: cstring; bufOutNeedBig_sz: cint): cint {.ReaperAPI.}
+proc GetMediaFileMetadata*(mediaSource: ptr PCM_source; identifier: cstring; bufOutNeedBig: cstring; bufOutNeedBig_sz: cint): cint {.ReaperAPI.}
 proc GetMediaItem*(proj: ptr ReaProject; itemidx: cint): ptr MediaItem {.ReaperAPI.}
 proc GetMediaItemInfo_Value*(item: ptr MediaItem; parmname: cstring): cdouble {.ReaperAPI.}
 proc GetMediaItemNumTakes*(item: ptr MediaItem): cint {.ReaperAPI.}
 proc GetMediaItemTake*(item: ptr MediaItem; tk: cint): ptr MediaItem_Take {.ReaperAPI.}
 proc GetMediaItemTake_Item*(take: ptr MediaItem_Take): ptr MediaItem {.ReaperAPI.}
 proc GetMediaItemTake_Peaks*(take: ptr MediaItem_Take; peakrate: cdouble; starttime: cdouble; numchannels: cint; numsamplesperchannel: cint; want_extra_type: cint; buf: ptr cdouble): cint {.ReaperAPI.}
-# proc GetMediaItemTake_Source*(take: ptr MediaItem_Take): ptr PCM_source {.ReaperAPI.}
+proc GetMediaItemTake_Source*(take: ptr MediaItem_Take): ptr PCM_source {.ReaperAPI.}
 proc GetMediaItemTake_Track*(take: ptr MediaItem_Take): ptr MediaTrack {.ReaperAPI.}
 proc GetMediaItemTakeByGUID*(project: ptr ReaProject; guid: ptr GUID): ptr MediaItem_Take {.ReaperAPI.}
 proc GetMediaItemTakeInfo_Value*(take: ptr MediaItem_Take; parmname: cstring): cdouble {.ReaperAPI.}
 proc GetMediaItemTrack*(item: ptr MediaItem): ptr MediaTrack {.ReaperAPI.}
-# proc GetMediaSourceFileName*(source: ptr PCM_source; filenamebuf: cstring; filenamebuf_sz: cint) {.ReaperAPI.}
-# proc GetMediaSourceLength*(source: ptr PCM_source; lengthIsQNOut: ptr bool): cdouble {.ReaperAPI.}
-# proc GetMediaSourceNumChannels*(source: ptr PCM_source): cint {.ReaperAPI.}
-# proc GetMediaSourceParent*(src: ptr PCM_source): ptr PCM_source {.ReaperAPI.}
-# proc GetMediaSourceSampleRate*(source: ptr PCM_source): cint {.ReaperAPI.}
-# proc GetMediaSourceType*(source: ptr PCM_source; typebuf: cstring; typebuf_sz: cint) {.ReaperAPI.}
+proc GetMediaSourceFileName*(source: ptr PCM_source; filenamebuf: cstring; filenamebuf_sz: cint) {.ReaperAPI.}
+proc GetMediaSourceLength*(source: ptr PCM_source; lengthIsQNOut: ptr bool): cdouble {.ReaperAPI.}
+proc GetMediaSourceNumChannels*(source: ptr PCM_source): cint {.ReaperAPI.}
+proc GetMediaSourceParent*(src: ptr PCM_source): ptr PCM_source {.ReaperAPI.}
+proc GetMediaSourceSampleRate*(source: ptr PCM_source): cint {.ReaperAPI.}
+proc GetMediaSourceType*(source: ptr PCM_source; typebuf: cstring; typebuf_sz: cint) {.ReaperAPI.}
 proc GetMediaTrackInfo_Value*(tr: ptr MediaTrack; parmname: cstring): cdouble {.ReaperAPI.}
 proc GetMIDIInputName*(dev: cint; nameout: cstring; nameout_sz: cint): bool {.ReaperAPI.}
 proc GetMIDIOutputName*(dev: cint; nameout: cstring; nameout_sz: cint): bool {.ReaperAPI.}
@@ -318,7 +318,7 @@ proc GetSetTrackSendInfo*(tr: ptr MediaTrack; category: cint; sendidx: cint; par
 proc GetSetTrackSendInfo_String*(tr: ptr MediaTrack; category: cint; sendidx: cint; parmname: cstring; stringNeedBig: cstring; setNewValue: bool): bool {.ReaperAPI.}
 proc GetSetTrackState*(track: ptr MediaTrack; str: cstring; str_sz: cint): bool {.ReaperAPI.}
 proc GetSetTrackState2*(track: ptr MediaTrack; str: cstring; str_sz: cint; isundo: bool): bool {.ReaperAPI.}
-# proc GetSubProjectFromSource*(src: ptr PCM_source): ptr ReaProject {.ReaperAPI.}
+proc GetSubProjectFromSource*(src: ptr PCM_source): ptr ReaProject {.ReaperAPI.}
 proc GetTake*(item: ptr MediaItem; takeidx: cint): ptr MediaItem_Take {.ReaperAPI.}
 proc GetTakeEnvelope*(take: ptr MediaItem_Take; envidx: cint): ptr TrackEnvelope {.ReaperAPI.}
 proc GetTakeEnvelopeByName*(take: ptr MediaItem_Take; envname: cstring): ptr TrackEnvelope {.ReaperAPI.}
@@ -328,7 +328,7 @@ proc GetTakeNumStretchMarkers*(take: ptr MediaItem_Take): cint {.ReaperAPI.}
 proc GetTakeStretchMarker*(take: ptr MediaItem_Take; idx: cint; posOut: ptr cdouble; srcposOutOptional: ptr cdouble): cint {.ReaperAPI.}
 proc GetTakeStretchMarkerSlope*(take: ptr MediaItem_Take; idx: cint): cdouble {.ReaperAPI.}
 proc GetTCPFXParm*(project: ptr ReaProject; track: ptr MediaTrack; index: cint; fxindexOut: ptr cint; parmidxOut: ptr cint): bool {.ReaperAPI.}
-# proc GetTempoMatchPlayRate*(source: ptr PCM_source; srcscale: cdouble; position: cdouble; mult: cdouble; rateOut: ptr cdouble; targetlenOut: ptr cdouble): bool {.ReaperAPI.}
+proc GetTempoMatchPlayRate*(source: ptr PCM_source; srcscale: cdouble; position: cdouble; mult: cdouble; rateOut: ptr cdouble; targetlenOut: ptr cdouble): bool {.ReaperAPI.}
 proc GetTempoTimeSigMarker*(proj: ptr ReaProject; ptidx: cint; timeposOut: ptr cdouble; measureposOut: ptr cint; beatposOut: ptr cdouble; bpmOut: ptr cdouble; timesig_numOut: ptr cint; timesig_denomOut: ptr cint; lineartempoOut: ptr bool): bool {.ReaperAPI.}
 proc GetThemeColor*(ini_key: cstring; flagsOptional: cint): cint {.ReaperAPI.}
 proc GetToggleCommandState*(command_id: cint): cint {.ReaperAPI.}
@@ -509,13 +509,13 @@ proc parsepanstr*(str: cstring): cdouble {.ReaperAPI.}
 proc PCM_Sink_Enum*(idx: cint; descstrOut: cstringArray): cuint {.ReaperAPI.}
 proc PCM_Sink_GetExtension*(data: cstring; data_sz: cint): cstring {.ReaperAPI.}
 proc PCM_Sink_ShowConfig*(cfg: cstring; cfg_sz: cint; hwndParent: HWND): HWND {.ReaperAPI.}
-# proc PCM_Source_CreateFromFile*(filename: cstring): ptr PCM_source {.ReaperAPI.}
-# proc PCM_Source_CreateFromFileEx*(filename: cstring; forcenoMidiImp: bool): ptr PCM_source {.ReaperAPI.}
+proc PCM_Source_CreateFromFile*(filename: cstring): ptr PCM_source {.ReaperAPI.}
+proc PCM_Source_CreateFromFileEx*(filename: cstring; forcenoMidiImp: bool): ptr PCM_source {.ReaperAPI.}
 # proc PCM_Source_CreateFromSimple*(dec: ptr ISimpleMediaDecoder; fn: cstring): ptr PCM_source {.ReaperAPI.}
-# proc PCM_Source_CreateFromType*(sourcetype: cstring): ptr PCM_source {.ReaperAPI.}
-# proc PCM_Source_Destroy*(src: ptr PCM_source) {.ReaperAPI.}
-# proc PCM_Source_GetPeaks*(src: ptr PCM_source; peakrate: cdouble; starttime: cdouble; numchannels: cint; numsamplesperchannel: cint; want_extra_type: cint; buf: ptr cdouble): cint {.ReaperAPI.}
-# proc PCM_Source_GetSectionInfo*(src: ptr PCM_source; offsOut: ptr cdouble; lenOut: ptr cdouble; revOut: ptr bool): bool {.ReaperAPI.}
+proc PCM_Source_CreateFromType*(sourcetype: cstring): ptr PCM_source {.ReaperAPI.}
+proc PCM_Source_Destroy*(src: ptr PCM_source) {.ReaperAPI.}
+proc PCM_Source_GetPeaks*(src: ptr PCM_source; peakrate: cdouble; starttime: cdouble; numchannels: cint; numsamplesperchannel: cint; want_extra_type: cint; buf: ptr cdouble): cint {.ReaperAPI.}
+proc PCM_Source_GetSectionInfo*(src: ptr PCM_source; offsOut: ptr cdouble; lenOut: ptr cdouble; revOut: ptr bool): bool {.ReaperAPI.}
 # proc PeakBuild_Create*(src: ptr PCM_source; fn: cstring; srate: cint; nch: cint): ptr REAPER_PeakBuild_Interface {.ReaperAPI.}
 # proc PeakBuild_CreateEx*(src: ptr PCM_source; fn: cstring; srate: cint; nch: cint; flags: cint): ptr REAPER_PeakBuild_Interface {.ReaperAPI.}
 # proc PeakGet_Create*(fn: cstring; srate: cint; nch: cint): ptr REAPER_PeakGet_Interface {.ReaperAPI.}
@@ -763,3 +763,7 @@ proc ValidatePtr*(pointer: pointer; ctypename: cstring): bool {.ReaperAPI.}
 proc ValidatePtr2*(proj: ptr ReaProject; pointer: pointer; ctypename: cstring): bool {.ReaperAPI.}
 proc ViewPrefs*(page: cint; pageByName: cstring) {.ReaperAPI.}
 # proc WDL_VirtualWnd_ScaledBlitBG*(dest: ptr LICE_IBitmap; src: ptr WDL_VirtualWnd_BGCfg; destx: cint; desty: cint; destw: cint; desth: cint; clipx: cint; clipy: cint; clipw: cint; cliph: cint; alpha: cfloat; mode: cint): bool {.ReaperAPI.}
+
+func reaperEcho*(x: varargs[string, `$`]) =
+  for arg in x:
+    ShowConsoleMsg(arg & "\n")

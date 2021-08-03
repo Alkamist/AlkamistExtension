@@ -1,6 +1,5 @@
 import
   ../lice, ../input, ../view, ../vector,
-  ../reaper/functions,
   whitekeys, boxselect, pitchline
 
 type
@@ -21,6 +20,7 @@ type
     mouseMiddleWasPressedInside: bool
     mouseRightWasPressedInside: bool
     boxSelect: BoxSelect
+    pitchLine: PitchLine
     correctionLine: PitchLine
 
 defineInputProcs(PitchEditor, position)
@@ -40,6 +40,7 @@ func position*(editor: PitchEditor): (float, float) = editor.position
 func `position=`*(editor: PitchEditor, value: (float, float)) =
   editor.position = value
   editor.correctionLine.parentPosition = value
+  editor.pitchLine.parentPosition = value
 
 func defaultPitchEditorColorScheme*(): PitchEditorColorScheme =
   result.background = rgb(16, 16, 16)
@@ -56,6 +57,7 @@ func zoomOutYToFull*(editor: var PitchEditor) =
 func resize*(editor: var PitchEditor, dimensions: (float, float)) =
   editor.view.resize(dimensions)
   editor.correctionLine.updateVisualPositions()
+  editor.pitchLine.updateVisualPositions()
   editor.image.resize(dimensions)
 
 func mouseIsInside*(editor: PitchEditor): bool =
@@ -66,6 +68,44 @@ func mouseIsInside*(editor: PitchEditor): bool =
 
 func redraw*(editor: var PitchEditor) =
   editor.shouldRedraw = true
+
+# proc analyzePitch(editor: var PitchEditor) =
+#   let sampleLength = 1000
+
+#   let item = GetSelectedMediaItem(nil, 0)
+#   if item == nil: return
+#   let take = GetActiveTake(item)
+#   if take == nil: return
+#   if TakeIsMIDI(take): return
+#   let source = GetMediaItemTake_Source(take)
+#   if source == nil: return
+
+#   let sampleRate = GetMediaSourceSampleRate(source)
+
+#   var
+#     rawMemory = alloc0(sampleLength)
+#     rawBufferPtr = cast[ptr cdouble](rawMemory)
+
+#   discard PCM_Source_GetPeaks(
+#     src = source,
+#     peakrate = sampleRate.cdouble,
+#     starttime = 0.0,
+#     numchannels = 2,
+#     numsamplesperchannel = sampleLength.cint,
+#     want_extra_type = 0,
+#     buf = rawBufferPtr,
+#   )
+
+#   # var
+#     # buffer: seq[float64]
+#     # uncheckedBuffer = cast[ptr UncheckedArray[cdouble]](rawMemory)
+
+#   # for i in 0 ..< sampleLength:
+#   #   discard uncheckedBuffer[i]
+#     # ShowConsoleMsg($uncheckedBuffer[i] & "\n")
+#     # buffer.add(uncheckedBuffer[i])
+
+#   dealloc(rawMemory)
 
 {.pop.}
 
@@ -115,8 +155,11 @@ func onMouseMove*(editor: var PitchEditor) =
 
   editor.redraw()
 
-func onKeyPress*(editor: var PitchEditor) =
+proc onKeyPress*(editor: var PitchEditor) =
   case editor.lastKeyPress:
+  of R:
+    # editor.analyzePitch()
+    editor.redraw()
   of Delete:
     editor.correctionLine.deleteSelection()
     editor.redraw()
@@ -175,6 +218,7 @@ func drawKeys(editor: PitchEditor) {.inline.} =
 func updateImage*(editor: PitchEditor) =
   editor.image.clear(editor.colorScheme.background)
   editor.drawKeys()
+  editor.pitchLine.drawWithCirclePoints(editor.image)
   editor.correctionLine.drawWithCirclePoints(editor.image)
   editor.boxSelect.draw(editor.image)
 
@@ -194,6 +238,10 @@ func newPitchEditor*(position: (float, float),
                                        result.view,
                                        result.input,
                                        result.boxSelect)
+  result.pitchLine = newPitchLine(position,
+                                  result.view,
+                                  result.input,
+                                  result.boxSelect)
   result.position = position
   result.resize(dimensions)
   result.zoomOutXToFull()
