@@ -6,7 +6,7 @@ import
 export window, apitypes, apifunctions, wrapper
 
 globalRaiseHook = proc(e: ref Exception): bool =
-  reaperEcho("An exception was raised: " & e.msg)
+  reaperEcho "An exception was raised: " & e.msg
 
 var
   hInstance*: HINSTANCE

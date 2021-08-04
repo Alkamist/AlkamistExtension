@@ -1,4 +1,6 @@
-import apitypes, apifunctions
+import
+  ../audio,
+  apitypes, apifunctions
 
 type
   Project* = object
@@ -135,3 +137,29 @@ proc peaks*(source: Source,
       )
 
   dealloc(memory)
+
+proc analyzePitch*(take: Take): seq[tuple[time, pitch: float]] =
+  if take.kind == Audio:
+    let
+      source = take.source
+      sampleRate = 8000.0
+      lengthSeconds = 5.0
+      peaks = source.peaks(0.0, lengthSeconds, sampleRate).toMono
+
+    var audioBuffer = initAudioBuffer(peaks.len, sampleRate)
+    for sampleId, peakSample in peaks:
+      audioBuffer[sampleId] = 0.5 * (peakSample.minimum + peakSample.maximum)
+
+    # var frequencyBuffer: seq[(float, float)]
+    # for step in audioBuffer.windowStep:
+    #   if step.buffer.rms > dbToAmplitude(-60.0):
+    #     let frequency = step.buffer.calculateFrequency(80.0, 5000.0)
+    #     if frequency.isSome:
+    #       let time = step.start.toSeconds(sampleRate)
+    #       frequencyBuffer.add((time, frequency.get))
+
+    # for value in frequencyBuffer:
+    #   reaperEcho $value[1].toPitch
+
+    # for value in frequencyBuffer:
+    #   result.add((value[0], value[1].toPitch))
