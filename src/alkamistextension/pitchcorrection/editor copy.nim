@@ -1,5 +1,5 @@
 import
-  # std/threadpool,
+  std/asyncdispatch,
   ../lice, ../input, ../view, ../vector, ../reaper,
   whitekeys, boxselect, pitchline, pitchdetection
 
@@ -92,9 +92,11 @@ func redraw*(editor: PitchEditor) =
 
 #     editor.redraw()
 
-proc analyzePitch(editor: PitchEditor) =
+proc analyzePitch(editor: PitchEditor) {.async.} =
   let take = currentProject().selectedItem(0).activeTake
   if take.kind == Audio:
+    editor.isAnalyzingPitch = true
+
     let
       source = take.source
       sampleRate = 8000.0
@@ -110,6 +112,12 @@ proc analyzePitch(editor: PitchEditor) =
     editor.pitchLine.deactivatePointsSpreadByTime(0.05)
 
     editor.redraw()
+
+    editor.isAnalyzingPitch = false
+
+proc onUpdate*(editor: PitchEditor) =
+  if editor.isAnalyzingPitch:
+    poll(0)
 
 func onMousePress*(editor: PitchEditor) =
   if editor.mouseIsInside:
@@ -160,7 +168,8 @@ func onMouseMove*(editor: PitchEditor) =
 proc onKeyPress*(editor: PitchEditor) =
   case editor.lastKeyPress:
   of R:
-    editor.analyzePitch()
+    # editor.analyzePitch()
+    asyncCheck(editor.analyzePitch())
     editor.redraw()
   of Delete:
     if editor.pitchLine.editingIsEnabled:

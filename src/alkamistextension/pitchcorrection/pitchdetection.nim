@@ -1,17 +1,19 @@
-import std/math
+import std/[math, options]
+
+export options
 
 const yinThreshold = 0.2
 
-{.push inline.}
-
-func toPitch[T](frequency: T): T =
+template toPitch*(frequency: untyped): untyped =
   69.0 + 12.0 * ln(frequency / 440.0) / ln(2.0)
 
-func toSamples[A, B](time: A, sampleRate: B): int =
+template toSamples(time, sampleRate: untyped): untyped =
   (time * sampleRate).floor.int
 
-func dbToAmplitude[T](dB: T): T =
+template dbToAmplitude(dB: untyped): untyped =
   exp(dB * 0.11512925464970228420089957273422)
+
+{.push inline.}
 
 func rootMeanSquare[T](buffer: openArray[T]): T =
   for sample in buffer:
@@ -50,29 +52,62 @@ func cumulativeMeanNormalizedDifference[T](buffer: openArray[T], tau: int): T =
     sum /= tau.T
     buffer.difference(tau) / sum
 
-func locationOfFirstMinimum[T](buffer: openArray[T]): T =
+func locationOfFirstMinimum[T](buffer: openArray[T]): Option[T] =
   var
+    location: Option[int]
     minValue = yinThreshold
-    location = -1
 
-  for i in 1 ..< buffer.len - 1:
+  for i in 1 ..< buffer.high:
     let value = buffer[i]
     if value < yinThreshold:
       if value > minValue:
         break
       minValue = value
-      location = i
+      location = some(i)
 
-  if location == -1:
-    -1.T
-  else:
-    buffer.parabolicInterpolation(location)
+  if location.isSome:
+    return some(buffer.parabolicInterpolation(location.get))
 
-{.pop.}
+iterator windowStep*[T](buffer: openArray[T],
+                        sampleRate: float,
+                        windowSeconds = 0.04,
+                        windowOverlap = 2.0,
+                        minRms = -60.0): (T, seq[T]) =
+  let
+    startSeconds = 0.0
+    lengthSeconds = buffer.len.float / sampleRate
+    minRmsAmp = minRms.dbToAmplitude
+    windowSamples = windowSeconds.toSamples(sampleRate)
+
+  var seekSeconds = startSeconds
+
+  while true:
+    let
+      seekSamples = seekSeconds.toSamples(sampleRate)
+      seekEnd = min(buffer.high, seekSamples + windowSamples)
+
+    var windowBuffer = buffer[seekSamples .. seekEnd]
+
+    let rms = windowBuffer.rootMeanSquare
+    if rms >= minRmsAmp:
+      yield (seekSeconds, windowBuffer)
+
+    seekSeconds += windowSeconds / windowOverlap
+
+    if seekSeconds >= startSeconds + lengthSeconds:
+      break
+
+func windowBuffers*[T](buffer: openArray[T],
+                       sampleRate: float,
+                       windowSeconds = 0.04,
+                       windowOverlap = 2.0,
+                       minRms = -60.0): seq[(T, seq[T])] =
+  for windowInfo in buffer.windowStep(sampleRate, windowSeconds, windowOverlap, minRms):
+    result.add(windowInfo)
 
 func calculateFrequency*[T](buffer: openArray[T],
                             sampleRate: float,
-                            minFrequency, maxFrequency: float): T =
+                            minFrequency, maxFrequency: float): Option[T] =
   let
     minLook = floor(sampleRate / maxFrequency).toInt
     maxLook = floor(min(sampleRate / minFrequency, buffer.len.float)).toInt
@@ -83,62 +118,54 @@ func calculateFrequency*[T](buffer: openArray[T],
     cmnds.add(buffer.cumulativeMeanNormalizedDifference(tau))
 
   let location = cmnds.locationOfFirstMinimum
-  if location > -1:
-    return sampleRate / (minLook.T + location)
+  if location.isSome:
+    return some(sampleRate / (minLook.T + location.get))
 
-func detectPitch*[T](buffer: openArray[T],
-                     sampleRate: float,
-                     minFrequency, maxFrequency: float,
-                     lengthSeconds: float,
-                     startSeconds = 0.0,
-                     windowStep = 0.04, windowOverlap = 2.0,
-                     minRms = -60.0): seq[tuple[time: T, pitch: T]] =
-  let
-    minRmsAmp = minRms.dbToAmplitude
-    windowSamples = windowStep.toSamples(sampleRate)
-    bufferEnd = buffer.len - 1
-
-  var seekSeconds = startSeconds
-
-  while true:
-    let
-      seekSamples = seekSeconds.toSamples(sampleRate)
-      seekEnd = min(bufferEnd, seekSamples + windowSamples)
-
-    var subBuffer = buffer[seekSamples .. seekEnd]
-
-    let rms = subBuffer.rootMeanSquare
-    if rms >= minRmsAmp:
-      let frequency = subBuffer.calculateFrequency(sampleRate, minFrequency, maxFrequency)
-
-      if frequency > 0.0:
-        let pitch = frequency.toPitch
-        result.add((seekSeconds, pitch))
-
-    seekSeconds += windowStep / windowOverlap
-
-    if seekSeconds >= startSeconds + lengthSeconds:
-      break
+{.pop.}
 
 when isMainModule:
-  import std/times
+  import std/[times, threadpool]
+  {.experimental: "parallel".}
 
-  let
-    sampleRate = 8000.0
-    sineLengthSamples = sampleRate.toInt
-    sineFrequency = 441.0
-    sinePeriodLengthSamples = sampleRate / sineFrequency
+  template bench(title: string, code: untyped): untyped =
+    block:
+      let t = cpuTime()
+      code
+      echo(title & ": " & $(cpuTime() - t))
 
-  var sineWave = newSeq[float64](sineLengthSamples)
-  for i in 0 ..< sineLengthSamples:
-    let phase = 2.0 * PI * i.toFloat / sinePeriodLengthSamples
-    sineWave[i] = sin(phase)
+  func createSineWave(sampleRate, lengthSeconds, frequency: float): seq[float64] =
+    let
+      lengthSamples = lengthSeconds.toSamples(sampleRate)
+      periodSamples = sampleRate / frequency
 
-  let t0 = cpuTime()
-  let points = sineWave.detectPitch(sampleRate, 80.0, 1000.0, 1.0)
-  let t1 = cpuTime()
+    result = newSeq[float64](lengthSamples)
 
-  for point in points:
-    echo "t: " & $point.time & " " & "p: " & $point.pitch
+    for i in 0 ..< lengthSamples:
+      let phase = 2.0 * PI * i.toFloat / periodSamples
+      result[i] = sin(phase)
 
-  echo "Total time: " & $(t1 - t0)
+  let sampleRate = 8000.0
+  var sineWave = createSineWave(sampleRate, 30.0, 441.0)
+
+  bench("Normal"):
+    var frequencies: seq[Option[float64]]
+    for windowStart, windowBuffer in sineWave.windowStep(sampleRate):
+      frequencies.add(windowBuffer.calculateFrequency(sampleRate, 80.0, 8000.0))
+
+  bench("Spawn"):
+    var frequencies: seq[FlowVar[Option[float64]]]
+
+    for windowStart, windowBuffer in sineWave.windowStep(sampleRate):
+      let frequency = spawn(windowBuffer.calculateFrequency(sampleRate, 80.0, 8000.0))
+      frequencies.add(frequency)
+
+    sync()
+
+  bench("Parallel"):
+    let buffers = sineWave.windowBuffers(sampleRate)
+    var frequencies: seq[Option[float64]]
+
+    parallel:
+      for buffer in buffers:
+        let frequency = spawn(buffer[1].calculateFrequency(sampleRate, 80.0, 8000.0))
+        frequencies.add(frequency)

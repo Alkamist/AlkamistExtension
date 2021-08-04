@@ -16,6 +16,7 @@ proc buildDll =
     "--app:lib",
     "--cc:vcc",
     "--nimcache:cache",
+    "--threads:on",
     "--o:" & outputName.toDll,
     "--outdir:" & pluginsDir,
   ]

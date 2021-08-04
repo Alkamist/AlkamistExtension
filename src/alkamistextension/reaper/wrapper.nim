@@ -2,31 +2,39 @@ import apitypes, apifunctions
 
 type
   Project* = object
-    reaperPtr*: ptr ReaProject
+    rawPtr*: pointer
 
   Item* = object
-    reaperPtr*: ptr MediaItem
+    rawPtr*: pointer
 
   TakeKind* = enum
     Audio,
     Midi,
 
   Take* = object
-    reaperPtr*: ptr MediaItem_Take
+    rawPtr*: pointer
 
   Source* = object
-    reaperPtr*: ptr PCM_source
+    rawPtr*: pointer
 
   PeakSample* = tuple[minimum, maximum: float64]
   PeakChannelBuffer* = seq[PeakSample]
   MonoPeaks* = PeakChannelBuffer
   Peaks* = seq[PeakChannelBuffer]
 
-template toSamples(time, sampleRate: float): int =
-  (time * sampleRate).toInt
+template reaperPtr*(s: Project): ptr ReaProject = cast[ptr ReaProject](s.rawPtr)
+template `reaperPtr=`*(s: var Project, v: ptr ReaProject) = s.rawPtr = cast[pointer](v)
 
-# template toTime(numSamples: int, sampleRate: float): float =
-#   numSamples.toFloat / sampleRate
+template reaperPtr*(s: Item): ptr MediaItem = cast[ptr MediaItem](s.rawPtr)
+template `reaperPtr=`*(s: var Item, v: ptr MediaItem) = s.rawPtr = cast[pointer](v)
+
+template reaperPtr*(s: Take): ptr MediaItem_Take = cast[ptr MediaItem_Take](s.rawPtr)
+template `reaperPtr=`*(s: var Take, v: ptr MediaItem_Take) = s.rawPtr = cast[pointer](v)
+
+template reaperPtr*(s: Source): ptr PCM_Source = cast[ptr PCM_Source](s.rawPtr)
+template `reaperPtr=`*(s: var Source, v: ptr PCM_Source) = s.rawPtr = cast[pointer](v)
+
+template toSamples(time, sampleRate: float): int = (time * sampleRate).toInt
 
 {.push inline.}
 
