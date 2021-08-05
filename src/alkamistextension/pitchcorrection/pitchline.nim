@@ -17,6 +17,7 @@ type
     editingIsEnabled*: bool
     editingActivationsIsEnabled*: bool
     isEditingPoint: bool
+    leftClickOnPointOrSegment: bool
     points: seq[PitchPoint]
     view: View
     input: Input
@@ -246,6 +247,8 @@ func onLeftPress*(line: PitchLine) =
     line.clickSelectLogic()
 
     if line.mousePoint != nil:
+      line.leftClickOnPointOrSegment = true
+
       if line.editingActivationsIsEnabled and line.isPressed(Alt):
         line.toggleSelectionActivations()
       elif line.lastMousePressWasDoubleClick:
@@ -267,9 +270,10 @@ func onLeftPress*(line: PitchLine) =
 
 func onLeftRelease*(line: PitchLine) =
   if line.editingIsEnabled:
-    if not line.isEditingPoint:
+    if not line.leftClickOnPointOrSegment:
       line.unselectAll()
   line.isEditingPoint = false
+  line.leftClickOnPointOrSegment = false
 
 func onRightRelease*(line: PitchLine) =
   if line.editingIsEnabled:
