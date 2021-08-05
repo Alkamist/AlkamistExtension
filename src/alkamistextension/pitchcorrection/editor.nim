@@ -140,7 +140,7 @@ func onResize*(editor: PitchEditor, dimensions: (float, float)) =
   editor.resize(dimensions)
   editor.redraw()
 
-func drawKeys(editor: PitchEditor) {.inline.} =
+func drawKeys(editor: PitchEditor) =
   var keyColorPrevious = editor.colorScheme.blackKeys
 
   for pitchId in 0 ..< numKeys:
