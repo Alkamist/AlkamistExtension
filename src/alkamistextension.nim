@@ -15,20 +15,14 @@ createExtension:
 
 
 
+# import alkamistextension/reaper
 
-# import alkamistextension/[reaper, winapi]
-
-# proc windowProc(hWnd: HWND, msg: UINT, wParam: WPARAM, lParam: LPARAM): INT_PTR {.stdcall.} =
-#   case msg:
-#   of WM_INITDIALOG: return 0
-#   of WM_COMMAND: return 0
-#   else: return 0
+# proc testFn() =
+#   let wnd = newWindow(
+#     title = "A Window",
+#     bounds = ((2.0, 2.0), (8.0, 6.0)),
+#     backgroundColor = rgb(16, 16, 16),
+#   )
 
 # createExtension:
-#   let hWnd = CreateDialog(hInstance, MAKEINTRESOURCE(100), pluginInfo.hwnd_main, windowProc)
-#   discard ShowWindow(hWnd, SW_SHOW)
-#   discard SetWindowPos(
-#     hWnd, pluginInfo.hwnd_main,
-#     200, 200, 200, 200,
-#     SWP_NOACTIVATE,
-#   )
+#   addAction("Alkamist: Test Action", "ALKAMIST_TEST_ACTION", testFn)

@@ -137,6 +137,7 @@ proc windowProc(hWnd: HWND, msg: UINT, wParam: WPARAM, lParam: LPARAM): INT_PTR 
       window.image.resize((window.clientWidth, window.clientHeight))
       if window.onResize != nil:
         window.onResize()
+      window.redraw()
 
   of WM_MOVE:
     ifWindow:
