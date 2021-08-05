@@ -250,9 +250,12 @@ func onLeftPress*(line: PitchLine) =
         line.toggleSelectionActivations()
       elif line.lastMousePressWasDoubleClick:
         line.doubleClickLogic()
+      else:
+        line.isEditingPoint = true
 
     else:
       line.mouseCreationLogic()
+      line.isEditingPoint = true
 
     let internalMouse = line.view.convertToInternal(line.mousePosition)
 
@@ -260,7 +263,6 @@ func onLeftPress*(line: PitchLine) =
     for point in line.points.mitems:
       point.editOffset = point.position - internalMouse
 
-    line.isEditingPoint = true
     line.updateVisualPositions()
 
 func onLeftRelease*(line: PitchLine) =
