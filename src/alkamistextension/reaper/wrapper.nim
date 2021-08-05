@@ -133,13 +133,15 @@ proc peaks*(source: Source,
 
   dealloc(memory)
 
-proc analyzePitchSingleCore*(take: Take): seq[(float, float)] =
+proc analyzePitchSingleCore*(take: Take,
+                             startSeconds, lengthSeconds: float,
+                             sampleRate = 8000.0,
+                             minFrequency = 80.0,
+                             maxFrequency = 4000.0): seq[(float, float)] =
   if take.kind == Audio:
     let
       source = take.source
-      sampleRate = 8000.0
-      lengthSeconds = 5.0
-      peaks = source.peaks(0.0, lengthSeconds, sampleRate).toMono
+      peaks = source.peaks(startSeconds, lengthSeconds, sampleRate).toMono
 
     var audioBuffer = newSeq[float64](peaks.len)
     for sampleId, peakSample in peaks:
@@ -148,7 +150,7 @@ proc analyzePitchSingleCore*(take: Take): seq[(float, float)] =
     var frequencies: seq[(float, float)]
     for start, buffer in audioBuffer.windowStep(sampleRate):
       if buffer.rms > dbToAmplitude(-60.0):
-        let frequency = buffer.calculateFrequency(sampleRate, 80.0, 4000.0)
+        let frequency = buffer.calculateFrequency(sampleRate, minFrequency, maxFrequency)
         if frequency.isSome:
           let time = start.toSeconds(sampleRate)
           frequencies.add((time, frequency.get))
@@ -156,13 +158,15 @@ proc analyzePitchSingleCore*(take: Take): seq[(float, float)] =
     for value in frequencies:
       result.add((value[0], value[1].toPitch))
 
-proc analyzePitch*(take: Take): seq[(float, float)] =
+proc analyzePitch*(take: Take,
+                   startSeconds, lengthSeconds: float,
+                   sampleRate = 8000.0,
+                   minFrequency = 80.0,
+                   maxFrequency = 4000.0): seq[(float, float)] =
   if take.kind == Audio:
     let
       source = take.source
-      sampleRate = 8000.0
-      lengthSeconds = 15.0
-      peaks = source.peaks(0.0, lengthSeconds, sampleRate).toMono
+      peaks = source.peaks(startSeconds, lengthSeconds, sampleRate).toMono
 
     var audioBuffer = newSeq[float64](peaks.len)
     for sampleId, peakSample in peaks:
@@ -173,7 +177,7 @@ proc analyzePitch*(take: Take): seq[(float, float)] =
       if buffer.rms > dbToAmplitude(-60.0):
         let
           time = start.toSeconds(sampleRate)
-          frequency = spawn buffer.calculateFrequency(sampleRate, 80.0, 4000.0)
+          frequency = spawn buffer.calculateFrequency(sampleRate, minFrequency, maxFrequency)
         flowFrequencies.add((time, frequency))
 
     sync()

@@ -71,7 +71,7 @@ func redraw*(editor: PitchEditor) =
 proc analyzePitch(editor: PitchEditor) =
   let
     take = currentProject().selectedItem(0).activeTake
-    pitchBuffer = take.analyzePitch()
+    pitchBuffer = take.analyzePitch(5.0, 10.0)
 
   editor.pitchLine.addPoints(pitchBuffer)
   editor.pitchLine.deactivatePointsSpreadByTime(0.05)
