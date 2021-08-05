@@ -57,8 +57,10 @@ proc addAction*(name, id: cstring, fn: proc()) =
   discard pluginInfo.Register("gaccel", addr accelReg)
   actionProcs[commandId] = fn
 
-proc newWindow*(): Window =
-  newWindow(hInstance, pluginInfo.hwnd_main)
+proc newWindow*(title: string,
+                bounds: ((float, float), (float, float)),
+                backgroundColor: Color): Window =
+  newWindow(hInstance, pluginInfo.hwnd_main, title, bounds, backgroundColor)
 
 template createExtension*(initCode: untyped): untyped =
   {.link: "resource/resource.res".}

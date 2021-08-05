@@ -63,12 +63,12 @@ func `bounds=`*(window: Window, value: ((float, float), (float, float))) =
   template toNative(inches: float): cint =
     (inches * window.dpi).cint
   discard SetWindowPos(
-    window.hWnd, HWND_TOP,
+    window.hWnd, window.parent,
     value[0][0].toNative,
     value[0][1].toNative,
     value[1][0].toNative,
     value[1][1].toNative,
-    SWP_NOZORDER,
+    SWP_NOACTIVATE,
   )
 
 func enableUpdateLoop*(window: Window, loopEvery: UINT) =
@@ -218,15 +218,20 @@ proc windowProc(hWnd: HWND, msg: UINT, wParam: WPARAM, lParam: LPARAM): INT_PTR 
   else:
     discard
 
-proc newWindow*(hInstance: HINSTANCE, parent: HWND): Window =
+proc newWindow*(hInstance: HINSTANCE,
+                parent: HWND,
+                title: string,
+                bounds: ((float, float), (float, float)),
+                backgroundColor: Color): Window =
   result = Window(hWnd: CreateDialog(hInstance, MAKEINTRESOURCE(100), parent, windowProc))
 
   if result.hWnd != nil:
-    result.title = "Unnamed Window"
-    result.updateBounds()
-    result.backgroundColor = rgb(0, 0, 0)
+    hWndWindows[result.hWnd] = result
+    result.parent = parent
     result.input = newInput()
     result.dpi = 96.0
     result.image = initImage(result.dpi, (0.0, 0.0))
-    hWndWindows[result.hWnd] = result
     discard ShowWindow(result.hWnd, SW_SHOW)
+    result.backgroundColor = backgroundColor
+    `title=`(result, title)
+    `bounds=`(result, bounds)
