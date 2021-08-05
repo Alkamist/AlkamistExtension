@@ -64,7 +64,7 @@ template createExtension*(initCode: untyped): untyped =
   {.link: "resource/resource.res".}
 
   {.emit: """/*INCLUDESECTION*/
-  #define REAPERAPI_IMPLEMENT
+#define REAPERAPI_IMPLEMENT
   """.}
 
   proc REAPER_PLUGIN_ENTRYPOINT(hInst: HINSTANCE, rec: ptr reaper_plugin_info_t): cint {.codegenDecl: "REAPER_PLUGIN_DLL_EXPORT $# $#$#", exportc, dynlib.} =

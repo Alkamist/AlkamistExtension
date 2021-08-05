@@ -7,5 +7,9 @@
       "path": "C:\\nim"
     }
 	],
-	"settings": {}
+	"settings": {
+		"files.associations": {
+			"windows.h": "c"
+		}
+	}
 }
