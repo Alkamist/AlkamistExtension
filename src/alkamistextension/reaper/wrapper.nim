@@ -1,4 +1,5 @@
 import
+  std/threadpool,
   ../audio,
   apitypes, apifunctions
 
@@ -132,7 +133,7 @@ proc peaks*(source: Source,
 
   dealloc(memory)
 
-proc analyzePitch*(take: Take): seq[(float, float)] =
+proc analyzePitchSingleCore*(take: Take): seq[(float, float)] =
   if take.kind == Audio:
     let
       source = take.source
@@ -144,13 +145,40 @@ proc analyzePitch*(take: Take): seq[(float, float)] =
     for sampleId, peakSample in peaks:
       audioBuffer[sampleId] = 0.5 * (peakSample.minimum + peakSample.maximum)
 
-    var frequencyBuffer: seq[(float, float)]
+    var frequencies: seq[(float, float)]
     for start, buffer in audioBuffer.windowStep(sampleRate):
       if buffer.rms > dbToAmplitude(-60.0):
         let frequency = buffer.calculateFrequency(sampleRate, 80.0, 4000.0)
         if frequency.isSome:
           let time = start.toSeconds(sampleRate)
-          frequencyBuffer.add((time, frequency.get))
+          frequencies.add((time, frequency.get))
 
-    for value in frequencyBuffer:
+    for value in frequencies:
       result.add((value[0], value[1].toPitch))
+
+proc analyzePitch*(take: Take): seq[(float, float)] =
+  if take.kind == Audio:
+    let
+      source = take.source
+      sampleRate = 8000.0
+      lengthSeconds = 15.0
+      peaks = source.peaks(0.0, lengthSeconds, sampleRate).toMono
+
+    var audioBuffer = newSeq[float64](peaks.len)
+    for sampleId, peakSample in peaks:
+      audioBuffer[sampleId] = 0.5 * (peakSample.minimum + peakSample.maximum)
+
+    var flowFrequencies: seq[(float, FlowVar[Option[float]])]
+    for start, buffer in audioBuffer.windowStep(sampleRate):
+      if buffer.rms > dbToAmplitude(-60.0):
+        let
+          time = start.toSeconds(sampleRate)
+          frequency = spawn buffer.calculateFrequency(sampleRate, 80.0, 4000.0)
+        flowFrequencies.add((time, frequency))
+
+    sync()
+
+    for flowValue in flowFrequencies:
+      let frequency = ^flowValue[1]
+      if frequency.isSome:
+        result.add((flowValue[0], frequency.get.toPitch))
