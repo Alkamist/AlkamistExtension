@@ -2,7 +2,11 @@ import window, view, lice, reaper
 
 proc peakViewerMain*() =
   var
-    window = newWindow()
+    window = newWindow(
+      title = "Pitch Correction",
+      bounds = ((4.0, 2.0), (12.0, 8.0)),
+      backgroundColor = rgb(16, 16, 16)
+    )
     view = newView()
     peaks: MonoPeaks
 
@@ -12,9 +16,6 @@ proc peakViewerMain*() =
   if take.kind == Audio:
     var source = take.source
     peaks = source.peaks(0.0, 15.0, 1000.0).toMono
-
-  window.title = "Pitch Correction"
-  window.bounds = ((4.0, 2.0), (12.0, 8.0))
 
   view.resize(window.clientDimensions)
   view.x.zoom = window.clientWidth / (44100.0 * 5.0)
