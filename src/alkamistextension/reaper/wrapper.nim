@@ -36,10 +36,6 @@ template `reaperPtr=`*(s: var Take, v: ptr MediaItem_Take) = s.rawPtr = cast[poi
 template reaperPtr*(s: Source): ptr PCM_Source = cast[ptr PCM_Source](s.rawPtr)
 template `reaperPtr=`*(s: var Source, v: ptr PCM_Source) = s.rawPtr = cast[pointer](v)
 
-template toSamples(time, sampleRate: float): int = (time * sampleRate).toInt
-
-{.push inline.}
-
 func currentProject*(): Project =
   result.reaperPtr = EnumProjects(-1, nil, 0)
 
@@ -79,8 +75,6 @@ func sampleLength*(peaks: Peaks): int =
     peaks[0].len
   else:
     0
-
-{.pop.}
 
 func toMono*(peaks: Peaks): MonoPeaks =
   result = newSeq[PeakSample](peaks.sampleLength)
@@ -138,28 +132,25 @@ proc peaks*(source: Source,
 
   dealloc(memory)
 
-# proc analyzePitch*(take: Take): seq[tuple[time, pitch: float]] =
-#   if take.kind == Audio:
-#     let
-#       source = take.source
-#       sampleRate = 8000.0
-#       lengthSeconds = 5.0
-#       peaks = source.peaks(0.0, lengthSeconds, sampleRate).toMono
+proc analyzePitch*(take: Take): seq[(float, float)] =
+  if take.kind == Audio:
+    let
+      source = take.source
+      sampleRate = 8000.0
+      lengthSeconds = 5.0
+      peaks = source.peaks(0.0, lengthSeconds, sampleRate).toMono
 
-#     var audioBuffer = initAudioBuffer(peaks.len, sampleRate)
-#     for sampleId, peakSample in peaks:
-#       audioBuffer[sampleId] = 0.5 * (peakSample.minimum + peakSample.maximum)
+    var audioBuffer = newSeq[float64](peaks.len)
+    for sampleId, peakSample in peaks:
+      audioBuffer[sampleId] = 0.5 * (peakSample.minimum + peakSample.maximum)
 
-    # var frequencyBuffer: seq[(float, float)]
-    # for step in audioBuffer.windowStep:
-    #   if step.buffer.rms > dbToAmplitude(-60.0):
-    #     let frequency = step.buffer.calculateFrequency(80.0, 5000.0)
-    #     if frequency.isSome:
-    #       let time = step.start.toSeconds(sampleRate)
-    #       frequencyBuffer.add((time, frequency.get))
+    var frequencyBuffer: seq[(float, float)]
+    for start, buffer in audioBuffer.windowStep(sampleRate):
+      if buffer.rms > dbToAmplitude(-60.0):
+        let frequency = buffer.calculateFrequency(sampleRate, 80.0, 4000.0)
+        if frequency.isSome:
+          let time = start.toSeconds(sampleRate)
+          frequencyBuffer.add((time, frequency.get))
 
-    # for value in frequencyBuffer:
-    #   reaperEcho $value[1].toPitch
-
-    # for value in frequencyBuffer:
-    #   result.add((value[0], value[1].toPitch))
+    for value in frequencyBuffer:
+      result.add((value[0], value[1].toPitch))

@@ -1,9 +1,6 @@
 import
-  # std/threadpool,
   ../lice, ../input, ../view, ../reaper,
   whitekeys, boxselect, pitchline
-
-# {.experimental: "parallel".}
 
 type
   PitchEditorColorScheme* = object
@@ -71,51 +68,15 @@ func mouseIsInside*(editor: PitchEditor): bool =
 func redraw*(editor: PitchEditor) =
   editor.shouldRedraw = true
 
-# proc analyzePitch(editor: PitchEditor) =
-#   let take = currentProject().selectedItem(0).activeTake
-#   if take.kind == Audio:
-#     let
-#       source = take.source
-#       sampleRate = 8000.0
-#       lengthSeconds = 5.0
-#       peaks = source.peaks(0.0, lengthSeconds, sampleRate).toMono
+proc analyzePitch(editor: PitchEditor) =
+  let
+    take = currentProject().selectedItem(0).activeTake
+    pitchBuffer = take.analyzePitch()
 
-#     var audio = newSeq[float64](peaks.len)
-#     for sampleId, peakSample in peaks:
-#       audio[sampleId] = 0.5 * (peakSample.minimum + peakSample.maximum)
+  editor.pitchLine.addPoints(pitchBuffer)
+  editor.pitchLine.deactivatePointsSpreadByTime(0.05)
 
-#     let buffers = audio.windowBuffers(sampleRate)
-#     var bufferPoints: seq[(float64, Option[float64])]
-#     parallel:
-#       for buffer in buffers:
-#         let frequency = spawn(buffer[1].calculateFrequency(sampleRate, 80.0, 5000.0))
-#         bufferPoints.add((buffer[0], frequency))
-
-#     var pitchBuffer: seq[(float64, float64)]
-#     for point in bufferPoints:
-#       let
-#         pointTime = point[0]
-#         pointFrequency = point[1]
-#       if pointFrequency.isSome:
-#         pitchBuffer.add((pointTime, pointFrequency.get.toPitch))
-
-#     editor.pitchLine.addPoints(pitchBuffer)
-#     editor.pitchLine.deactivatePointsSpreadByTime(0.05)
-
-#     editor.redraw()
-
-# proc analyzePitch(editor: PitchEditor) =
-#   let
-#     take = currentProject().selectedItem(0).activeTake
-#     pitchBuffer = take.analyzePitch()
-
-#   # for value in pitchBuffer:
-#   #   reaperEcho value.pitch
-
-#   # editor.pitchLine.addPoints(pitchBuffer)
-#   # editor.pitchLine.deactivatePointsSpreadByTime(0.05)
-
-#   editor.redraw()
+  editor.redraw()
 
 func onMousePress*(editor: PitchEditor) =
   if editor.mouseIsInside:
@@ -165,8 +126,8 @@ func onMouseMove*(editor: PitchEditor) =
 
 proc onKeyPress*(editor: PitchEditor) =
   case editor.lastKeyPress:
-  # of R:
-  #   editor.analyzePitch()
+  of R:
+    editor.analyzePitch()
   of Delete:
     if editor.pitchLine.editingIsEnabled:
       editor.pitchLine.deleteSelection()
