@@ -1,18 +1,15 @@
-import std/math, vector
-
-export vector
+import std/math
 
 type
   ViewAxis* = ref object
     pan*, zoomTarget*: float
-    zoom*, zoomSensitivity*: float
+    zoom*: float
+    zoomSensitivity*: float
     isInverted*: bool
     externalSize, previousExternalSize: float
 
   View* = ref object
     x*, y*: ViewAxis
-
-{.push inline.}
 
 func externalSize*(axis: ViewAxis): float = axis.externalSize
 
@@ -67,40 +64,40 @@ func resize*(axis: ViewAxis, externalSize: float) =
   axis.previousExternalSize = externalSize
 
 func scaleToInternal*(view: View, value: (float, float)): (float, float) =
-  (view.x.scaleToInternal(value.x),
-   view.y.scaleToInternal(value.y))
+  (view.x.scaleToInternal(value[0]),
+   view.y.scaleToInternal(value[1]))
 
 func scaleToExternal*(view: View, value: (float, float)): (float, float) =
-  (view.x.scaleToExternal(value.x),
-   view.y.scaleToExternal(value.y))
+  (view.x.scaleToExternal(value[0]),
+   view.y.scaleToExternal(value[1]))
 
 func convertToInternal*(view: View, value: (float, float)): (float, float) =
-  (view.x.convertToInternal(value.x),
-   view.y.convertToInternal(value.y))
+  (view.x.convertToInternal(value[0]),
+   view.y.convertToInternal(value[1]))
 
 func convertToExternal*(view: View, value: (float, float)): (float, float) =
-  (view.x.convertToExternal(value.x),
-   view.y.convertToExternal(value.y))
+  (view.x.convertToExternal(value[0]),
+   view.y.convertToExternal(value[1]))
 
 func changePanInternally*(view: View, value: (float, float)) =
-  view.x.changePanInternally(value.x)
-  view.y.changePanInternally(value.y)
+  view.x.changePanInternally(value[0])
+  view.y.changePanInternally(value[1])
 
 func changePanExternally*(view: View, value: (float, float)) =
-  view.x.changePanExternally(value.x)
-  view.y.changePanExternally(value.y)
+  view.x.changePanExternally(value[0])
+  view.y.changePanExternally(value[1])
 
 func changeZoom*(view: View, value: (float, float)) =
-  view.x.changeZoom(value.x)
-  view.y.changeZoom(value.y)
+  view.x.changeZoom(value[0])
+  view.y.changeZoom(value[1])
 
 func setZoomTargetExternally*(view: View, value: (float, float)) =
-  view.x.zoomTarget = view.x.convertToInternal(value.x)
-  view.y.zoomTarget = view.y.convertToInternal(value.y)
+  view.x.zoomTarget = view.x.convertToInternal(value[0])
+  view.y.zoomTarget = view.y.convertToInternal(value[1])
 
 func resize*(view: View, externalDimensions: (float, float)) =
-  view.x.resize(externalDimensions.width)
-  view.y.resize(externalDimensions.height)
+  view.x.resize(externalDimensions[0])
+  view.y.resize(externalDimensions[1])
 
 func newViewAxis*(): ViewAxis =
   result = ViewAxis()
@@ -115,5 +112,3 @@ func newView*(): View =
   result = View()
   result.x = newViewAxis()
   result.y = newViewAxis()
-
-{.pop.}

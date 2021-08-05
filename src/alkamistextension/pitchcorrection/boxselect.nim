@@ -1,4 +1,4 @@
-import ../lice, ../vector
+import ../lice
 
 type
   BoxSelect* = ref object
@@ -7,8 +7,14 @@ type
 
 template p0: untyped = box.points[0]
 template p1: untyped = box.points[1]
-
-{.push inline.}
+template x(p: (float, float)): untyped = p[0]
+template `x=`(p: (float, float), v: float): untyped = p[0] = v
+template y(p: (float, float)): untyped = p[1]
+template `y=`(p: (float, float), v: float): untyped = p[1] = v
+template width(p: (float, float)): untyped = p[0]
+template height(p: (float, float)): untyped = p[1]
+template position(b: ((float, float), (float, float))): untyped = b[0]
+template dimensions(b: ((float, float), (float, float))): untyped = b[1]
 
 func left*(box: BoxSelect): float = min(p1.x, p0.x)
 func right*(box: BoxSelect): float = max(p1.x, p0.x)
@@ -93,5 +99,3 @@ func draw*(box: BoxSelect, image: Image) =
 
 func newBoxSelect*(): BoxSelect =
   BoxSelect()
-
-{.pop.}

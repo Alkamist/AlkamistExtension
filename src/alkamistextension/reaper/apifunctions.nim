@@ -764,5 +764,5 @@ proc ValidatePtr2*(proj: ptr ReaProject; pointer: pointer; ctypename: cstring): 
 proc ViewPrefs*(page: cint; pageByName: cstring) {.ReaperAPI.}
 # proc WDL_VirtualWnd_ScaledBlitBG*(dest: ptr LICE_IBitmap; src: ptr WDL_VirtualWnd_BGCfg; destx: cint; desty: cint; destw: cint; desth: cint; clipx: cint; clipy: cint; clipw: cint; cliph: cint; alpha: cfloat; mode: cint): bool {.ReaperAPI.}
 
-template reaperEcho*(msg: string): untyped =
+proc reaperEcho*(msg: string) =
   ShowConsoleMsg(msg & "\n")

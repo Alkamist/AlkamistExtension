@@ -175,8 +175,6 @@ type
     keyStates*: array[KeyboardKey, bool]
     mouseButtonStates*: array[MouseButton, bool]
 
-{.push inline.}
-
 func newInput*(): Input =
   result = Input()
 
@@ -189,10 +187,7 @@ func isPressed*(input: Input, key: KeyboardKey): bool =
 func isPressed*(input: Input, button: MouseButton): bool =
   input.mouseButtonStates[button]
 
-{.pop.}
-
 template defineInputProcs*(T, offset: untyped): untyped =
-  {.push inline.}
   func mousePosition*(self: T): (float, float) = self.input.mousePosition - self.offset
   func previousMousePosition*(self: T): (float, float) = self.input.previousMousePosition - self.offset
   func mouseDelta*(self: T): (float, float) = self.input.mouseDelta
@@ -203,7 +198,6 @@ template defineInputProcs*(T, offset: untyped): untyped =
   func lastMousePressWasDoubleClick*(self: T): bool = self.input.lastMousePressWasDoubleClick
   func isPressed*(self: T, key: KeyboardKey): bool = self.input.isPressed(key)
   func isPressed*(self: T, button: MouseButton): bool = self.input.isPressed(button)
-  {.pop.}
 
 func toKeyboardKey*(keyCode: int): Option[KeyboardKey] =
   case keyCode:

@@ -1,21 +1,5 @@
 import std/math
 
-template tupleField(name, index: untyped): untyped =
-  template name*(vec: untyped): untyped = vec[index]
-  template `name=`*(vec, value: untyped): untyped = vec[index] = value
-
-tupleField(a, 0)
-tupleField(b, 1)
-tupleField(x, 0)
-tupleField(y, 1)
-tupleField(width, 0)
-tupleField(height, 1)
-
-tupleField(position, 0)
-tupleField(dimensions, 1)
-
-{.push inline.}
-
 func `+`*[A, B, C, D](a: (A, B), b: (C, D)): (A, B) = (a[0] + b[0], a[1] + b[1])
 func `+=`*[A, B, C, D](a: var (A, B), b: (C, D)) = a = a + b
 func `-`*[A, B, C, D](a: (A, B), b: (C, D)): (A, B) = (a[0] - b[0], a[1] - b[1])
@@ -68,5 +52,3 @@ func distance*[A, B](point: (A, B), segment: ((A, B), (A, B))): A =
     dy = pY - yy
 
   sqrt(dx * dx + dy * dy).A
-
-{.pop.}

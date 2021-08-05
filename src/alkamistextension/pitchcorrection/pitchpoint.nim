@@ -1,7 +1,3 @@
-import ../vector
-
-export vector
-
 type
   PitchPointMouseOver* = enum
     None,
@@ -17,23 +13,12 @@ type
     mouseOver*: PitchPointMouseOver
     previous*, next*: PitchPoint
 
-{.push inline.}
-
-func time*(point: (float, float)): float = point.x
-func time*(point: var (float, float)): var float = point.x
-func `time=`*(point: var (float, float), value: float) = point.x = value
-func pitch*(point: (float, float)): float = point.y
-func pitch*(point: var (float, float)): var float = point.y
-func `pitch=`*(point: var (float, float), value: float) = point.y = value
-
-func time*(point: PitchPoint): float = point.position.time
-func time*(point: var PitchPoint): var float = point.position.time
-func `time=`*(point: PitchPoint, value: float) = point.position.time = value
-func pitch*(point: PitchPoint): float = point.position.pitch
-func pitch*(point: var PitchPoint): var float = point.position.pitch
-func `pitch=`*(point: PitchPoint, value: float) = point.position.pitch = value
-
-{.pop.}
+func time*(point: PitchPoint): float = point.position[0]
+func time*(point: var PitchPoint): var float = point.position[0]
+func `time=`*(point: PitchPoint, value: float) = point.position[0] = value
+func pitch*(point: PitchPoint): float = point.position[1]
+func pitch*(point: var PitchPoint): var float = point.position[1]
+func `pitch=`*(point: PitchPoint, value: float) = point.position[1] = value
 
 func newPitchPoint*(): PitchPoint =
   result = PitchPoint()

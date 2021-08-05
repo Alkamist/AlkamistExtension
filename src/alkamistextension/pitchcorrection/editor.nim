@@ -1,7 +1,6 @@
 import
   # std/threadpool,
-  ../lice, ../input, ../view,
-  ../vector, ../reaper,
+  ../lice, ../input, ../view, ../reaper,
   whitekeys, boxselect, pitchline
 
 # {.experimental: "parallel".}
@@ -30,12 +29,10 @@ type
 
 defineInputProcs(PitchEditor, position)
 
-{.push inline.}
-
-func x*(editor: PitchEditor): float = editor.position.x
-func x*(editor: var PitchEditor): var float = editor.position.x
-func y*(editor: PitchEditor): float = editor.position.y
-func y*(editor: var PitchEditor): var float = editor.position.y
+func x*(editor: PitchEditor): float = editor.position[0]
+func x*(editor: var PitchEditor): var float = editor.position[0]
+func y*(editor: PitchEditor): float = editor.position[1]
+func y*(editor: var PitchEditor): var float = editor.position[1]
 func width*(editor: PitchEditor): float = editor.view.x.externalSize
 func height*(editor: PitchEditor): float = editor.view.y.externalSize
 func dimensions*(editor: PitchEditor): (float, float) = (editor.width, editor.height)
@@ -66,15 +63,13 @@ func resize*(editor: PitchEditor, dimensions: (float, float)) =
   editor.image.resize(dimensions)
 
 func mouseIsInside*(editor: PitchEditor): bool =
-  editor.mousePosition.x >= 0.0 and
-  editor.mousePosition.x <= editor.width and
-  editor.mousePosition.y >= 0.0 and
-  editor.mousePosition.y <= editor.height
+  editor.mousePosition[0] >= 0.0 and
+  editor.mousePosition[0] <= editor.width and
+  editor.mousePosition[1] >= 0.0 and
+  editor.mousePosition[1] <= editor.height
 
 func redraw*(editor: PitchEditor) =
   editor.shouldRedraw = true
-
-{.pop.}
 
 # proc analyzePitch(editor: PitchEditor) =
 #   let take = currentProject().selectedItem(0).activeTake
@@ -109,18 +104,18 @@ func redraw*(editor: PitchEditor) =
 
 #     editor.redraw()
 
-proc analyzePitch(editor: PitchEditor) =
-  let
-    take = currentProject().selectedItem(0).activeTake
-    pitchBuffer = take.analyzePitch()
+# proc analyzePitch(editor: PitchEditor) =
+#   let
+#     take = currentProject().selectedItem(0).activeTake
+#     pitchBuffer = take.analyzePitch()
 
-  # for value in pitchBuffer:
-  #   reaperEcho value.pitch
+#   # for value in pitchBuffer:
+#   #   reaperEcho value.pitch
 
-  # editor.pitchLine.addPoints(pitchBuffer)
-  # editor.pitchLine.deactivatePointsSpreadByTime(0.05)
+#   # editor.pitchLine.addPoints(pitchBuffer)
+#   # editor.pitchLine.deactivatePointsSpreadByTime(0.05)
 
-  editor.redraw()
+#   editor.redraw()
 
 func onMousePress*(editor: PitchEditor) =
   if editor.mouseIsInside:
@@ -170,8 +165,8 @@ func onMouseMove*(editor: PitchEditor) =
 
 proc onKeyPress*(editor: PitchEditor) =
   case editor.lastKeyPress:
-  of R:
-    editor.analyzePitch()
+  # of R:
+  #   editor.analyzePitch()
   of Delete:
     if editor.pitchLine.editingIsEnabled:
       editor.pitchLine.deleteSelection()

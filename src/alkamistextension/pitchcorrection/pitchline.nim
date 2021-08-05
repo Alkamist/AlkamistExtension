@@ -26,8 +26,6 @@ type
 
 defineInputProcs(PitchLine, parentPosition)
 
-{.push inline.}
-
 func updateVisualPositions*(line: PitchLine) =
   for point in line.points.mitems:
     point.visualPosition = line.view.convertToExternal(point.position)
@@ -70,11 +68,11 @@ func deleteSelection*(line: PitchLine) =
   line.points.keepIf(proc(x: PitchPoint): bool = not x.isSelected)
   line.timeSort()
 
-func addPoints*(line: PitchLine, points: seq[tuple[time, pitch: float]]) =
+func addPoints*(line: PitchLine, points: seq[(float, float)]) =
   for point in points:
     var pitchPoint = newPitchPoint()
-    pitchPoint.time = point.time
-    pitchPoint.pitch = point.pitch
+    pitchPoint.time = point[0]
+    pitchPoint.pitch = point[1]
     line.points.add(pitchPoint)
   line.timeSort()
   line.updateVisualPositions()
@@ -89,8 +87,6 @@ func deactivatePointsSpreadByTime*(line: PitchLine, timeThreshold: float) =
 
     if pointId == lastId:
       point.isActive = false
-
-{.pop.}
 
 template clickSelectLogic(line: PitchLine): untyped =
   let
@@ -153,7 +149,7 @@ template mouseCreationLogic(line: PitchLine): untyped =
   if line.isPressed(Shift):
     point.position = mouseInternal
   else:
-    point.position = (mouseInternal.time, mouseInternal.pitch.round)
+    point.position = (mouseInternal[0], mouseInternal[1].round)
 
   line.points.add(point)
   line.timeSort()
@@ -187,12 +183,12 @@ template editMovementLogic(line: PitchLine): untyped =
   for point in line.selection.mitems:
     if point.isSelected:
       if line.isPressed(Shift):
-        point.time = point.editOffset.time + editStart.time + editDelta.time
-        point.pitch = point.editOffset.pitch + editStart.pitch + editDelta.pitch
+        point.time = point.editOffset[0] + editStart[0] + editDelta[0]
+        point.pitch = point.editOffset[1] + editStart[1] + editDelta[1]
         line.snapStart = internalMouse
       else:
-        point.time = point.editOffset.time + editStart.time + editDelta.time
-        point.pitch = point.editOffset.pitch + editStart.pitch + editDelta.pitch.round
+        point.time = point.editOffset[0] + editStart[0] + editDelta[0]
+        point.pitch = point.editOffset[1] + editStart[1] + editDelta[1].round
 
   line.timeSort()
 

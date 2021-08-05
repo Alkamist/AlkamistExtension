@@ -138,17 +138,17 @@ proc peaks*(source: Source,
 
   dealloc(memory)
 
-proc analyzePitch*(take: Take): seq[tuple[time, pitch: float]] =
-  if take.kind == Audio:
-    let
-      source = take.source
-      sampleRate = 8000.0
-      lengthSeconds = 5.0
-      peaks = source.peaks(0.0, lengthSeconds, sampleRate).toMono
+# proc analyzePitch*(take: Take): seq[tuple[time, pitch: float]] =
+#   if take.kind == Audio:
+#     let
+#       source = take.source
+#       sampleRate = 8000.0
+#       lengthSeconds = 5.0
+#       peaks = source.peaks(0.0, lengthSeconds, sampleRate).toMono
 
-    var audioBuffer = initAudioBuffer(peaks.len, sampleRate)
-    for sampleId, peakSample in peaks:
-      audioBuffer[sampleId] = 0.5 * (peakSample.minimum + peakSample.maximum)
+#     var audioBuffer = initAudioBuffer(peaks.len, sampleRate)
+#     for sampleId, peakSample in peaks:
+#       audioBuffer[sampleId] = 0.5 * (peakSample.minimum + peakSample.maximum)
 
     # var frequencyBuffer: seq[(float, float)]
     # for step in audioBuffer.windowStep:

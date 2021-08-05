@@ -1,8 +1,8 @@
 import
   std/[tables, options],
-  winapi, lice, input, vector
+  winapi, lice, input
 
-export lice, input, vector
+export lice, input
 
 type
   Window* = ref object
@@ -31,8 +31,6 @@ type
 
 var hWndWindows = initTable[HWND, Window]()
 
-{.push inline.}
-
 func title*(window: Window): string = window.title
 func left*(window: Window): float = window.rect.left.float / window.dpi
 func right*(window: Window): float = window.rect.right.float / window.dpi
@@ -60,19 +58,18 @@ func clientBounds*(window: Window): ((float, float), (float, float)) = (window.c
 func `title=`*(window: Window, value: string) =
   window.title = value
   discard SetWindowText(window.hWnd, value)
+
 func `bounds=`*(window: Window, value: ((float, float), (float, float))) =
   template toNative(inches: float): cint =
     (inches * window.dpi).cint
   discard SetWindowPos(
     window.hWnd, HWND_TOP,
-    value.position.x.toNative,
-    value.position.y.toNative,
-    value.dimensions.width.toNative,
-    value.dimensions.height.toNative,
+    value[0][0].toNative,
+    value[0][1].toNative,
+    value[1][0].toNative,
+    value[1][1].toNative,
     SWP_NOZORDER,
   )
-
-{.pop.}
 
 func enableUpdateLoop*(window: Window, loopEvery: UINT) =
   discard SetTimer(window.hWnd, 1, loopEvery, nil)
@@ -86,7 +83,7 @@ func disableUpdateLoop*(window: Window) =
 func redraw*(window: Window) =
   discard InvalidateRect(window.hWnd, nil, 1)
 
-template updateBounds(window: Window): untyped =
+func updateBounds(window: Window) =
   discard GetClientRect(window.hWnd, addr window.clientRect)
   discard GetWindowRect(window.hWnd, addr window.rect)
 
@@ -122,10 +119,10 @@ proc windowProc(hWnd: HWND, msg: UINT, wParam: WPARAM, lParam: LPARAM): INT_PTR 
 
   of WM_MOUSEMOVE:
     ifWindow:
-      window.input.previousMousePosition.x = window.input.mousePosition.x
-      window.input.previousMousePosition.y = window.input.mousePosition.y
-      window.input.mousePosition.x = GET_X_LPARAM(lParam).float / window.dpi
-      window.input.mousePosition.y = GET_Y_LPARAM(lParam).float / window.dpi
+      window.input.previousMousePosition[0] = window.input.mousePosition[0]
+      window.input.previousMousePosition[1] = window.input.mousePosition[1]
+      window.input.mousePosition[0] = GET_X_LPARAM(lParam).float / window.dpi
+      window.input.mousePosition[1] = GET_Y_LPARAM(lParam).float / window.dpi
       if window.onMouseMove != nil:
         window.onMouseMove()
 
