@@ -93,13 +93,8 @@ proc correctPitch(editor: PitchEditor) =
 
   preventUiRefresh(true)
 
-  let
-    take = currentProject().selectedItem(0).activeTake
-    envelope = take.pitchEnvelope
-
-  envelope.clear()
-  envelope.correctPitch(pitchPoints, corrections)
-  envelope.sort()
+  let take = currentProject().selectedItem(0).activeTake
+  take.correctPitch(pitchPoints, corrections)
 
   preventUiRefresh(false)
   updateArrange()
@@ -152,7 +147,9 @@ func onMouseMove*(editor: PitchEditor) =
 
 proc onKeyPress*(editor: PitchEditor) =
   case editor.lastKeyPress:
-  of R: editor.analyzePitch()
+  of R:
+    reaperEcho "Analyzing pitch."
+    editor.analyzePitch()
   of E: editor.correctPitch()
   of Delete:
     if editor.pitchLine.editingIsEnabled:

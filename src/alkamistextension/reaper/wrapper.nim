@@ -1,5 +1,5 @@
 import
-  std/threadpool,
+  std/[threadpool, options],
   ../audio,
   apitypes, apifunctions
 
@@ -297,6 +297,7 @@ proc numStretchMarkers*(take: Take): int {.inline.} =
 proc playRate*(take: Take): float {.inline.} =
   GetMediaItemTakeInfo_Value(take.reaperPtr, "D_PLAYRATE")
 
+# This will screw up slanted stretch markers.
 proc toSourceTime*(take: Take, takeTime: float): float {.inline.} =
   let tempMarkerIndex = SetTakeStretchMarker(take.reaperPtr, -1, takeTime * take.playRate, nil)
   var
@@ -306,6 +307,7 @@ proc toSourceTime*(take: Take, takeTime: float): float {.inline.} =
   discard DeleteTakeStretchMarkers(take.reaperPtr, tempMarkerIndex, nil)
   srcTime
 
+# This will screw up slanted stretch markers.
 proc toTakeTime*(take: Take, sourceTime: float): float {.inline.} =
   if take.numStretchMarkers < 1:
     return (sourceTime - take.toSourceTime(0.0)) / take.playRate
@@ -351,53 +353,56 @@ proc correctPitch*(take: Take,
 
   envelope.clear()
 
+  # var firstZeroPointTime, finalZeroPointTime: Option[float]
+
   for correctionId, correction in corrections:
-    if correction.isActive and correctionId < corrections.high:
-      let
-        correctionTime = take.toTakeTime(correction.time) * playRate
-        nextCorrection = corrections[correctionId + 1]
-        nextCorrectionTime = take.toTakeTime(nextCorrection.time) * playRate
-        correctionLength = nextCorrectionTime - correctionTime
-
-      for pointId, point in pitchPoints:
+    let correctionTime = take.toTakeTime(correction.time) * playRate
+    if correctionId < corrections.high:
+      if correction.isActive:
         let
-          pointTime = take.toTakeTime(point.time) * playRate
-          pointIsInCorrection =
-            pointTime >= correctionTime and
-            pointTime <= nextCorrectionTime
+          nextCorrection = corrections[correctionId + 1]
+          nextCorrectionTime = take.toTakeTime(nextCorrection.time) * playRate
+          correctionLength = nextCorrectionTime - correctionTime
 
-        if pointIsInCorrection:
+        for pointId, point in pitchPoints:
           let
-            timeRatio = (pointTime - correctionTime) / correctionLength
-            targetPitch = lerp(correction.pitch, nextCorrection.pitch, timeRatio)
-            pitchAdjustment = correction.driftStrength * (targetPitch - point.pitch)
+            pointTime = take.toTakeTime(point.time) * playRate
+            pointIsInCorrection =
+              pointTime >= correctionTime and
+              pointTime <= nextCorrectionTime
 
-          envelope.add EnvelopePoint(
-            time: pointTime,
-            value: pitchAdjustment,
-            shape: Linear,
-          )
-
-          let
-            hasPreviousPoint = pointId > pitchPoints.low
-            hasNextPoint = pointId < pitchPoints.high
-
-          if hasPreviousPoint:
+          if pointIsInCorrection:
             let
-              previousPoint = pitchPoints[pointId - 1]
-              gap = pointTime - take.toTakeTime(previousPoint.time) * playRate
-            if gap > zeroPointGapLength:
+              timeRatio = (pointTime - correctionTime) / correctionLength
+              targetPitch = lerp(correction.pitch, nextCorrection.pitch, timeRatio)
+              pitchAdjustment = correction.driftStrength * (targetPitch - point.pitch)
+
+            envelope.add EnvelopePoint(
+              time: pointTime,
+              value: pitchAdjustment,
+              shape: Linear,
+            )
+
+            let
+              hasPreviousPoint = pointId > pitchPoints.low
+              hasNextPoint = pointId < pitchPoints.high
+
+            if hasPreviousPoint:
+              let
+                previousPoint = pitchPoints[pointId - 1]
+                gap = pointTime - take.toTakeTime(previousPoint.time) * playRate
+              if gap > zeroPointGapLength:
+                envelope.add zeroPoint(pointTime - zeroPointDistance)
+            else:
               envelope.add zeroPoint(pointTime - zeroPointDistance)
-          else:
-            envelope.add zeroPoint(pointTime - zeroPointDistance)
 
-          if hasNextPoint:
-            let
-              nextPoint = pitchPoints[pointId + 1]
-              gap = take.toTakeTime(nextPoint.time) * playRate - pointTime
-            if gap > zeroPointGapLength:
+            if hasNextPoint:
+              let
+                nextPoint = pitchPoints[pointId + 1]
+                gap = take.toTakeTime(nextPoint.time) * playRate - pointTime
+              if gap > zeroPointGapLength:
+                envelope.add zeroPoint(pointTime + zeroPointDistance)
+            else:
               envelope.add zeroPoint(pointTime + zeroPointDistance)
-          else:
-            envelope.add zeroPoint(pointTime + zeroPointDistance)
 
   envelope.sort()
