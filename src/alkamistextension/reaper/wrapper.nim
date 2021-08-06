@@ -353,12 +353,30 @@ proc correctPitch*(take: Take,
 
   envelope.clear()
 
-  # var firstZeroPointTime, finalZeroPointTime: Option[float]
+  var
+    isFirstActiveCorrection = true
+    firstActiveCorrectionTime: Option[float]
+    lastCorrectionWithActiveCorrectionBeforeItTime: Option[float]
 
   for correctionId, correction in corrections:
     let correctionTime = take.toTakeTime(correction.time) * playRate
+
+    if correctionId > corrections.low:
+      let previousCorrection = corrections[correctionId - 1]
+      if previousCorrection.isActive:
+        lastCorrectionWithActiveCorrectionBeforeItTime = some(correctionTime)
+
     if correctionId < corrections.high:
       if correction.isActive:
+        if correctionId > corrections.low:
+          let previousCorrection = corrections[correctionId - 1]
+          if not previousCorrection.isActive:
+            envelope.add zeroPoint(correctionTime - zeroPointDistance)
+
+        if isFirstActiveCorrection:
+          firstActiveCorrectionTime = some(correctionTime)
+          isFirstActiveCorrection = false
+
         let
           nextCorrection = corrections[correctionId + 1]
           nextCorrectionTime = take.toTakeTime(nextCorrection.time) * playRate
@@ -404,5 +422,15 @@ proc correctPitch*(take: Take,
                 envelope.add zeroPoint(pointTime + zeroPointDistance)
             else:
               envelope.add zeroPoint(pointTime + zeroPointDistance)
+      else:
+        let nextCorrection = corrections[correctionId + 1]
+        if nextCorrection.isActive and not correction.isActive:
+          envelope.add zeroPoint(correctionTime + zeroPointDistance)
+
+  if firstActiveCorrectionTime.isSome:
+    envelope.add zeroPoint(firstActiveCorrectionTime.get - zeroPointDistance)
+
+  if lastCorrectionWithActiveCorrectionBeforeItTime.isSome:
+    envelope.add zeroPoint(lastCorrectionWithActiveCorrectionBeforeItTime.get + zeroPointDistance)
 
   envelope.sort()
