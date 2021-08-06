@@ -14,7 +14,7 @@ proc testFn() =
     pitchPoints = source.analyzePitch(0.0, source.timeLength)
     corrections = @[
       (0.0, 60.0, 1.0, 1.0, true),
-      (source.timeLength, 60.0, 1.0, 1.0, false),
+      (source.timeLength, 40.0, 1.0, 1.0, false),
     ]
 
   envelope.correctPitch(pitchPoints, corrections)
