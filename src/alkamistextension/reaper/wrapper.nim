@@ -232,11 +232,11 @@ proc analyzePitch*(source: Source,
 #############################################################
 # Envelope
 
-func zeroPoint*(time: float): EnvelopePoint {.inline.} =
+proc zeroPoint*(time: float): EnvelopePoint {.inline.} =
   result.time = time
   result.shape = Linear
 
-func toInt*(shape: EnvelopePointShape): int {.inline.} =
+proc toInt*(shape: EnvelopePointShape): int {.inline.} =
   case shape:
   of Linear: 0
   of Square: 1
@@ -255,9 +255,20 @@ proc add*(envelope: Envelope, point: EnvelopePoint) {.inline.} =
     noSort.addr,
   )
 
+proc len*(envelope: Envelope): int {.inline.} =
+  CountEnvelopePoints(envelope.reaperPtr)
+
 proc clearTimeRange*(envelope: Envelope,
                      startSeconds, endSeconds: float) {.inline.} =
   discard DeleteEnvelopePointRange(envelope.reaperPtr, startSeconds, endSeconds)
+
+proc clear*(envelope: Envelope) {.inline.} =
+  for i in 0 ..< envelope.len:
+    var
+      time: cdouble
+      noSort = true
+    discard SetEnvelopePoint(envelope.reaperPtr, i.cint, time.addr, nil, nil, nil, nil, noSort.addr)
+  envelope.clearTimeRange(-0.01, 0.01)
 
 proc sort*(envelope: Envelope) {.inline.} =
   discard Envelope_SortPoints(envelope.reaperPtr)
@@ -334,3 +345,47 @@ proc pitchEnvelope*(take: Take): Envelope {.inline.} =
 
 proc source*(take: Take): Source {.inline.} =
   result.reaperPtr = GetMediaItemTake_Source(take.reaperPtr)
+
+proc numStretchMarkers*(take: Take): int {.inline.} =
+  GetTakeNumStretchMarkers(take.reaperPtr)
+
+proc playRate*(take: Take): float {.inline.} =
+  GetMediaItemTakeInfo_Value(take.reaperPtr, "D_PLAYRATE")
+
+proc toSourceTime*(take: Take, takeTime: float): float {.inline.} =
+  let tempMarkerIndex = SetTakeStretchMarker(take.reaperPtr, -1, takeTime * take.playRate, nil)
+  var
+    unused: cdouble
+    srcTime: cdouble
+  discard GetTakeStretchMarker(take.reaperPtr, tempMarkerIndex, unused.addr, srcTime.addr)
+  discard DeleteTakeStretchMarkers(take.reaperPtr, tempMarkerIndex, nil)
+  srcTime
+
+proc toTakeTime*(take: Take, sourceTime: float): float {.inline.} =
+  if take.numStretchMarkers < 1:
+    return (sourceTime - take.toSourceTime(0.0)) / take.playRate
+
+  const tolerance = 0.000001
+
+  var
+    guessTime = 0.0
+    guessSourceTime = take.toSourceTime(guessTime)
+    loopCount = 0
+
+  while true:
+    let error = sourceTime - guessSourceTime
+    if error.abs < tolerance:
+      break
+
+    let
+      testGuessSourceTime = take.toSourceTime(guessTime + error)
+      seekRatio = (error / (testGuessSourceTime - guessSourceTime)).abs
+
+    guessTime = guessTime + error * seekRatio
+    guessSourceTime = take.toSourceTime(guessTime)
+
+    loopCount = loopCount + 1
+    if loopCount > 100:
+      break
+
+  guessTime

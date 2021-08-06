@@ -1,5 +1,4 @@
 import
-  std/tables,
   ../lice, ../input, ../view, ../reaper,
   whitekeys, boxselect, pitchline
 
@@ -71,33 +70,39 @@ func redraw*(editor: PitchEditor) =
 
 proc analyzePitch(editor: PitchEditor) =
   let
-    take = currentProject().selectedItem(0).activeTake
-    pitchBuffer = take.analyzePitch(5.0, 10.0)
+    source = currentProject().selectedItem(0).activeTake.source
+    pitchBuffer = source.analyzePitch(0.0, source.timeLength)
 
   editor.pitchLine.addPoints(pitchBuffer)
   editor.pitchLine.deactivatePointsSpreadByTime(0.05)
 
   editor.redraw()
 
-# proc correctPitch(editor: PitchEditor) =
-#   template lerp(x1, x2, ratio): untyped =
-#     (1.0 - ratio) * x1 + ratio * x2
+proc correctPitch(editor: PitchEditor) =
+  var pitchPoints = newSeq[tuple[time, pitch: float]](editor.pitchLine.points.len)
+  for i, point in editor.pitchLine.points:
+    pitchPoints[i] = (point.time, point.pitch)
 
-#   template lerpPitch(correction, pitchPoint): untyped =
-#     block:
-#       let timeRatio = (pitchPoint.time - correction.time) /
-#                       (correction.next.time - correction.time)
-#       lerp(correction.pitch, correction.next.pitch, timeRatio)
+  var corrections = newSeq[tuple[time, pitch, driftStrength, modStrength: float, isActive: bool]](editor.correctionLine.points.len)
+  for i, correction in editor.correctionLine.points:
+    corrections[i] = (
+      correction.time, correction.pitch,
+      1.0, 1.0,
+      correction.isActive,
+    )
 
-#   let
-#     take = currentProject().selectedItem(0).activeTake
-#     envelope = take.pitchEnvelope
+  preventUiRefresh(true)
 
-#   for correction in editor.correctionLine.points:
-#     if correction.isActive and correction.next != nil:
-#       for pitchPoint in editor.pitchLine.points:
-#         if pitchPoint.time >= correction.time and
-#            pitchPoint.time <= correction.next.time:
+  let
+    take = currentProject().selectedItem(0).activeTake
+    envelope = take.pitchEnvelope
+
+  envelope.clear()
+  envelope.correctPitch(pitchPoints, corrections)
+  envelope.sort()
+
+  preventUiRefresh(false)
+  updateArrange()
 
 func onMousePress*(editor: PitchEditor) =
   if editor.mouseIsInside:
@@ -148,7 +153,7 @@ func onMouseMove*(editor: PitchEditor) =
 proc onKeyPress*(editor: PitchEditor) =
   case editor.lastKeyPress:
   of R: editor.analyzePitch()
-  # of E: editor.correctPitch()
+  of E: editor.correctPitch()
   of Delete:
     if editor.pitchLine.editingIsEnabled:
       editor.pitchLine.deleteSelection()

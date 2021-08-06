@@ -1,7 +1,3 @@
-# addAction("Alkamist: Test Action", "ALKAMIST_TEST_ACTION", testActionFn)
-
-
-
 import alkamistextension/reaper
 
 proc testFn() =
@@ -11,13 +7,22 @@ proc testFn() =
     take = currentProject().selectedItem(0).activeTake
     source = take.source
     envelope = take.pitchEnvelope
+
+  var
     pitchPoints = source.analyzePitch(0.0, source.timeLength)
     corrections = @[
-      (0.0, 60.0, 1.0, 1.0, true),
-      (source.timeLength, 40.0, 1.0, 1.0, false),
+      (take.toTakeTime(0.0), 60.0, 1.0, 1.0, true),
+      (take.toTakeTime(source.timeLength), 60.0, 1.0, 1.0, false),
     ]
 
-  envelope.correctPitch(pitchPoints, corrections)
+  for point in pitchPoints.mitems:
+    point.time = take.toTakeTime(point.time)
+
+  envelope.clear()
+  envelope.correctPitch(
+    pitchPoints,
+    corrections,
+  )
   envelope.sort()
 
   preventUiRefresh(false)
