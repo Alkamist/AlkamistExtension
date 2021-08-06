@@ -1,10 +1,39 @@
 # addAction("Alkamist: Test Action", "ALKAMIST_TEST_ACTION", testActionFn)
 
 
-import alkamistextension/[reaper, pitchcorrection]
+
+import alkamistextension/reaper
+
+proc testFn() =
+  preventUiRefresh(true)
+
+  let
+    take = currentProject().selectedItem(0).activeTake
+    source = take.source
+    envelope = take.pitchEnvelope
+    pitchPoints = source.analyzePitch(0.0, source.timeLength)
+    corrections = @[
+      (0.0, 60.0, 1.0, 1.0, true),
+      (source.timeLength, 60.0, 1.0, 1.0, false),
+    ]
+
+  envelope.correctPitch(pitchPoints, corrections)
+  envelope.sort()
+
+  preventUiRefresh(false)
+  updateArrange()
 
 createExtension:
-  pitchCorrectionMain()
+  addAction("Alkamist: Test Action", "ALKAMIST_TEST_ACTION", testFn)
+
+
+
+
+
+# import alkamistextension/[reaper, pitchcorrection]
+
+# createExtension:
+#   pitchCorrectionMain()
 
 
 

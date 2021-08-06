@@ -16,9 +16,9 @@ type
     activeColor*, inactiveColor*: Color
     editingIsEnabled*: bool
     editingActivationsIsEnabled*: bool
+    points*: seq[PitchPoint]
     isEditingPoint: bool
     leftClickOnPointOrSegment: bool
-    points: seq[PitchPoint]
     view: View
     input: Input
     boxSelect: BoxSelect
@@ -140,7 +140,7 @@ func doubleClickLogic(line: PitchLine) =
     for point in line.selection.mitems:
       point.pitch += pitchChange
 
-func mouseCreationLogic(line: PitchLine) =
+proc mouseCreationLogic(line: PitchLine) =
   let mouseInternal = line.view.convertToInternal(line.mousePosition)
 
   line.unselectAll()
@@ -175,7 +175,7 @@ func boxSelectLogic(line: PitchLine) =
 
   line.cleanSelection()
 
-func editMovementLogic(line: PitchLine) =
+proc editMovementLogic(line: PitchLine) =
   let
     internalMouse = line.view.convertToInternal(line.mousePosition)
     editStart = line.snapStart
@@ -279,7 +279,7 @@ func onRightRelease*(line: PitchLine) =
   if line.editingIsEnabled:
     line.boxSelectLogic()
 
-func onMouseMove*(line: PitchLine) =
+proc onMouseMove*(line: PitchLine) =
   if line.editingIsEnabled:
     if line.isEditingPoint:
       line.editMovementLogic()

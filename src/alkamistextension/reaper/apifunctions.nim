@@ -759,8 +759,8 @@ proc update_disk_counters*(readamt: cint; writeamt: cint) {.ReaperAPI.}
 proc UpdateArrange*() {.ReaperAPI.}
 proc UpdateItemInProject*(item: ptr MediaItem) {.ReaperAPI.}
 proc UpdateTimeline*() {.ReaperAPI.}
-proc ValidatePtr*(pointer: pointer; ctypename: cstring): bool {.ReaperAPI.}
-proc ValidatePtr2*(proj: ptr ReaProject; pointer: pointer; ctypename: cstring): bool {.ReaperAPI.}
+proc ValidatePtr*(`pointer`: pointer; ctypename: cstring): bool {.ReaperAPI.}
+proc ValidatePtr2*(proj: ptr ReaProject; `pointer`: pointer; ctypename: cstring): bool {.ReaperAPI.}
 proc ViewPrefs*(page: cint; pageByName: cstring) {.ReaperAPI.}
 # proc WDL_VirtualWnd_ScaledBlitBG*(dest: ptr LICE_IBitmap; src: ptr WDL_VirtualWnd_BGCfg; destx: cint; desty: cint; destw: cint; desth: cint; clipx: cint; clipy: cint; clipw: cint; cliph: cint; alpha: cfloat; mode: cint): bool {.ReaperAPI.}
 

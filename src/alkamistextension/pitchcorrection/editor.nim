@@ -1,4 +1,5 @@
 import
+  std/tables,
   ../lice, ../input, ../view, ../reaper,
   whitekeys, boxselect, pitchline
 
@@ -78,6 +79,26 @@ proc analyzePitch(editor: PitchEditor) =
 
   editor.redraw()
 
+# proc correctPitch(editor: PitchEditor) =
+#   template lerp(x1, x2, ratio): untyped =
+#     (1.0 - ratio) * x1 + ratio * x2
+
+#   template lerpPitch(correction, pitchPoint): untyped =
+#     block:
+#       let timeRatio = (pitchPoint.time - correction.time) /
+#                       (correction.next.time - correction.time)
+#       lerp(correction.pitch, correction.next.pitch, timeRatio)
+
+#   let
+#     take = currentProject().selectedItem(0).activeTake
+#     envelope = take.pitchEnvelope
+
+#   for correction in editor.correctionLine.points:
+#     if correction.isActive and correction.next != nil:
+#       for pitchPoint in editor.pitchLine.points:
+#         if pitchPoint.time >= correction.time and
+#            pitchPoint.time <= correction.next.time:
+
 func onMousePress*(editor: PitchEditor) =
   if editor.mouseIsInside:
     case editor.lastMousePress:
@@ -126,8 +147,8 @@ func onMouseMove*(editor: PitchEditor) =
 
 proc onKeyPress*(editor: PitchEditor) =
   case editor.lastKeyPress:
-  of R:
-    editor.analyzePitch()
+  of R: editor.analyzePitch()
+  # of E: editor.correctPitch()
   of Delete:
     if editor.pitchLine.editingIsEnabled:
       editor.pitchLine.deleteSelection()

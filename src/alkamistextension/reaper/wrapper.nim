@@ -20,6 +20,23 @@ type
   Source* = object
     rawPtr*: pointer
 
+  Envelope* = object
+    rawPtr*: pointer
+
+  EnvelopePointShape* = enum
+    Linear,
+    Square,
+    SlowStartEnd,
+    FastStart,
+    FastEnd,
+    Bezier,
+
+  EnvelopePoint* = object
+    time*, value*: float
+    tension*: float
+    shape*: EnvelopePointShape
+    isSelected*: bool
+
   PeakSample* = tuple[minimum, maximum: float64]
   PeakChannelBuffer* = seq[PeakSample]
   MonoPeaks* = PeakChannelBuffer
@@ -37,47 +54,61 @@ template `reaperPtr=`*(s: var Take, v: ptr MediaItem_Take) = s.rawPtr = cast[poi
 template reaperPtr*(s: Source): ptr PCM_Source = cast[ptr PCM_Source](s.rawPtr)
 template `reaperPtr=`*(s: var Source, v: ptr PCM_Source) = s.rawPtr = cast[pointer](v)
 
-func currentProject*(): Project =
+template reaperPtr*(s: Envelope): ptr TrackEnvelope = cast[ptr TrackEnvelope](s.rawPtr)
+template `reaperPtr=`*(s: var Envelope, v: ptr TrackEnvelope) = s.rawPtr = cast[pointer](v)
+
+#############################################################
+# General
+
+proc updateArrange*() {.inline.} =
+  UpdateArrange()
+
+var uiRefreshPrevented = false
+proc preventUiRefresh*(shouldPrevent: bool) {.inline.} =
+  if shouldPrevent and not uiRefreshPrevented:
+    PreventUIRefresh(1)
+    uiRefreshPrevented = true
+  elif not shouldPrevent and uiRefreshPrevented:
+    PreventUIRefresh(-1)
+    uiRefreshPrevented = false
+
+proc mainCommand*(id: int) {.inline.} =
+  Main_OnCommand(id.cint, 0)
+
+proc mainCommand*(id: string) {.inline.} =
+  Main_OnCommand(NamedCommandLookup(id), 0)
+
+proc currentProject*(): Project {.inline.} =
   result.reaperPtr = EnumProjects(-1, nil, 0)
 
-func selectedItem*(index: int): Item =
+proc selectedItem*(index: int): Item {.inline.} =
   result.reaperPtr = GetSelectedMediaItem(nil, index.cint)
 
-func selectedItem*(project: Project, index: int): Item =
+#############################################################
+# Project
+
+proc selectedItem*(project: Project, index: int): Item {.inline.} =
   result.reaperPtr = GetSelectedMediaItem(project.reaperPtr, index.cint)
 
-func activeTake*(item: Item): Take =
+#############################################################
+# Item
+
+proc activeTake*(item: Item): Take {.inline.} =
   result.reaperPtr = GetActiveTake(item.reaperPtr)
 
-func kind*(take: Take): TakeKind =
-  if TakeIsMIDI(take.reaperPtr): Midi
-  else: Audio
+#############################################################
+# Peaks
 
-func source*(take: Take): Source =
-  result.reaperPtr = GetMediaItemTake_Source(take.reaperPtr)
-
-func sampleRate*(source: Source): int =
-  GetMediaSourceSampleRate(source.reaperPtr)
-
-func numChannels*(source: Source): int =
-  GetMediaSourceNumChannels(source.reaperPtr)
-
-func timeLength*(source: Source): float =
-  var lengthIsInQuarterNotes: ptr bool
-  GetMediaSourceLength(source.reaperPtr, lengthIsInQuarterNotes)
-  #if lengthIsInQuarterNotes:
-    # Fix here
-
-func numChannels*(peaks: Peaks): int =
+proc numChannels*(peaks: Peaks): int {.inline.} =
   peaks.len
 
-func sampleLength*(peaks: Peaks): int =
+proc sampleLength*(peaks: Peaks): int {.inline.} =
   if peaks.len > 0:
     peaks[0].len
   else:
     0
 
-func toMono*(peaks: Peaks): MonoPeaks =
+proc toMono*(peaks: Peaks): MonoPeaks {.inline.} =
   result = newSeq[PeakSample](peaks.sampleLength)
 
   for channelBuffer in peaks:
@@ -89,6 +120,23 @@ func toMono*(peaks: Peaks): MonoPeaks =
   for sample in result.mitems:
     sample.minimum /= numChannels.toFloat
     sample.maximum /= numChannels.toFloat
+
+#############################################################
+# Source
+
+proc sampleRate*(source: Source): int {.inline.} =
+  GetMediaSourceSampleRate(source.reaperPtr)
+
+proc numChannels*(source: Source): int {.inline.} =
+  GetMediaSourceNumChannels(source.reaperPtr)
+
+proc timeLength*(source: Source): float {.inline.} =
+  var
+    offset: cdouble = 0.0
+    length: cdouble = 0.0
+    reverse = false
+  discard PCM_Source_GetSectionInfo(source.reaperPtr, offset.addr, length.addr, reverse.addr)
+  length
 
 proc peaks*(source: Source,
             startSeconds, lengthSeconds: float,
@@ -133,56 +181,122 @@ proc peaks*(source: Source,
 
   dealloc(memory)
 
-proc analyzePitchSingleCore*(take: Take,
+proc analyzePitchSingleCore*(source: Source,
                              startSeconds, lengthSeconds: float,
                              sampleRate = 8000.0,
                              minFrequency = 80.0,
-                             maxFrequency = 4000.0): seq[(float, float)] =
-  if take.kind == Audio:
-    let
-      source = take.source
-      peaks = source.peaks(startSeconds, lengthSeconds, sampleRate).toMono
+                             maxFrequency = 4000.0): seq[tuple[time, pitch: float]] =
+  let peaks = source.peaks(startSeconds, lengthSeconds, sampleRate).toMono
 
-    var audioBuffer = newSeq[float64](peaks.len)
-    for sampleId, peakSample in peaks:
-      audioBuffer[sampleId] = 0.5 * (peakSample.minimum + peakSample.maximum)
+  var audioBuffer = newSeq[float64](peaks.len)
+  for sampleId, peakSample in peaks:
+    audioBuffer[sampleId] = 0.5 * (peakSample.minimum + peakSample.maximum)
 
-    var frequencies: seq[(float, float)]
-    for start, buffer in audioBuffer.windowStep(sampleRate):
-      if buffer.rms > dbToAmplitude(-60.0):
-        let frequency = buffer.calculateFrequency(sampleRate, minFrequency, maxFrequency)
-        if frequency.isSome:
-          let time = start.toSeconds(sampleRate)
-          frequencies.add((time, frequency.get))
+  var frequencies: seq[(float, float)]
+  for start, buffer in audioBuffer.windowStep(sampleRate):
+    if buffer.rms > dbToAmplitude(-60.0):
+      let frequency = buffer.calculateFrequency(sampleRate, minFrequency, maxFrequency)
+      if frequency.isSome:
+        let time = start.toSeconds(sampleRate)
+        frequencies.add((time, frequency.get))
 
-    for value in frequencies:
-      result.add((value[0], value[1].toPitch))
+  for value in frequencies:
+    result.add((value[0], value[1].toPitch))
 
-proc analyzePitch*(take: Take,
+proc analyzePitch*(source: Source,
                    startSeconds, lengthSeconds: float,
                    sampleRate = 8000.0,
                    minFrequency = 80.0,
-                   maxFrequency = 4000.0): seq[(float, float)] =
-  if take.kind == Audio:
-    let
-      source = take.source
-      peaks = source.peaks(startSeconds, lengthSeconds, sampleRate).toMono
+                   maxFrequency = 4000.0): seq[tuple[time, pitch: float]] =
+  let peaks = source.peaks(startSeconds, lengthSeconds, sampleRate).toMono
 
-    var audioBuffer = newSeq[float64](peaks.len)
-    for sampleId, peakSample in peaks:
-      audioBuffer[sampleId] = 0.5 * (peakSample.minimum + peakSample.maximum)
+  var audioBuffer = newSeq[float64](peaks.len)
+  for sampleId, peakSample in peaks:
+    audioBuffer[sampleId] = 0.5 * (peakSample.minimum + peakSample.maximum)
 
-    var flowFrequencies: seq[(float, FlowVar[Option[float]])]
-    for start, buffer in audioBuffer.windowStep(sampleRate):
-      if buffer.rms > dbToAmplitude(-60.0):
-        let
-          time = start.toSeconds(sampleRate)
-          frequency = spawn buffer.calculateFrequency(sampleRate, minFrequency, maxFrequency)
-        flowFrequencies.add((time, frequency))
+  var flowFrequencies: seq[(float, FlowVar[Option[float]])]
+  for start, buffer in audioBuffer.windowStep(sampleRate):
+    if buffer.rms > dbToAmplitude(-60.0):
+      let
+        time = start.toSeconds(sampleRate)
+        frequency = spawn buffer.calculateFrequency(sampleRate, minFrequency, maxFrequency)
+      flowFrequencies.add((time, frequency))
 
-    sync()
+  sync()
 
-    for flowValue in flowFrequencies:
-      let frequency = ^flowValue[1]
-      if frequency.isSome:
-        result.add((flowValue[0], frequency.get.toPitch))
+  for flowValue in flowFrequencies:
+    let frequency = ^flowValue[1]
+    if frequency.isSome:
+      result.add((flowValue[0], frequency.get.toPitch))
+
+#############################################################
+# Envelope
+
+proc toInt*(shape: EnvelopePointShape): int {.inline.} =
+  case shape:
+  of Linear: 0
+  of Square: 1
+  of SlowStartEnd: 2
+  of FastStart: 3
+  of FastEnd: 4
+  of Bezier: 5
+
+proc add*(envelope: Envelope, point: EnvelopePoint) {.inline.} =
+  var noSort = true
+  discard InsertEnvelopePoint(
+    envelope.reaperPtr,
+    point.time, point.value,
+    point.shape.toInt.cint, point.tension,
+    point.isSelected,
+    noSort.addr,
+  )
+
+proc clearTimeRange*(envelope: Envelope,
+                     startSeconds, endSeconds: float) {.inline.} =
+  discard DeleteEnvelopePointRange(envelope.reaperPtr, startSeconds, endSeconds)
+
+proc sort*(envelope: Envelope) {.inline.} =
+  discard Envelope_SortPoints(envelope.reaperPtr)
+
+proc correctPitch*(envelope: Envelope,
+                   pitchPoints: seq[tuple[time, pitch: float]],
+                   corrections: seq[tuple[time, pitch, driftStrength, modStrength: float, isActive: bool]]) =
+  template lerp(x1, x2, ratio): untyped =
+    (1.0 - ratio) * x1 + ratio * x2
+
+  for correctionId, correction in corrections:
+    if correction.isActive and correctionId < corrections.high:
+      let
+        nextCorrection = corrections[correctionId + 1]
+        correctionLength = nextCorrection.time - correction.time
+      for point in pitchPoints:
+        if point.time >= correction.time and
+           point.time <= nextCorrection.time:
+          let
+            timeRatio = (point.time - correction.time) / correctionLength
+            targetPitch = lerp(correction.pitch, nextCorrection.pitch, timeRatio)
+            pitchAdjustment = correction.driftStrength * (targetPitch - point.pitch)
+
+          envelope.add EnvelopePoint(
+            time: point.time,
+            value: pitchAdjustment,
+            shape: Linear,
+          )
+
+#############################################################
+# Take
+
+proc kind*(take: Take): TakeKind {.inline.} =
+  if TakeIsMIDI(take.reaperPtr): Midi
+  else: Audio
+
+proc pitchEnvelope*(take: Take): Envelope {.inline.} =
+  var envelopePtr = GetTakeEnvelopeByName(take.reaperPtr, "Pitch")
+  if envelopePtr == nil:
+    mainCommand("_S&M_TAKEENV10") # Show and unbypass take pitch envelope
+    envelopePtr = GetTakeEnvelopeByName(take.reaperPtr, "Pitch")
+    # mainCommand("_S&M_TAKEENVSHOW8") # Hide take pitch envelope
+  result.reaperPtr = envelopePtr
+
+proc source*(take: Take): Source {.inline.} =
+  result.reaperPtr = GetMediaItemTake_Source(take.reaperPtr)
