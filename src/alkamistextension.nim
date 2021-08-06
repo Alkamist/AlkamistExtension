@@ -11,19 +11,14 @@ proc testFn() =
   var
     pitchPoints = source.analyzePitch(0.0, source.timeLength)
     corrections = @[
-      (take.toTakeTime(0.0), 60.0, 1.0, 1.0, true),
-      (take.toTakeTime(source.timeLength), 60.0, 1.0, 1.0, false),
+      (0.0, 60.0, 1.0, 1.0, true),
+      (source.timeLength, 60.0, 1.0, 1.0, false),
     ]
 
-  for point in pitchPoints.mitems:
-    point.time = take.toTakeTime(point.time)
-
-  envelope.clear()
-  envelope.correctPitch(
+  take.correctPitch(
     pitchPoints,
     corrections,
   )
-  envelope.sort()
 
   preventUiRefresh(false)
   updateArrange()
