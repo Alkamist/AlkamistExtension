@@ -10,7 +10,8 @@ func toSeconds*[A, B](samples: A, sampleRate: B): float =
   samples.float / sampleRate
 
 func dbToAmplitude*[T](dB: T): T =
-  exp(dB * 0.11512925464970228420089957273422)
+  exp(dB * ln(10.0) / 20.0)
+  # exp(dB * 0.11512925464970228420089957273422)
 
 func parabolicInterpolation*[A, B](buffer: openArray[A], index: B): A =
   assert index > buffer.low

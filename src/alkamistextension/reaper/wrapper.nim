@@ -150,9 +150,10 @@ proc peaks*(source: Source,
 
   const maxReaperPeakBlocks = 3
   let cDoublesToAlloc = lengthSamples * numChannels * maxReaperPeakBlocks
+
   var memory = createU(cdouble, cDoublesToAlloc)
 
-  discard PCM_Source_GetPeaks(
+  let info = PCM_Source_GetPeaks(
     src = source.reaperPtr,
     peakrate = sampleRate,
     starttime = startSeconds,
@@ -161,6 +162,12 @@ proc peaks*(source: Source,
     want_extra_type = 0,
     buf = memory,
   )
+
+  # let samplesWrote = info and 0x000fffff
+
+  # For some absurd reason this function will write all zeros
+  # to the buffer unless I concatenate a string afterward.
+  let weirdFix = "weird" & "fix"
 
   var rawBuffer = cast[ptr UncheckedArray[cdouble]](memory)
 
@@ -187,9 +194,11 @@ proc analyzePitchSingleCore*(source: Source,
   for sampleId, peakSample in peaks:
     audioBuffer[sampleId] = 0.5 * (peakSample.minimum + peakSample.maximum)
 
+  let minRms = dbToAmplitude(-60.0)
+
   var frequencies: seq[(float, float)]
   for start, buffer in audioBuffer.windowStep(sampleRate):
-    if buffer.rms > dbToAmplitude(-60.0):
+    if buffer.rms > minRms:
       let frequency = buffer.calculateFrequency(sampleRate, minFrequency, maxFrequency)
       if frequency.isSome:
         let time = start.toSeconds(sampleRate)
