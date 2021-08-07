@@ -1,4 +1,5 @@
 import
+  std/options,
   ../lice, ../input, ../view, ../reaper,
   whitekeys, boxselect, pitchline
 
@@ -22,7 +23,9 @@ type
     boxSelect: BoxSelect
     pitchLine: PitchLine
     correctionLine: PitchLine
+    pitchLineOffsets: Option[seq[(float, float)]]
     isAnalyzingPitch: bool
+    take: Take
 
 defineInputProcs(PitchEditor, position)
 
@@ -68,11 +71,27 @@ func mouseIsInside*(editor: PitchEditor): bool =
 func redraw*(editor: PitchEditor) =
   editor.shouldRedraw = true
 
+proc calculatePitchLineOffsets(editor: PitchEditor) =
+  if editor.pitchLineOffsets.isSome:
+    editor.pitchLineOffsets.get.setLen(editor.pitchLine.points.len)
+  else:
+    editor.pitchLineOffsets = some(newSeq[(float, float)](editor.pitchLine.points.len))
+
+  let envelope = editor.take.pitchEnvelope
+
+  for i, point in editor.pitchLine.points:
+    let
+      pointEnvelopeTime = editor.take.toSourceTime(point.time)
+      pitchOffset = envelope.evaluate(pointEnvelopeTime)
+
+    editor.pitchLineOffsets.get[i] = (0.0, pitchOffset)
+
 proc analyzePitch(editor: PitchEditor) =
   let
-    source = currentProject().selectedItem(0).activeTake.source
+    source = editor.take.source
     pitchBuffer = source.analyzePitch(0.0, source.timeLength)
 
+  editor.pitchLine.clearPoints()
   editor.pitchLine.addPoints(pitchBuffer)
   editor.pitchLine.deactivatePointsSpreadByTime(0.05)
 
@@ -92,12 +111,12 @@ proc correctPitch(editor: PitchEditor) =
     )
 
   preventUiRefresh(true)
-
-  let take = currentProject().selectedItem(0).activeTake
-  take.correctPitch(pitchPoints, corrections)
-
+  editor.take.correctPitch(pitchPoints, corrections)
   preventUiRefresh(false)
   updateArrange()
+
+  editor.calculatePitchLineOffsets()
+  editor.redraw()
 
 func onMousePress*(editor: PitchEditor) =
   if editor.mouseIsInside:
@@ -132,7 +151,7 @@ func onMouseRelease*(editor: PitchEditor) =
   else:
     discard
 
-func onMouseMove*(editor: PitchEditor) =
+proc onMouseMove*(editor: PitchEditor) =
   editor.pitchLine.onMouseMove()
   editor.correctionLine.onMouseMove()
 
@@ -147,8 +166,11 @@ func onMouseMove*(editor: PitchEditor) =
 
 proc onKeyPress*(editor: PitchEditor) =
   case editor.lastKeyPress:
-  of R: editor.analyzePitch()
-  of E: editor.correctPitch()
+  of R:
+    editor.take = currentProject().selectedItem(0).activeTake
+    editor.analyzePitch()
+  of E:
+    editor.correctPitch()
   of Delete:
     if editor.pitchLine.editingIsEnabled:
       editor.pitchLine.deleteSelection()
@@ -210,7 +232,17 @@ func drawKeys(editor: PitchEditor) =
 func updateImage*(editor: PitchEditor) =
   editor.image.clear(editor.colorScheme.background)
   editor.drawKeys()
+
+  # Uncorrected pitch data visuals.
+  editor.pitchLine.activeColor = rgb(52, 79, 47)
+  editor.pitchLine.inactiveColor = editor.pitchLine.activeColor
   editor.pitchLine.drawWithSquarePoints(editor.image)
+
+  # Corrected pitch data visuals.
+  editor.pitchLine.activeColor = rgb(41, 148, 25)
+  editor.pitchLine.inactiveColor = editor.pitchLine.activeColor
+  editor.pitchLine.drawWithSquarePoints(editor.image, editor.pitchLineOffsets)
+
   editor.correctionLine.drawWithCirclePoints(editor.image)
   editor.boxSelect.draw(editor.image)
 
@@ -227,6 +259,11 @@ func newPitchEditor*(position: (float, float),
   result.colorScheme = defaultPitchEditorColorScheme()
   result.boxSelect = newBoxSelect()
 
+  result.pitchLine = newPitchLine(position,
+                                  result.view,
+                                  result.input,
+                                  result.boxSelect)
+
   result.correctionLine = newPitchLine(position,
                                        result.view,
                                        result.input,
@@ -235,13 +272,6 @@ func newPitchEditor*(position: (float, float),
   result.correctionLine.editingActivationsIsEnabled = true
   result.correctionLine.activeColor = rgb(51, 214, 255)
   result.correctionLine.inactiveColor = rgb(255, 46, 112)
-
-  result.pitchLine = newPitchLine(position,
-                                  result.view,
-                                  result.input,
-                                  result.boxSelect)
-  result.pitchLine.activeColor = rgb(41, 148, 25)
-  result.pitchLine.inactiveColor = result.pitchLine.activeColor
 
   result.position = position
   result.resize(dimensions)

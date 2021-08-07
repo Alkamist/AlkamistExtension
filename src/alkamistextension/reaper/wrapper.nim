@@ -279,6 +279,11 @@ proc clear*(envelope: Envelope) {.inline.} =
 proc sort*(envelope: Envelope) {.inline.} =
   discard Envelope_SortPoints(envelope.reaperPtr)
 
+proc evaluate*(envelope: Envelope, time: float): float {.inline.} =
+  var value: cdouble
+  discard Envelope_Evaluate(envelope.reaperPtr, time, 44100.0, 128, value.addr, nil, nil, nil)
+  value
+
 #############################################################
 # Take
 

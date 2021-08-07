@@ -1,5 +1,5 @@
 import
-  std/[math, algorithm, sequtils],
+  std/[math, options, algorithm, sequtils],
   ../lice, ../view, ../input,
   pitchpoint, boxselect
 
@@ -88,6 +88,10 @@ func deactivatePointsSpreadByTime*(line: PitchLine, timeThreshold: float) =
 
     if pointId == lastId:
       point.isActive = false
+
+func clearPoints*(line: PitchLine) =
+  line.selection = @[]
+  line.points = @[]
 
 func clickSelectLogic(line: PitchLine) =
   let
@@ -288,7 +292,8 @@ proc onMouseMove*(line: PitchLine) =
 
   line.updateVisualPositions()
 
-template drawPitchLine(drawPoint: untyped): untyped =
+template drawPitchLine(offsets: Option[seq[(float, float)]],
+                       drawPoint: untyped): untyped =
   let
     lastId = line.points.len - 1
     activeColorDark {.inject.} = (line.activeColor * 0.2).redistribute
@@ -296,52 +301,64 @@ template drawPitchLine(drawPoint: untyped): untyped =
     highlight {.inject.} = rgb(255, 255, 255, 0.5)
 
   for i, point {.inject.} in line.points:
-    if point.isActive and i < lastId:
-      let next = line.points[i + 1]
+    let visualOffset {.inject.} =
+      if offsets.isSome and offsets.get.len == line.points.len:
+        -line.view.scaleToExternal(offsets.get[i])
+      else: (0.0, 0.0)
 
-      image.drawLine(
-        point.visualPosition,
-        next.visualPosition,
-        line.activeColor,
-      )
+    if point.isActive and i < lastId:
+      let
+        next = line.points[i + 1]
+        position = point.visualPosition + visualOffset
+
+        nextVisualOffset =
+          if offsets.isSome and offsets.get.len == line.points.len:
+            -line.view.scaleToExternal(offsets.get[i + 1])
+          else: (0.0, 0.0)
+
+        nextPosition = next.visualPosition + nextVisualOffset
+
+      image.drawLine(position, nextPosition, line.activeColor)
 
       if point.mouseOver == Segment:
-        image.drawLine(
-          point.visualPosition,
-          next.visualPosition,
-          highlight,
-        )
+        image.drawLine(position, nextPosition, highlight)
 
     drawPoint
 
-func drawWithCirclePoints*(line: PitchLine, image: Image) =
+func drawWithCirclePoints*(line: PitchLine,
+                           image: Image,
+                           offsets = none(seq[(float, float)])) =
   let r = (3.0 / 96.0).float
 
-  drawPitchLine:
+  drawPitchLine(offsets):
+    let position = point.visualPosition + visualOffset
+
     if point.isSelected:
       if point.isActive:
-        image.fillCircle(point.visualPosition, r, line.activeColor)
+        image.fillCircle(position, r, line.activeColor)
       else:
-        image.fillCircle(point.visualPosition, r, line.inactiveColor)
+        image.fillCircle(position, r, line.inactiveColor)
     else:
       if point.isActive:
-        image.fillCircle(point.visualPosition, r, activeColorDark)
-        image.drawCircle(point.visualPosition, r, line.activeColor)
+        image.fillCircle(position, r, activeColorDark)
+        image.drawCircle(position, r, line.activeColor)
       else:
-        image.fillCircle(point.visualPosition, r, inactiveColorDark)
-        image.drawCircle(point.visualPosition, r, line.inactiveColor)
+        image.fillCircle(position, r, inactiveColorDark)
+        image.drawCircle(position, r, line.inactiveColor)
 
     if point.mouseOver == Point:
-      image.fillCircle(point.visualPosition, r, highlight)
+      image.fillCircle(position, r, highlight)
 
-func drawWithSquarePoints*(line: PitchLine, image: Image) =
+func drawWithSquarePoints*(line: PitchLine,
+                           image: Image,
+                           offsets = none(seq[(float, float)])) =
   let
     r = (3.0 / 96.0).float
     dimensions = (r, r)
     dimensionsHalf = (r * 0.5, r * 0.5)
 
-  drawPitchLine:
-    let position = point.visualPosition - dimensionsHalf
+  drawPitchLine(offsets):
+    let position = point.visualPosition + visualOffset - dimensionsHalf
 
     if point.isSelected:
       if point.isActive:
