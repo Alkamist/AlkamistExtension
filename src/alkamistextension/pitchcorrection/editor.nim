@@ -147,9 +147,7 @@ func onMouseMove*(editor: PitchEditor) =
 
 proc onKeyPress*(editor: PitchEditor) =
   case editor.lastKeyPress:
-  of R:
-    reaperEcho "Analyzing pitch."
-    editor.analyzePitch()
+  of R: editor.analyzePitch()
   of E: editor.correctPitch()
   of Delete:
     if editor.pitchLine.editingIsEnabled:

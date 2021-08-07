@@ -8,14 +8,14 @@ proc peakViewerMain*() =
       backgroundColor = rgb(16, 16, 16)
     )
     view = newView()
-    peaks: MonoPeaks
+    peaks: Peaks
 
   view.y.isInverted = true
 
   let take = currentProject().selectedItem(0).activeTake
   if take.kind == Audio:
     var source = take.source
-    peaks = source.peaks(0.0, 15.0, 1000.0).toMono
+    peaks = source.peaks(0.0, source.timeLength, 8000.0)
 
   view.resize(window.clientDimensions)
   view.x.zoom = window.clientWidth / (44100.0 * 5.0)
@@ -39,7 +39,7 @@ proc peakViewerMain*() =
 
   window.onDraw = proc() =
     let minWidth = 1.0 / window.dpi
-    for sampleId, sample in peaks:
+    for sampleId, sample in peaks[0]:
       let
         x = view.x.convertToExternal(0.1 + sampleId.toFloat)
         top = view.y.convertToExternal(sample.maximum)

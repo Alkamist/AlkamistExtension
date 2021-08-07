@@ -108,7 +108,7 @@ proc sampleLength*(peaks: Peaks): int {.inline.} =
   else:
     0
 
-proc toMono*(peaks: Peaks): MonoPeaks {.inline.} =
+proc toMonoPeaks*(peaks: Peaks): MonoPeaks {.inline.} =
   result = newSeq[PeakSample](peaks.sampleLength)
 
   for channelBuffer in peaks:
@@ -148,23 +148,18 @@ proc peaks*(source: Source,
   for _ in 0 ..< numChannels:
     result.add(newSeq[PeakSample](lengthSamples))
 
-  const
-    bytesPerCDouble = 8
-    maxReaperPeakBlocks = 3
-
-  let bytesToAlloc = lengthSamples * bytesPerCDouble *
-                     numChannels * maxReaperPeakBlocks
-
-  var memory = alloc(bytesToAlloc)
+  const maxReaperPeakBlocks = 3
+  let cDoublesToAlloc = lengthSamples * numChannels * maxReaperPeakBlocks
+  var memory = createU(cdouble, cDoublesToAlloc)
 
   discard PCM_Source_GetPeaks(
     src = source.reaperPtr,
-    peakrate = sampleRate.cdouble,
+    peakrate = sampleRate,
     starttime = startSeconds,
     numchannels = numChannels.cint,
     numsamplesperchannel = lengthSamples.cint,
     want_extra_type = 0,
-    buf = cast[ptr cdouble](memory),
+    buf = memory,
   )
 
   var rawBuffer = cast[ptr UncheckedArray[cdouble]](memory)
@@ -186,7 +181,7 @@ proc analyzePitchSingleCore*(source: Source,
                              sampleRate = 8000.0,
                              minFrequency = 80.0,
                              maxFrequency = 4000.0): seq[tuple[time, pitch: float]] =
-  let peaks = source.peaks(startSeconds, lengthSeconds, sampleRate).toMono
+  let peaks = source.peaks(startSeconds, lengthSeconds, sampleRate).toMonoPeaks
 
   var audioBuffer = newSeq[float64](peaks.len)
   for sampleId, peakSample in peaks:
@@ -208,15 +203,17 @@ proc analyzePitch*(source: Source,
                    sampleRate = 8000.0,
                    minFrequency = 80.0,
                    maxFrequency = 4000.0): seq[tuple[time, pitch: float]] =
-  let peaks = source.peaks(startSeconds, lengthSeconds, sampleRate).toMono
+  let peaks = source.peaks(startSeconds, lengthSeconds, sampleRate).toMonoPeaks
 
   var audioBuffer = newSeq[float64](peaks.len)
   for sampleId, peakSample in peaks:
     audioBuffer[sampleId] = 0.5 * (peakSample.minimum + peakSample.maximum)
 
+  let minRms = dbToAmplitude(-60.0)
+
   var flowFrequencies: seq[(float, FlowVar[Option[float]])]
   for start, buffer in audioBuffer.windowStep(sampleRate):
-    if buffer.rms > dbToAmplitude(-60.0):
+    if buffer.rms > minRms:
       let
         time = start.toSeconds(sampleRate)
         frequency = spawn buffer.calculateFrequency(sampleRate, minFrequency, maxFrequency)
