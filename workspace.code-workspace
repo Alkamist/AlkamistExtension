@@ -3,6 +3,9 @@
 		{
 			"path": "."
 		},
+		{
+			"path": "../Reaper"
+		},
     {
       "path": "C:\\nim"
     }

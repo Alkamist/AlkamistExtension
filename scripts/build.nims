@@ -11,24 +11,10 @@ cd thisDir()
 cd ".."
 
 proc buildDll =
-  let opts = [
-    "-d:release",
-    "--app:lib",
-    "--cc:vcc",
-    "--nimcache:cache",
-    "--threads:on",
-    "--o:" & outputName.toDll,
-    "--outdir:" & pluginsDir,
-  ]
-
-  var optStr = ""
-  for opt in opts:
-    optStr.add opt
-    optStr.add " "
-
-  let mainFile = "src" / "alkamistextension.nim"
-
-  exec "nimble c " & optStr & mainFile
+  exec "nim cpp -d:release --app:lib --cc:vcc " &
+       "--o:" & outputName.toDll & " " &
+       "--outdir:" & pluginsDir & " " &
+       "alkamistextension.nim"
 
 proc removeExtraFiles =
   rmFile(pluginsDir / outputName & ".exp")
