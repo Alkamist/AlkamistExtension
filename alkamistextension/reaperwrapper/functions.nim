@@ -17,6 +17,11 @@ proc preventUiRefresh*(shouldPrevent: bool) =
     PreventUIRefresh(-1)
     uiRefreshPrevented = false
 
+template noUiRefresh*(code): untyped =
+  preventUiRefresh(true)
+  code
+  preventUiRefresh(false)
+
 proc mainCommand*(id: int) =
   Main_OnCommand(id.cint, 0)
 
@@ -24,4 +29,7 @@ proc mainCommand*(id: string) =
   Main_OnCommand(NamedCommandLookup(id), 0)
 
 proc currentProject*: Project =
-  result.reaperPtr = EnumProjects(-1, nil, 0)
+  EnumProjects(-1, nil, 0)
+
+proc currentTempo*: float =
+  Master_GetTempo()

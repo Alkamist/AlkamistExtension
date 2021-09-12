@@ -1,35 +1,20 @@
 import reaper
-import alkamistextension/[reaperwrapper, region]
+import alkamistextension/reaperwrapper
 
-# var lastChangeCount: Option[cint]
-# proc timerProc =
-#   if lastChangeCount.isNone:
-#     lastChangeCount = some GetProjectStateChangeCount(nil)
-#   else:
-#     let changeCount = GetProjectStateChangeCount(nil)
-#     if changeCount != lastChangeCount.get:
-#       let asdf = changeCount - lastChangeCount.get
-#       ShowConsoleMsg($asdf & "\n")
-#     lastChangeCount = some changeCount
+# proc relativeCopyAction =
+#   let project = currentProject()
+#   project.relativeCopyItems(project.editCursorPosition)
 
-var reg: Region
+# proc relativePaste =
+  # let project = currentProject()
+  # project.relativePasteItems(project.editCursorPosition)
 
-proc copyRegion =
+proc relativeCopyAction =
   let project = currentProject()
-  reg.reset()
-  reg.project = project
-  reg.position = project.editCursorPosition
-  for item in project.selectedItems:
-    reg.items.add item
-
-proc pasteRegion =
-  let project = currentProject()
-  preventUiRefresh(true)
-  reg.copyContent()
-  reg.pasteContent(project.editCursorPosition)
-  preventUiRefresh(false)
+  recho project.timeSelectionBounds
+  recho project.loopBounds
+  # recho project.timeRangeContainsTempoChange(timeSelectionLeft, timeSelectionRight)
 
 createExtension:
-  addAction("Alkamist: Copy Region", "ALKAMIST_COPY_REGION", copyRegion)
-  addAction("Alkamist: Paste Region", "ALKAMIST_PASTE_REGION", pasteRegion)
-  # addTimerProc(timerProc)
+  addAction("Alkamist: Relative Copy", "ALKAMIST_RELATIVE_COPY", relativeCopyAction)
+  # addAction("Alkamist: Relative Paste", "ALKAMIST_RELATIVE_PASTE", relativePaste)

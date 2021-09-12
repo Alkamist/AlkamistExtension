@@ -1,15 +1,31 @@
 import reaper
 
 type
-  Project* = object
-    reaperPtr*: ReaProject
+  Project* = ReaProject
+  Track* = MediaTrack
+  Item* = MediaItem
+  Take* = MediaItem_Take
 
-  Track* = object
-    reaperPtr*: MediaTrack
+  StretchMarker* = object
+    take*: Take
+    index*: int
+    position*: float
+    sourcePosition*: float
+    slope*: float
 
-  Item* = object
-    reaperPtr*: MediaItem
+  TimeSignatureMarker* = object
+    project*: Project
+    index*: int
+    position*: float
+    measure*: int
+    beat*: float
+    bpm*: float
+    numerator*: int
+    denominator*: int
+    isLinear*: bool
 
-converter toPtr*(project: Project): ReaProject = project.reaperPtr
-converter toPtr*(track: Track): MediaTrack = track.reaperPtr
-converter toPtr*(item: Item): MediaItem = item.reaperPtr
+  TimeSelectionBounds* = object
+    left*, right*: float
+
+  LoopBounds* = object
+    left*, right*: float

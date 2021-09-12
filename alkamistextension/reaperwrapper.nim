@@ -1,3 +1,3 @@
-import reaperwrapper/[functions, item, project, track, types]
+import reaperwrapper/[functions, item, project, take, track, types]
 
-export functions, item, project, track, types
+export functions, item, project, take, track, types
