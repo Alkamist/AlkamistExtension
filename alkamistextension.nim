@@ -11,9 +11,10 @@ import alkamistextension/reaperwrapper
 
 proc relativeCopyAction =
   let project = currentProject()
-  let item = project.selectedItem(0).get
-  recho item.take(0).isSome
-  recho item.take(5).isSome
+  let timeSelection = project.timeSelectionBounds
+  if timeSelection.isSome:
+    recho project.timeRangeContainsTempoChange(timeSelection.get.left, timeSelection.get.right)
+    # recho project.averageTempoOfTimeRange(timeSelection.get.left, timeSelection.get.right)
 
 createExtension:
   addAction("Alkamist: Relative Copy", "ALKAMIST_RELATIVE_COPY", relativeCopyAction)

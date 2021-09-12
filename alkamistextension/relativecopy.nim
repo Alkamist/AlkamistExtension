@@ -3,8 +3,8 @@ import reaperwrapper
 
 # template unselectAll = mainCommand(40769)
 # template unselectItems = mainCommand(40289)
-template copyItems = mainCommand(40698)
-template pasteItems = mainCommand(41072)
+# template copyItems = mainCommand(40698)
+# template pasteItems = mainCommand(41072)
 
 type
   StretchMarkerCopyInfo = object
@@ -101,7 +101,7 @@ proc relativeCopyItems*(project: Project, position: float) =
   if project.selectedItemCount < 1:
     return
 
-  recho project.selectedItem(0).copyInfo(position, 1.0, 0.0)
+  recho project.selectedItem(0).get.copyInfo(position, 1.0, 0.0)
 
   # noUiRefresh:
   #   copyItems()

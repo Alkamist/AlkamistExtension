@@ -1,6 +1,6 @@
 import std/options
 import reaper
-import types
+import types, functions
 
 proc validate*(project: Project, track: Track): bool =
   ValidatePtr2(project, cast[pointer](track), "MediaTrack*")
@@ -46,6 +46,18 @@ proc timeToBeats*(project: Project, time: float): float =
 proc beatsToTime*(project: Project, beats: float): float =
   TimeMap2_beatsToTime(project, beats, nil)
 
+proc timeSelectionBounds*(project: Project): Option[TimeSelectionBounds] =
+  var left, right: cdouble
+  GetSet_LoopTimeRange2(project, false, false, left.addr, right.addr, false)
+  if left > 0.0 or right > 0.0:
+    return some TimeSelectionBounds(left: left, right: right)
+
+proc loopBounds*(project: Project): Option[LoopBounds] =
+  var left, right: cdouble
+  GetSet_LoopTimeRange2(project, false, true, left.addr, right.addr, false)
+  if left > 0.0 or right > 0.0:
+    return some LoopBounds(left: left, right: right)
+
 proc timeSignatureMarkerCount*(project: Project): int =
   CountTempoTimeSigMarkers(project)
 
@@ -87,14 +99,37 @@ iterator timeSignatureMarkers*(project: Project): TimeSignatureMarker =
 proc effectiveTimeSignatureMarkerIndex*(project: Project, time: float): int =
   FindTempoTimeSigMarker(project, time)
 
+proc tempoAtTime*(project: Project, time: float): float =
+  let markerIndex = project.effectiveTimeSignatureMarkerIndex(time)
+  let marker = project.timeSignatureMarker(markerIndex)
+
+  # No markers, so flat line
+  if marker.isNone:
+    return currentTempo()
+
+  # Flat line
+  if not marker.get.isLinear:
+    return marker.get.bpm
+
+  let nextMarker = project.timeSignatureMarker(markerIndex + 1)
+
+  # Flat line again
+  if nextMarker.isNone:
+    return marker.get.bpm
+
+  let timeBetweenMarkers = nextMarker.get.position - marker.get.position
+  let timeRatio = (time - marker.get.position) / timeBetweenMarkers
+  let markerTempoDelta = nextMarker.get.bpm - marker.get.bpm
+
+  marker.get.bpm + timeRatio * markerTempoDelta
+
 proc timeRangeContainsTempoChange*(project: Project, left, right: float): bool =
   if project.timeSignatureMarkerCount <= 1:
     return false
 
   let leftmostMarkerIndex = project.effectiveTimeSignatureMarkerIndex(left)
   let rightmostMarkerIndex = project.effectiveTimeSignatureMarkerIndex(right)
-  let markersInOrBeforeRange = rightmostMarkerIndex - leftmostMarkerIndex
-  let markerCount = markersInOrBeforeRange + 1
+  let markerCount = 1 + (rightmostMarkerIndex - leftmostMarkerIndex)
 
   var previousMarker: TimeSignatureMarker
   for i in 0 .. markerCount:
@@ -116,14 +151,48 @@ proc timeRangeContainsTempoChange*(project: Project, left, right: float): bool =
 
       previousMarker = marker.get
 
-proc timeSelectionBounds*(project: Project): Option[TimeSelectionBounds] =
-  var left, right: cdouble
-  GetSet_LoopTimeRange2(project, false, false, left.addr, right.addr, false)
-  if left > 0.0 or right > 0.0:
-    return some TimeSelectionBounds(left: left, right: right)
+proc averageTempoOfTimeRange*(project: Project, left, right: float): float =
+  let markerCount = project.timeSignatureMarkerCount
 
-proc loopBounds*(project: Project): Option[LoopBounds] =
-  var left, right: cdouble
-  GetSet_LoopTimeRange2(project, false, true, left.addr, right.addr, false)
-  if left > 0.0 or right > 0.0:
-    return some LoopBounds(left: left, right: right)
+  if markerCount <= 1:
+    return currentTempo()
+
+  elif not project.timeRangeContainsTempoChange(left, right):
+    let effectiveMarkerIndex = project.effectiveTimeSignatureMarkerIndex(right)
+    let marker = project.timeSignatureMarker(effectiveMarkerIndex).get
+    return marker.bpm
+
+  else:
+    let leftmostMarkerIndex = project.effectiveTimeSignatureMarkerIndex(left)
+    let rightmostMarkerIndex = project.effectiveTimeSignatureMarkerIndex(right)
+    let markerCount = 1 + (rightmostMarkerIndex - leftmostMarkerIndex)
+
+    let fullTimePeriod = right - left
+
+    template weightedAverage(mrkr, timeStart, timeEnd): float =
+      let timeDelta = timeEnd - timeStart
+      let tempoStart = project.tempoAtTime(timeStart)
+      let tempoEnd = project.tempoAtTime(timeEnd)
+      let tempoDelta = tempoEnd - tempoStart
+      let averageTempo =
+        if mrkr.isLinear: tempoStart + 0.5 * tempoDelta
+        else: mrkr.bpm
+      averageTempo * timeDelta / fullTimePeriod
+
+    for i in 0 ..< markerCount:
+      let markerIndex = leftmostMarkerIndex + i
+      let marker = project.timeSignatureMarker(markerIndex).get
+      let nextMarker = project.timeSignatureMarker(markerIndex + 1)
+
+      if nextMarker.isNone:
+        result += weightedAverage(marker, marker.position, right)
+        break
+
+      if i == 0:
+        result += weightedAverage(marker, left, nextMarker.get.position)
+
+      elif i == markerCount:
+        result += weightedAverage(marker, marker.position, right)
+
+      else:
+        result += weightedAverage(marker, marker.position, nextMarker.get.position)

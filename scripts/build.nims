@@ -11,7 +11,7 @@ cd thisDir()
 cd ".."
 
 proc buildDll =
-  exec "nim cpp -d:release --app:lib --cc:vcc " &
+  exec "nim cpp --app:lib --cc:vcc " &
        "--o:" & outputName.toDll & " " &
        "--outdir:" & pluginsDir & " " &
        "alkamistextension.nim"
