@@ -9,7 +9,7 @@ import reaperwrapper
 type
   StretchMarkerCopyInfo = object
     positionBeats: float
-    sourcePositionTime: float
+    sourcePosition: float
 
   TakeCopyInfo = object
     playrate: float
@@ -18,12 +18,10 @@ type
 
   ItemCopyInfo = object
     startOffsetBeats: float
-    startOffsetTime: float
+    startOffset: float
     lengthBeats: float
-    unscaledLengthTime: float
-    lengthTime: float
+    length: float
     snapOffsetBeats: float
-    snapOffsetPercent: float
     fadeIn: float
     fadeInBeats: float
     fadeOut: float
@@ -34,7 +32,7 @@ type
     autoFadeOutBeats: float
     takes: seq[TakeCopyInfo]
 
-proc copyInfo(item: Item, start, playrate, pitch: float): ItemCopyInfo =
+proc copyInfo(item: Item, start: float): ItemCopyInfo =
   let project = item.project
   let startBeats = project.timeToBeats(start)
 
@@ -48,43 +46,41 @@ proc copyInfo(item: Item, start, playrate, pitch: float): ItemCopyInfo =
   let itemRightBeats = project.timeToBeats(itemRight)
   let itemLengthBeats = itemRightBeats - itemLeftBeats
 
-  result.startOffsetBeats = (itemSnapStartBeats - startBeats) * playrate
-  result.startOffsetTime = (itemSnapStart - start) * playrate
-  result.lengthBeats = itemLengthBeats * playrate
-  result.unscaledLengthTime = itemLength
-  result.lengthTime = itemLength * playrate
-  result.snapOffsetBeats = (itemSnapStartBeats - itemLeftBeats) * playrate
-  result.snapOffsetPercent = itemSnapOffset / itemLength
+  result.startOffsetBeats = (itemSnapStartBeats - startBeats)
+  result.startOffset = (itemSnapStart - start)
+  result.lengthBeats = itemLengthBeats
+  result.length = itemLength
+  result.snapOffsetBeats = (itemSnapStartBeats - itemLeftBeats)
 
   let itemFadeIn = item.fadeInLength
   let itemFadeInBeats = project.timeToBeats(itemFadeIn + itemLeft) - itemLeftBeats
   let itemFadeOut = item.fadeOutLength
   let itemFadeOutBeats = itemRightBeats - project.timeToBeats(itemRight - itemFadeOut)
-  result.fadeIn = itemFadeIn * playrate
-  result.fadeInBeats = itemFadeInBeats * playrate
-  result.fadeOut = itemFadeOut * playrate
-  result.fadeOutBeats = itemFadeOutBeats * playrate
+  result.fadeIn = itemFadeIn
+  result.fadeInBeats = itemFadeInBeats
+  result.fadeOut = itemFadeOut
+  result.fadeOutBeats = itemFadeOutBeats
 
   let itemAutoFadeIn = item.autoFadeInLength
   let itemAutoFadeInBeats = project.timeToBeats(itemAutoFadeIn + itemLeft) - itemLeftBeats
   let itemAutoFadeOut = item.autoFadeOutLength
   let itemAutoFadeOutBeats = itemRightBeats - project.timeToBeats(itemRight - itemAutoFadeOut)
-  result.autoFadeIn = itemAutoFadeIn * playrate
-  result.autoFadeInBeats = itemAutoFadeInBeats * playrate
-  result.autoFadeOut = itemAutoFadeOut * playrate
-  result.autoFadeOutBeats = itemAutoFadeOutBeats * playrate
+  result.autoFadeIn = itemAutoFadeIn
+  result.autoFadeInBeats = itemAutoFadeInBeats
+  result.autoFadeOut = itemAutoFadeOut
+  result.autoFadeOutBeats = itemAutoFadeOutBeats
 
   for take in item.takes:
     let takePlayrate = take.playrate
 
     var takeInfo = TakeCopyInfo()
-    takeInfo.playrate = take.playrate / playrate
-    takeInfo.pitch = take.pitch - pitch
+    takeInfo.playrate = take.playrate
+    takeInfo.pitch = take.pitch
 
     for marker in take.stretchMarkers:
       var markerInfo = StretchMarkerCopyInfo()
-      markerInfo.positionBeats = (project.timeToBeats(itemSnapStart + marker.position / takePlayrate) - itemSnapStartBeats) * playrate
-      markerInfo.sourcePositionTime = marker.sourcePosition
+      markerInfo.positionBeats = (project.timeToBeats(itemSnapStart + marker.position / takePlayrate) - itemSnapStartBeats)
+      markerInfo.sourcePosition = marker.sourcePosition
       takeInfo.stretchMarkers.add markerInfo
 
     result.takes.add takeInfo
@@ -101,7 +97,7 @@ proc relativeCopyItems*(project: Project, position: float) =
   if project.selectedItemCount < 1:
     return
 
-  recho project.selectedItem(0).get.copyInfo(position, 1.0, 0.0)
+  recho project.selectedItem(0).get.copyInfo(position)
 
   # noUiRefresh:
   #   copyItems()
