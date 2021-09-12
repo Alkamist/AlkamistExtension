@@ -1,3 +1,4 @@
+import std/options
 import reaper
 import types
 
@@ -10,15 +11,19 @@ proc pitch*(take: Take): float =
 proc stretchMarkerCount*(take: Take): int =
   GetTakeNumStretchMarkers(take)
 
-proc stretchMarker*(take: Take, index: int): StretchMarker =
+proc stretchMarker*(take: Take, index: int): Option[StretchMarker] =
   var position, sourcePosition: cdouble
-  discard GetTakeStretchMarker(take, index.cint, position.addr, sourcePosition.addr)
-  result.take = take
-  result.index = index
-  result.position = position
-  result.sourcePosition = sourcePosition
-  result.slope = GetTakeStretchMarkerSlope(take, index.cint)
+  let retval = GetTakeStretchMarker(take, index.cint, position.addr, sourcePosition.addr)
+  let markerIsValid = retval != -1
+  if markerIsValid:
+    var marker = StretchMarker()
+    marker.take = take
+    marker.index = index
+    marker.position = position
+    marker.sourcePosition = sourcePosition
+    marker.slope = GetTakeStretchMarkerSlope(take, index.cint)
+    return some marker
 
 iterator stretchMarkers*(take: Take): StretchMarker =
   for i in 0 ..< take.stretchMarkerCount:
-    yield take.stretchMarker(i)
+    yield take.stretchMarker(i).get

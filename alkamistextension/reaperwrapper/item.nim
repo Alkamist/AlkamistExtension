@@ -1,6 +1,6 @@
+import std/options
 import reaper
-import types
-import project
+import types, project
 
 proc project*(item: Item): Project =
   GetItemProjectContext(item)
@@ -35,15 +35,16 @@ proc isSelected*(item: Item): bool =
 proc `isSelected=`*(item: Item, selected: bool) =
   SetMediaItemSelected(item, selected)
 
-proc take*(item: Item, index: int): Take =
-  GetMediaItemTake(item, index.cint)
-
 proc takeCount*(item: Item): int =
   GetMediaItemNumTakes(item)
 
+proc take*(item: Item, index: int): Option[Take] =
+  if index >= 0 and index < item.takeCount:
+    return some GetMediaItemTake(item, index.cint)
+
 iterator takes*(item: Item): Take =
   for i in 0 ..< item.takeCount:
-    yield item.take(i)
+    yield GetMediaItemTake(item, i.cint)
 
 proc leftBeats*(item: Item): float =
   item.project.timeToBeats(item.left)
