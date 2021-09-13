@@ -128,3 +128,6 @@ proc isSelected*(item: Item): bool =
 
 proc `isSelected=`*(item: Item, selected: bool) =
   SetMediaItemSelected(item, selected)
+
+proc averageTempo*(item: Item): float =
+  item.project.averageTempoOfTimeRange(item.positionTime, item.rightTime)

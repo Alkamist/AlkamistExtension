@@ -9,7 +9,6 @@ import reaperwrapper
 #       if item.left < result.get.left:
 #         result = some item
 
-
 # template unselectAll = mainCommand(40769)
 template unselectItems = mainCommand(40289)
 template copyItems = mainCommand(40698)
@@ -18,7 +17,7 @@ template pasteItems = mainCommand(41072)
 type
   StretchMarkerCopyInfo = object
     positionBeats: float
-    sourcePosition: float
+    sourcePositionTime: float
 
   TakeCopyInfo = object
     playrate: float
@@ -26,63 +25,43 @@ type
     stretchMarkers: seq[StretchMarkerCopyInfo]
 
   ItemCopyInfo = object
+    startOffsetTime: float
     startOffsetBeats: float
-    startOffset: float
+    lengthTime: float
     lengthBeats: float
-    length: float
+    snapOffsetTime: float
     snapOffsetBeats: float
-    snapOffset: float
-    fadeIn: float
+    fadeInTime: float
     fadeInBeats: float
-    fadeOut: float
+    fadeOutTime: float
     fadeOutBeats: float
-    autoFadeIn: float
+    autoFadeInTime: float
     autoFadeInBeats: float
-    autoFadeOut: float
+    autoFadeOutTime: float
     autoFadeOutBeats: float
     averageTempo: float
     takes: seq[TakeCopyInfo]
 
-proc copyInfo(item: Item, start: float): ItemCopyInfo =
+proc copyInfo(item: Item, positionTime: float): ItemCopyInfo =
   let project = item.project
-  let startBeats = project.timeToBeats(start)
-
-  let itemLeft = item.left
-  let itemLeftBeats = project.timeToBeats(itemLeft)
-  let itemSnapOffset = item.snapOffset
-  let itemSnapStart = itemLeft + itemSnapOffset
-  let itemSnapStartBeats = project.timeToBeats(itemSnapStart)
-  let itemLength = item.length
-  let itemRight = itemLeft + itemLength
-  let itemRightBeats = project.timeToBeats(itemRight)
-  let itemLengthBeats = itemRightBeats - itemLeftBeats
-
-  result.startOffsetBeats = (itemSnapStartBeats - startBeats)
-  result.startOffset = (itemSnapStart - start)
-  result.lengthBeats = itemLengthBeats
-  result.length = itemLength
-  result.snapOffsetBeats = (itemSnapStartBeats - itemLeftBeats)
-  result.snapOffset = itemSnapOffset
-
-  let itemFadeIn = item.fadeInLength
-  let itemFadeInBeats = project.timeToBeats(itemFadeIn + itemLeft) - itemLeftBeats
-  let itemFadeOut = item.fadeOutLength
-  let itemFadeOutBeats = itemRightBeats - project.timeToBeats(itemRight - itemFadeOut)
-  result.fadeIn = itemFadeIn
-  result.fadeInBeats = itemFadeInBeats
-  result.fadeOut = itemFadeOut
-  result.fadeOutBeats = itemFadeOutBeats
-
-  let itemAutoFadeIn = item.autoFadeInLength
-  let itemAutoFadeInBeats = project.timeToBeats(itemAutoFadeIn + itemLeft) - itemLeftBeats
-  let itemAutoFadeOut = item.autoFadeOutLength
-  let itemAutoFadeOutBeats = itemRightBeats - project.timeToBeats(itemRight - itemAutoFadeOut)
-  result.autoFadeIn = itemAutoFadeIn
-  result.autoFadeInBeats = itemAutoFadeInBeats
-  result.autoFadeOut = itemAutoFadeOut
-  result.autoFadeOutBeats = itemAutoFadeOutBeats
-
-  result.averageTempo = project.averageTempoOfTimeRange(itemLeft, itemRight)
+  let positionBeats = project.timeToBeats(positionTime)
+  let itemSnapPositionTime = item.snapPositionTime
+  let itemSnapPositionBeats = item.snapPositionBeats
+  result.startOffsetTime = itemSnapPositionTime - positionTime
+  result.startOffsetBeats = itemSnapPositionBeats - positionBeats
+  result.lengthTime = item.lengthTime
+  result.lengthBeats = item.lengthBeats
+  result.snapOffsetTime = item.snapOffsetTime
+  result.snapOffsetBeats = item.snapOffsetBeats
+  result.fadeInTime = item.fadeInTime
+  result.fadeInBeats = item.fadeInBeats
+  result.fadeOutTime = item.fadeOutTime
+  result.fadeOutBeats = item.fadeOutBeats
+  result.autoFadeInTime = item.autoFadeInTime
+  result.autoFadeInBeats = item.autoFadeInBeats
+  result.autoFadeOutTime = item.autoFadeOutTime
+  result.autoFadeOutBeats = item.autoFadeOutBeats
+  result.averageTempo = item.averageTempo
 
   for take in item.takes:
     let takePlayrate = take.playrate
@@ -93,44 +72,84 @@ proc copyInfo(item: Item, start: float): ItemCopyInfo =
 
     for marker in take.stretchMarkers:
       var markerInfo = StretchMarkerCopyInfo()
-      markerInfo.positionBeats = (project.timeToBeats(itemSnapStart + marker.position / takePlayrate) - itemSnapStartBeats)
-      markerInfo.sourcePosition = marker.sourcePosition
+      markerInfo.positionBeats = (project.timeToBeats(itemSnapPositionTime + marker.position / takePlayrate) - itemSnapPositionBeats)
+      markerInfo.sourcePositionTime = marker.sourcePosition
       takeInfo.stretchMarkers.add markerInfo
 
     result.takes.add takeInfo
 
 var relativeCopyInfo: seq[ItemCopyInfo]
 
-proc relativeCopyItems*(project: Project, position: float) =
+proc relativeCopyItems*(project: Project, positionTime: float) =
   if project.selectedItemCount < 1:
     return
-
-  recho project.selectedItem(0).get.copyInfo(position)
 
   relativeCopyInfo = @[]
 
   noUiRefresh:
     for item in project.selectedItems:
-      relativeCopyInfo.add item.copyInfo(position)
+      relativeCopyInfo.add item.copyInfo(positionTime)
     copyItems()
 
-proc relativePasteItems*(project: Project, position, playrate, pitch: float) =
+proc relativePasteItems*(project: Project, positionTime, playrate, pitch: float) =
   noUiRefresh:
+    let cursorTime = project.editCursorTime
+
     unselectItems()
+    pasteItems()
 
-    let positionBeats = project.timeToBeats(position)
+    let items = block:
+      var res: seq[Item]
+      for item in project.selectedItems:
+        res.add item
+      res
 
-    for i, info in relativeCopyInfo.pairs:
-      let itemSnapStartBeats = positionBeats + info.startOffsetBeats / playrate
-      let itemSnapStart = project.beatsToTime(itemSnapStartBeats)
+    let positionBeats = project.timeToBeats(positionTime)
+
+    for itemId, info in relativeCopyInfo.pairs:
+      let item = items[itemId]
+      let itemSnapPositionBeats = positionBeats + info.startOffsetBeats / playrate
       let itemLengthBeats = info.lengthBeats / playrate
       let itemSnapOffsetBeats = info.snapOffsetBeats / playrate
-      let itemLeftBoundBeats = itemSnapStartBeats - itemSnapOffsetBeats
-      let itemLeftBound = project.beatsToTime(itemLeftBoundBeats)
-      let itemRightBoundBeats = itemLeftBoundBeats + itemLengthBeats
-      let itemRightBound = project.beatsToTime(itemRightBoundBeats)
-      let itemLength = itemRightBound - itemLeftBound
-      let itemSnapOffset = project.beatsToTime(itemLeftBoundBeats + itemSnapOffsetBeats) - itemLeftBound
+      let itemLeftBoundBeats = itemSnapPositionBeats - itemSnapOffsetBeats
+      let itemFadeInBeats = info.fadeInBeats / playrate
+      let itemFadeOutBeats = info.fadeOutBeats / playrate
+      let itemAutoFadeInBeats = info.autoFadeInBeats / playrate
+      let itemAutoFadeOutBeats = info.autoFadeOutBeats / playrate
 
+      item.positionBeats = itemLeftBoundBeats
+      item.lengthBeats = itemLengthBeats
+      item.snapOffsetBeats = itemSnapOffsetBeats
+      item.fadeInBeats = itemFadeInBeats
+      item.fadeOutBeats = itemFadeOutBeats
+      item.autoFadeInBeats = itemAutoFadeInBeats
+      item.autoFadeOutBeats = itemAutoFadeOutBeats
 
-    pasteItems()
+      let tempoRatio = 1.0
+      # if getItemType(items[i]) == "audio":
+      #   let newItemAverageTempo = getAverageTempoOfItem(items[i])
+      #   tempoRatio = newItemAverageTempo / copiedItemStats[i].averageTempo
+
+      var takeId = 0
+      for take in item.takes:
+        let takeInfo = info.takes[takeId]
+        let markerCount = take.stretchMarkerCount
+
+        if markerCount <= 0:
+          take.playrate = info.takes[takeId].playrate * tempoRatio * playrate
+        else:
+          let takePlayrate = takeInfo.playrate * playrate
+          take.playrate = takePlayrate
+
+          # Delete and re-add all stretch markers in the correct positions.
+          take.deleteStretchMarker(0, markerCount)
+
+          for markerId in 0 ..< takeInfo.stretchMarkers.len:
+            let markerInfo = takeInfo.stretchMarkers[markerId]
+            let positionTime = project.beatsToTime(item.snapPositionBeats + markerInfo.positionBeats / playrate) - item.snapPositionTime
+            let sourceTime = markerInfo.sourcePositionTime
+            take.addStretchMarker(positionTime * takePlayrate, some sourceTime)
+
+        inc takeId
+
+    project.setEditCursorTime(cursorTime, false, false)

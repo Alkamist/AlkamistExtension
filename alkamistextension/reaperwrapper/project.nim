@@ -8,11 +8,11 @@ proc validate*(project: Project, track: Track): bool =
 proc validate*(project: Project, item: Item): bool =
   ValidatePtr2(project, cast[pointer](item), "MediaItem*")
 
-proc setEditCursor*(project: Project, time: float, moveView: bool, seekPlay: bool) =
-  SetEditCurPos2(project, time.cdouble, moveView, seekPlay)
-
-proc editCursorPosition*(project: Project): float =
+proc editCursorTime*(project: Project): float =
   GetCursorPosition()
+
+proc setEditCursorTime*(project: Project, time: float, moveView, seekPlay: bool) =
+  SetEditCurPos2(project, time.cdouble, moveView, seekPlay)
 
 proc selectedTrackCount*(project: Project): int =
   CountSelectedTracks(project)
