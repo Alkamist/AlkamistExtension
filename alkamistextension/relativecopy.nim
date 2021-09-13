@@ -1,10 +1,19 @@
 # import std/options
 import reaperwrapper
 
+# proc leftmostSelectedItem(project: Project): Option[Item] =
+#   for item in project.selectedItems:
+#     if result.isNone:
+#       result = some item
+#     else:
+#       if item.left < result.get.left:
+#         result = some item
+
+
 # template unselectAll = mainCommand(40769)
-# template unselectItems = mainCommand(40289)
-# template copyItems = mainCommand(40698)
-# template pasteItems = mainCommand(41072)
+template unselectItems = mainCommand(40289)
+template copyItems = mainCommand(40698)
+template pasteItems = mainCommand(41072)
 
 type
   StretchMarkerCopyInfo = object
@@ -22,6 +31,7 @@ type
     lengthBeats: float
     length: float
     snapOffsetBeats: float
+    snapOffset: float
     fadeIn: float
     fadeInBeats: float
     fadeOut: float
@@ -30,6 +40,7 @@ type
     autoFadeInBeats: float
     autoFadeOut: float
     autoFadeOutBeats: float
+    averageTempo: float
     takes: seq[TakeCopyInfo]
 
 proc copyInfo(item: Item, start: float): ItemCopyInfo =
@@ -51,6 +62,7 @@ proc copyInfo(item: Item, start: float): ItemCopyInfo =
   result.lengthBeats = itemLengthBeats
   result.length = itemLength
   result.snapOffsetBeats = (itemSnapStartBeats - itemLeftBeats)
+  result.snapOffset = itemSnapOffset
 
   let itemFadeIn = item.fadeInLength
   let itemFadeInBeats = project.timeToBeats(itemFadeIn + itemLeft) - itemLeftBeats
@@ -70,6 +82,8 @@ proc copyInfo(item: Item, start: float): ItemCopyInfo =
   result.autoFadeOut = itemAutoFadeOut
   result.autoFadeOutBeats = itemAutoFadeOutBeats
 
+  result.averageTempo = project.averageTempoOfTimeRange(itemLeft, itemRight)
+
   for take in item.takes:
     let takePlayrate = take.playrate
 
@@ -85,13 +99,7 @@ proc copyInfo(item: Item, start: float): ItemCopyInfo =
 
     result.takes.add takeInfo
 
-# proc leftmostSelectedItem(project: Project): Option[Item] =
-#   for item in project.selectedItems:
-#     if result.isNone:
-#       result = some item
-#     else:
-#       if item.left < result.get.left:
-#         result = some item
+var relativeCopyInfo: seq[ItemCopyInfo]
 
 proc relativeCopyItems*(project: Project, position: float) =
   if project.selectedItemCount < 1:
@@ -99,12 +107,30 @@ proc relativeCopyItems*(project: Project, position: float) =
 
   recho project.selectedItem(0).get.copyInfo(position)
 
-  # noUiRefresh:
-  #   copyItems()
+  relativeCopyInfo = @[]
 
-# proc relativePasteItems*(project: Project, position: float) =
-#   noUiRefresh:
-#     let previousEditPosition = project.editCursorPosition
-#     project.setEditCursor(position - pasteOffset, false, false)
-#     pasteItems()
-#     project.setEditCursor(previousEditPosition, false, false)
+  noUiRefresh:
+    for item in project.selectedItems:
+      relativeCopyInfo.add item.copyInfo(position)
+    copyItems()
+
+proc relativePasteItems*(project: Project, position, playrate, pitch: float) =
+  noUiRefresh:
+    unselectItems()
+
+    let positionBeats = project.timeToBeats(position)
+
+    for i, info in relativeCopyInfo.pairs:
+      let itemSnapStartBeats = positionBeats + info.startOffsetBeats / playrate
+      let itemSnapStart = project.beatsToTime(itemSnapStartBeats)
+      let itemLengthBeats = info.lengthBeats / playrate
+      let itemSnapOffsetBeats = info.snapOffsetBeats / playrate
+      let itemLeftBoundBeats = itemSnapStartBeats - itemSnapOffsetBeats
+      let itemLeftBound = project.beatsToTime(itemLeftBoundBeats)
+      let itemRightBoundBeats = itemLeftBoundBeats + itemLengthBeats
+      let itemRightBound = project.beatsToTime(itemRightBoundBeats)
+      let itemLength = itemRightBound - itemLeftBound
+      let itemSnapOffset = project.beatsToTime(itemLeftBoundBeats + itemSnapOffsetBeats) - itemLeftBound
+
+
+    pasteItems()
