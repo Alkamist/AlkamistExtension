@@ -1,6 +1,6 @@
 import std/options
 import reaper
-import types, project
+import types, project, take
 
 proc project*(item: Item): Project = GetItemProjectContext(item)
 proc track*(item: Item): Track = GetMediaItem_Track(item)
@@ -131,3 +131,12 @@ proc `isSelected=`*(item: Item, selected: bool) =
 
 proc averageTempo*(item: Item): float =
   item.project.averageTempoOfTimeRange(item.positionTime, item.rightTime)
+
+proc kind*(item: Item): ItemKind =
+  result = ItemKind.Empty
+  let take = item.take(0)
+  if take.isSome:
+    if take.get.isMidi:
+      return ItemKind.Midi
+    else:
+      return ItemKind.Audio

@@ -191,7 +191,7 @@ proc averageTempoOfTimeRange*(project: Project, left, right: float): float =
       if i == 0:
         result += weightedAverage(marker, left, nextMarker.get.position)
 
-      elif i == markerCount:
+      elif i == markerCount - 1:
         result += weightedAverage(marker, marker.position, right)
 
       else:

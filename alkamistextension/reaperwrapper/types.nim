@@ -5,6 +5,7 @@ type
   Track* = MediaTrack
   Item* = MediaItem
   Take* = MediaItem_Take
+  Source* = PCM_source
 
   StretchMarker* = object
     take*: Take
@@ -29,3 +30,6 @@ type
 
   LoopBounds* = object
     left*, right*: float
+
+  ItemKind* {.pure.} = enum
+    Empty, Audio, Midi,

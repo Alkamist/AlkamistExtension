@@ -1,13 +1,4 @@
-# import std/options
 import reaperwrapper
-
-# proc leftmostSelectedItem(project: Project): Option[Item] =
-#   for item in project.selectedItems:
-#     if result.isNone:
-#       result = some item
-#     else:
-#       if item.left < result.get.left:
-#         result = some item
 
 # template unselectAll = mainCommand(40769)
 template unselectItems = mainCommand(40289)
@@ -106,16 +97,16 @@ proc relativePasteItems*(project: Project, positionTime, playrate, pitch: float)
 
     let positionBeats = project.timeToBeats(positionTime)
 
-    for itemId, info in relativeCopyInfo.pairs:
+    for itemId, itemInfo in relativeCopyInfo.pairs:
       let item = items[itemId]
-      let itemSnapPositionBeats = positionBeats + info.startOffsetBeats / playrate
-      let itemLengthBeats = info.lengthBeats / playrate
-      let itemSnapOffsetBeats = info.snapOffsetBeats / playrate
+      let itemSnapPositionBeats = positionBeats + itemInfo.startOffsetBeats / playrate
+      let itemLengthBeats = itemInfo.lengthBeats / playrate
+      let itemSnapOffsetBeats = itemInfo.snapOffsetBeats / playrate
       let itemLeftBoundBeats = itemSnapPositionBeats - itemSnapOffsetBeats
-      let itemFadeInBeats = info.fadeInBeats / playrate
-      let itemFadeOutBeats = info.fadeOutBeats / playrate
-      let itemAutoFadeInBeats = info.autoFadeInBeats / playrate
-      let itemAutoFadeOutBeats = info.autoFadeOutBeats / playrate
+      let itemFadeInBeats = itemInfo.fadeInBeats / playrate
+      let itemFadeOutBeats = itemInfo.fadeOutBeats / playrate
+      let itemAutoFadeInBeats = itemInfo.autoFadeInBeats / playrate
+      let itemAutoFadeOutBeats = itemInfo.autoFadeOutBeats / playrate
 
       item.positionBeats = itemLeftBoundBeats
       item.lengthBeats = itemLengthBeats
@@ -125,18 +116,19 @@ proc relativePasteItems*(project: Project, positionTime, playrate, pitch: float)
       item.autoFadeInBeats = itemAutoFadeInBeats
       item.autoFadeOutBeats = itemAutoFadeOutBeats
 
-      let tempoRatio = 1.0
-      # if getItemType(items[i]) == "audio":
-      #   let newItemAverageTempo = getAverageTempoOfItem(items[i])
-      #   tempoRatio = newItemAverageTempo / copiedItemStats[i].averageTempo
+      let tempoRatio = block:
+        if item.kind in [ItemKind.Empty, ItemKind.Midi]:
+          1.0
+        else:
+          item.averageTempo / itemInfo.averageTempo
 
       var takeId = 0
       for take in item.takes:
-        let takeInfo = info.takes[takeId]
+        let takeInfo = itemInfo.takes[takeId]
         let markerCount = take.stretchMarkerCount
 
         if markerCount <= 0:
-          take.playrate = info.takes[takeId].playrate * tempoRatio * playrate
+          take.playrate = takeInfo.playrate * tempoRatio * playrate
         else:
           let takePlayrate = takeInfo.playrate * playrate
           take.playrate = takePlayrate

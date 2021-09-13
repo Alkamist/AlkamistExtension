@@ -2,6 +2,12 @@ import std/options
 import reaper
 import types
 
+proc source*(take: Take): Source =
+  GetMediaItemTake_Source(take)
+
+proc isMidi*(take: Take): bool =
+  TakeIsMIDI(take)
+
 proc playrate*(take: Take): float =
   GetMediaItemTakeInfo_Value(take, "D_PLAYRATE")
 
