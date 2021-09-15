@@ -140,3 +140,10 @@ proc kind*(item: Item): ItemKind =
       return ItemKind.Midi
     else:
       return ItemKind.Audio
+
+proc timebase*(item: Item): Option[Timebase] =
+  let retval = GetMediaItemInfo_Value(item, "C_BEATATTACHMODE")
+  case retval:
+  of 0: result = some Timebase.Time
+  of 1: result = some Timebase.BeatsPositionLengthRate
+  of 2: result = some Timebase.BeatsPosition

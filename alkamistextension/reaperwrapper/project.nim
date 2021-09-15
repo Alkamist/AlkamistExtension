@@ -2,6 +2,29 @@ import std/options
 import reaper
 import types, functions
 
+proc configVarPtr[T](project: Project, name: string): ptr T =
+  var size = 0.cint
+  var address: pointer
+
+  let offset = projectconfig_var_getoffs(name, size.addr)
+
+  if offset != 0:
+    address = projectconfig_var_addr(project, offset)
+  else:
+    address = get_config_var(name, size.addr)
+
+  if size == sizeof(T):
+    return cast[ptr T](address)
+
+proc timebase*(project: Project): Timebase =
+  let retval = configVarPtr[cint](project, "itemtimelock")[]
+  case retval:
+  of 0: result = Timebase.Time
+  of 1: result = Timebase.BeatsPositionLengthRate
+  of 2: result = Timebase.BeatsPosition
+  else:
+    raise newException(IOError, "Parsed unknown project timebase.")
+
 proc validate*(project: Project, track: Track): bool =
   ValidatePtr2(project, cast[pointer](track), "MediaTrack*")
 
@@ -188,11 +211,16 @@ proc averageTempoOfTimeRange*(project: Project, left, right: float): float =
         result += weightedAverage(marker, marker.position, right)
         break
 
-      if i == 0:
-        result += weightedAverage(marker, left, nextMarker.get.position)
+      let subRangeLeft = block:
+        if marker.position < left:
+          left
+        else:
+          marker.position
 
-      elif i == markerCount - 1:
-        result += weightedAverage(marker, marker.position, right)
+      let subRangeRight = block:
+        if nextMarker.get.position > right:
+          right
+        else:
+          nextMarker.get.position
 
-      else:
-        result += weightedAverage(marker, marker.position, nextMarker.get.position)
+      result += weightedAverage(marker, subRangeLeft, subRangeRight)

@@ -33,3 +33,8 @@ type
 
   ItemKind* {.pure.} = enum
     Empty, Audio, Midi,
+
+  Timebase* {.pure.} = enum
+    Time,
+    BeatsPositionLengthRate,
+    BeatsPosition,
