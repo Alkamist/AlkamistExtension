@@ -8,8 +8,11 @@ proc relativeCopyAction =
   project.relativeCopyItems(project.editCursorTime)
 
 proc relativePasteAction =
+  preventUiRefresh(true)
   let project = currentProject()
-  project.relativePasteItems(project.editCursorTime, 0.5, 0.0)
+  for i in 0 ..< 100:
+    project.relativePasteItems(project.editCursorTime + i.float, 1.0, 0.0)
+  preventUiRefresh(false)
   updateArrange()
 
 

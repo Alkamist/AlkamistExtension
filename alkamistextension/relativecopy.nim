@@ -77,10 +77,9 @@ proc relativeCopyItems*(project: Project, positionTime: float) =
 
   relativeCopyInfo = @[]
 
-  noUiRefresh:
-    for item in project.selectedItems:
-      relativeCopyInfo.add item.copyInfo(positionTime)
-    copyItems()
+  for item in project.selectedItems:
+    relativeCopyInfo.add item.copyInfo(positionTime)
+  copyItems()
 
 proc adjustUsingTime(project: Project,
                      item: Item,
@@ -168,7 +167,7 @@ proc adjustUsingBeatsPositionLengthRate(project: Project,
       let takePlayrate = takeInfo.playrate * playrate
       take.playrate = takePlayrate
 
-      # Delete and re-add all stretch markers in the correct positions.
+      # Delete and re-add all stretch markers in the correct positions
       take.deleteStretchMarker(0, markerCount)
 
       for markerId in 0 ..< takeInfo.stretchMarkers.len:
@@ -180,56 +179,56 @@ proc adjustUsingBeatsPositionLengthRate(project: Project,
     inc takeId
 
 proc relativePasteItems*(project: Project, positionTime, playrate, pitch: float) =
-  noUiRefresh:
-    let cursorTime = project.editCursorTime
+  let cursorTime = project.editCursorTime
 
-    unselectItems()
-    pasteItems()
+  unselectItems()
+  pasteItems()
 
-    let items = block:
-      var res: seq[Item]
-      for item in project.selectedItems:
-        res.add item
-      res
+  let items = block:
+    var res: seq[Item]
+    for item in project.selectedItems:
+      res.add item
+    res
 
-    if items.len != relativeCopyInfo.len:
-      raise newException(IOError, "Relative Paste Error: Items copied != items pasted.")
+  if items.len != relativeCopyInfo.len:
+    showMessageBox("Relative Paste Warning:", "The number of items copied does not equal the number of items pasted.")
+    return
 
-    let positionBeats = project.timeToBeats(positionTime)
-    let projectTimebase = project.timebase
+  let positionBeats = project.timeToBeats(positionTime)
+  let projectTimebase = project.timebase
 
-    for itemId, itemInfo in relativeCopyInfo.pairs:
-      let item = items[itemId]
-      let track = item.track
+  for itemId, itemInfo in relativeCopyInfo.pairs:
+    let item = items[itemId]
+    let track = item.track
 
-      let trackTimebase = block:
-        let res = track.timebase
-        if res.isSome:
-          res.get
-        else:
-          projectTimebase
+    let trackTimebase = block:
+      let res = track.timebase
+      if res.isSome:
+        res.get
+      else:
+        projectTimebase
 
-      let itemTimebase = block:
-        let res = item.timebase
-        if res.isSome:
-          res.get
-        else:
-          trackTimebase
+    let itemTimebase = block:
+      let res = item.timebase
+      if res.isSome:
+        res.get
+      else:
+        trackTimebase
 
-      # Adjust item bounds, playrates, and stretch markers based on timebase
-      case itemTimebase:
-      of Timebase.Time:
-        project.adjustUsingTime(item, itemInfo, positionTime, playrate)
-      of Timebase.BeatsPositionLengthRate:
-        project.adjustUsingBeatsPositionLengthRate(item, itemInfo, positionTime, positionBeats, playrate)
-      of Timebase.BeatsPosition:
-        project.adjustUsingBeatsPosition(item, itemInfo, positionTime, positionBeats, playrate)
+    # Adjust item bounds, playrates, and stretch markers based on timebase
+    case itemTimebase:
+    of Timebase.Time:
+      project.adjustUsingTime(item, itemInfo, positionTime, playrate)
+    of Timebase.BeatsPositionLengthRate:
+      project.adjustUsingBeatsPositionLengthRate(item, itemInfo, positionTime, positionBeats, playrate)
+    of Timebase.BeatsPosition:
+      project.adjustUsingBeatsPosition(item, itemInfo, positionTime, positionBeats, playrate)
 
-      # Adjust take pitches
-      var takeId = 0
-      for take in item.takes:
-        let takeInfo = itemInfo.takes[takeId]
-        take.pitch = takeInfo.pitch + pitch
-        inc takeId
+    # Adjust take pitches
+    var takeId = 0
+    for take in item.takes:
+      let takeInfo = itemInfo.takes[takeId]
+      take.pitch = takeInfo.pitch + pitch
+      inc takeId
 
-    project.setEditCursorTime(cursorTime, false, false)
+  project.setEditCursorTime(cursorTime, false, false)

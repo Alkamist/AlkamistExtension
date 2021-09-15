@@ -17,11 +17,6 @@ proc preventUiRefresh*(shouldPrevent: bool) =
     PreventUIRefresh(-1)
     uiRefreshPrevented = false
 
-template noUiRefresh*(code): untyped =
-  preventUiRefresh(true)
-  code
-  preventUiRefresh(false)
-
 proc mainCommand*(id: int) =
   Main_OnCommand(id.cint, 0)
 
@@ -34,5 +29,5 @@ proc currentProject*: Project =
 proc currentTempo*: float =
   Master_GetTempo()
 
-proc showMessageBox*(title, msg: string, kind: MessageBoxKind) =
+proc showMessageBox*(title, msg: string, kind = MessageBoxKind.Ok) =
   discard ShowMessageBox(msg, title, kind.cint)
