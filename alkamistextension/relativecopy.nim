@@ -117,16 +117,16 @@ proc adjustUsingBeatsPosition(project: Project,
                               positionBeats: float,
                               playrate: float) =
   let itemSnapPositionBeats = positionBeats + itemInfo.startOffsetBeats / playrate
-  let itemSnapOffsetBeats = itemInfo.snapOffsetBeats / playrate
-  let itemLeftBoundBeats = itemSnapPositionBeats - itemSnapOffsetBeats
+  # No need to scale with playrate since the item doesn't scale
+  let itemSnapOffsetTime = itemInfo.snapOffsetTime
+  let itemLeftBoundTime = project.beatsToTime(itemSnapPositionBeats) - itemSnapOffsetTime
 
-  item.positionBeats = itemLeftBoundBeats
-
-  # if item.kind == ItemKind.Midi:
-  #   let itemLengthTime = itemInfo.lengthTime
-  #   let snapOffsetPercent = itemInfo.snapOffsetTime / itemLengthTime
-  #   item.lengthTime = itemLengthTime
-    # item.snapOffsetTime = itemLengthTime * snapOffsetPercent
+  if item.kind == ItemKind.Midi:
+    item.positionTime = itemLeftBoundTime
+    item.lengthTime = itemInfo.lengthTime
+    item.snapOffsetTime = itemSnapOffsetTime
+  else:
+    item.positionTime = itemLeftBoundTime
 
 proc adjustUsingBeatsPositionLengthRate(project: Project,
                                         item: Item,
@@ -192,6 +192,9 @@ proc relativePasteItems*(project: Project, positionTime, playrate, pitch: float)
         res.add item
       res
 
+    if items.len != relativeCopyInfo.len:
+      raise newException(IOError, "Relative Paste Error: Items copied != items pasted.")
+
     let positionBeats = project.timeToBeats(positionTime)
     let projectTimebase = project.timebase
 
@@ -213,6 +216,7 @@ proc relativePasteItems*(project: Project, positionTime, playrate, pitch: float)
         else:
           trackTimebase
 
+      # Adjust item bounds, playrates, and stretch markers based on timebase
       case itemTimebase:
       of Timebase.Time:
         project.adjustUsingTime(item, itemInfo, positionTime, playrate)
@@ -220,5 +224,12 @@ proc relativePasteItems*(project: Project, positionTime, playrate, pitch: float)
         project.adjustUsingBeatsPositionLengthRate(item, itemInfo, positionTime, positionBeats, playrate)
       of Timebase.BeatsPosition:
         project.adjustUsingBeatsPosition(item, itemInfo, positionTime, positionBeats, playrate)
+
+      # Adjust take pitches
+      var takeId = 0
+      for take in item.takes:
+        let takeInfo = itemInfo.takes[takeId]
+        take.pitch = takeInfo.pitch + pitch
+        inc takeId
 
     project.setEditCursorTime(cursorTime, false, false)

@@ -9,7 +9,7 @@ proc relativeCopyAction =
 
 proc relativePasteAction =
   let project = currentProject()
-  project.relativePasteItems(project.editCursorTime, 1.0, 0.0)
+  project.relativePasteItems(project.editCursorTime, 0.5, 0.0)
   updateArrange()
 
 

@@ -33,3 +33,6 @@ proc currentProject*: Project =
 
 proc currentTempo*: float =
   Master_GetTempo()
+
+proc showMessageBox*(title, msg: string, kind: MessageBoxKind) =
+  discard ShowMessageBox(msg, title, kind.cint)
