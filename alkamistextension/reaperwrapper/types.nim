@@ -51,8 +51,8 @@ template defineGetStateChunkProc*(chunkApiFunction, pointerType): untyped =
       discard chunkApiFunction(p, result, chunkLength.cint, false)
 
       let endPos = result.find('\0')
-      if endpos < chunkLength - 1:
-        result.setLen(endpos)
+      if endPos < chunkLength - 1:
+        result.setLen(endPos)
         return result
 
       if chunkLength > 100 shl 20:

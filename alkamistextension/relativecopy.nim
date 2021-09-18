@@ -1,9 +1,5 @@
+import std/strutils
 import reaperwrapper
-
-# template unselectAll = mainCommand(40769)
-template unselectItems = mainCommand(40289)
-template copyItems = mainCommand(40698)
-template pasteItems = mainCommand(41072)
 
 type
   StretchMarkerCopyInfo = object
@@ -16,6 +12,7 @@ type
     stretchMarkers: seq[StretchMarkerCopyInfo]
 
   ItemCopyInfo = object
+    track: Track
     startOffsetTime: float
     startOffsetBeats: float
     lengthTime: float
@@ -31,45 +28,21 @@ type
     autoFadeOutTime: float
     autoFadeOutBeats: float
     averageTempo: float
+    stateChunk: string
     takes: seq[TakeCopyInfo]
 
-proc copyInfo(item: Item, positionTime: float): ItemCopyInfo =
-  let project = item.project
-  let positionBeats = project.timeToBeats(positionTime)
-  let itemSnapPositionTime = item.snapPositionTime
-  let itemSnapPositionBeats = item.snapPositionBeats
-  result.startOffsetTime = itemSnapPositionTime - positionTime
-  result.startOffsetBeats = itemSnapPositionBeats - positionBeats
-  result.lengthTime = item.lengthTime
-  result.lengthBeats = item.lengthBeats
-  result.snapOffsetTime = item.snapOffsetTime
-  result.snapOffsetBeats = item.snapOffsetBeats
-  result.fadeInTime = item.fadeInTime
-  result.fadeInBeats = item.fadeInBeats
-  result.fadeOutTime = item.fadeOutTime
-  result.fadeOutBeats = item.fadeOutBeats
-  result.autoFadeInTime = item.autoFadeInTime
-  result.autoFadeInBeats = item.autoFadeInBeats
-  result.autoFadeOutTime = item.autoFadeOutTime
-  result.autoFadeOutBeats = item.autoFadeOutBeats
-  result.averageTempo = item.averageTempo
-
-  for take in item.takes:
-    let takePlayrate = take.playrate
-
-    var takeInfo = TakeCopyInfo()
-    takeInfo.playrate = take.playrate
-    takeInfo.pitch = take.pitch
-
-    for marker in take.stretchMarkers:
-      var markerInfo = StretchMarkerCopyInfo()
-      markerInfo.positionBeats = (project.timeToBeats(itemSnapPositionTime + marker.position / takePlayrate) - itemSnapPositionBeats)
-      markerInfo.sourcePositionTime = marker.sourcePosition
-      takeInfo.stretchMarkers.add markerInfo
-
-    result.takes.add takeInfo
-
 var relativeCopyInfo: seq[ItemCopyInfo]
+
+proc isIdLine(line: string): bool =
+  let unindentedLine = line.unindent
+  unindentedLine.startsWith("IGUID") or
+  unindentedLine.startsWith("GUID") or
+  unindentedLine.startsWith("IID")
+
+proc stripStateChunkIds(chunk: string): string =
+  for line in chunk.splitLines:
+    if not line.isIdLine:
+      result.add line & '\n'
 
 proc relativeCopyItems*(project: Project, positionTime: float) =
   if project.selectedItemCount < 1:
@@ -78,8 +51,45 @@ proc relativeCopyItems*(project: Project, positionTime: float) =
   relativeCopyInfo = @[]
 
   for item in project.selectedItems:
-    relativeCopyInfo.add item.copyInfo(positionTime)
-  copyItems()
+    var info = ItemCopyInfo()
+    let project = item.project
+    let positionBeats = project.timeToBeats(positionTime)
+    let itemSnapPositionTime = item.snapPositionTime
+    let itemSnapPositionBeats = item.snapPositionBeats
+    info.track = item.track
+    info.startOffsetTime = itemSnapPositionTime - positionTime
+    info.startOffsetBeats = itemSnapPositionBeats - positionBeats
+    info.lengthTime = item.lengthTime
+    info.lengthBeats = item.lengthBeats
+    info.snapOffsetTime = item.snapOffsetTime
+    info.snapOffsetBeats = item.snapOffsetBeats
+    info.fadeInTime = item.fadeInTime
+    info.fadeInBeats = item.fadeInBeats
+    info.fadeOutTime = item.fadeOutTime
+    info.fadeOutBeats = item.fadeOutBeats
+    info.autoFadeInTime = item.autoFadeInTime
+    info.autoFadeInBeats = item.autoFadeInBeats
+    info.autoFadeOutTime = item.autoFadeOutTime
+    info.autoFadeOutBeats = item.autoFadeOutBeats
+    info.averageTempo = item.averageTempo
+    info.stateChunk = item.stateChunk.stripStateChunkIds
+
+    for take in item.takes:
+      let takePlayrate = take.playrate
+
+      var takeInfo = TakeCopyInfo()
+      takeInfo.playrate = take.playrate
+      takeInfo.pitch = take.pitch
+
+      for marker in take.stretchMarkers:
+        var markerInfo = StretchMarkerCopyInfo()
+        markerInfo.positionBeats = (project.timeToBeats(itemSnapPositionTime + marker.position / takePlayrate) - itemSnapPositionBeats)
+        markerInfo.sourcePositionTime = marker.sourcePosition
+        takeInfo.stretchMarkers.add markerInfo
+
+      info.takes.add takeInfo
+
+    relativeCopyInfo.add info
 
 proc adjustUsingTime(project: Project,
                      item: Item,
@@ -179,15 +189,12 @@ proc adjustUsingBeatsPositionLengthRate(project: Project,
     inc takeId
 
 proc relativePasteItems*(project: Project, positionTime, playrate, pitch: float) =
-  let cursorTime = project.editCursorTime
-
-  unselectItems()
-  pasteItems()
-
   let items = block:
     var res: seq[Item]
-    for item in project.selectedItems:
-      res.add item
+    for info in relativeCopyInfo:
+      let pastedItem = newItem(info.track)
+      pastedItem.stateChunk = info.stateChunk
+      res.add pastedItem
     res
 
   if items.len != relativeCopyInfo.len:
@@ -230,5 +237,3 @@ proc relativePasteItems*(project: Project, positionTime, playrate, pitch: float)
       let takeInfo = itemInfo.takes[takeId]
       take.pitch = takeInfo.pitch + pitch
       inc takeId
-
-  project.setEditCursorTime(cursorTime, false, false)

@@ -4,6 +4,9 @@ import types, project, take
 
 defineGetStateChunkProc(GetItemStateChunk, Item)
 
+proc `stateChunk=`*(item: Item, chunk: string) =
+  discard SetItemStateChunk(item, chunk, false)
+
 proc project*(item: Item): Project = GetItemProjectContext(item)
 proc track*(item: Item): Track = GetMediaItem_Track(item)
 

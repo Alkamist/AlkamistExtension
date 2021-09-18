@@ -251,7 +251,7 @@ const testStr = """
 >
 """
 
-var p = RppXmlParser()
-p.location = 0
-p.data = testStr
-echo p.parseSection().toRppXml
+# var p = RppXmlParser()
+# p.location = 0
+# p.data = testStr
+# echo p.parseSection().toRppXml

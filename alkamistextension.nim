@@ -10,19 +10,31 @@ import reaper
 # proc relativePasteAction =
 #   preventUiRefresh(true)
 #   let project = currentProject()
-#   for i in 0 ..< 100:
-#     project.relativePasteItems(project.editCursorTime + i.float, 1.0, 0.0)
+#   # for i in 0 ..< 100:
+#   #   project.relativePasteItems(project.editCursorTime + i.float, 1.0, 0.0)
+#   project.relativePasteItems(project.editCursorTime, 1.0, 0.0)
 #   preventUiRefresh(false)
 #   updateArrange()
 
 
+import std/strutils
 import alkamistextension/reaperwrapper
+
+proc isIdLine*(line: string): bool =
+  let unindentedLine = line.unindent
+  unindentedLine.startsWith("IGUID") or
+  unindentedLine.startsWith("GUID") or
+  unindentedLine.startsWith("IID")
+
+proc stripStateChunkIds*(chunk: string): string =
+  for line in chunk.splitLines:
+    if not line.isIdLine:
+      result.add line & '\n'
 
 proc relativeCopyAction =
   let project = currentProject()
-  let item = project.selectedItem(0).get
-
-  recho item.stateChunk
+  for item in project.selectedItems:
+    recho item.stateChunk.stripStateChunkIds
 
 
 createExtension:

@@ -21,3 +21,6 @@ proc timebase*(track: Track): Option[Timebase] =
   of 0: result = some Timebase.Time
   of 1: result = some Timebase.BeatsPositionLengthRate
   of 2: result = some Timebase.BeatsPosition
+
+proc newItem*(track: Track): Item =
+  AddMediaItemToTrack(track)
