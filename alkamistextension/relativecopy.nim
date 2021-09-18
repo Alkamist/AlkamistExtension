@@ -1,5 +1,5 @@
-import std/strutils
 import reaperwrapper
+import chunkpatch
 
 type
   StretchMarkerCopyInfo = object
@@ -33,17 +33,6 @@ type
 
 var relativeCopyInfo: seq[ItemCopyInfo]
 
-proc isIdLine(line: string): bool =
-  let unindentedLine = line.unindent
-  unindentedLine.startsWith("IGUID") or
-  unindentedLine.startsWith("GUID") or
-  unindentedLine.startsWith("IID")
-
-proc stripStateChunkIds(chunk: string): string =
-  for line in chunk.splitLines:
-    if not line.isIdLine:
-      result.add line & '\n'
-
 proc relativeCopyItems*(project: Project, positionTime: float) =
   if project.selectedItemCount < 1:
     return
@@ -72,7 +61,11 @@ proc relativeCopyItems*(project: Project, positionTime: float) =
     info.autoFadeOutTime = item.autoFadeOutTime
     info.autoFadeOutBeats = item.autoFadeOutBeats
     info.averageTempo = item.averageTempo
-    info.stateChunk = item.stateChunk.stripStateChunkIds
+    info.stateChunk = item.stateChunk.patch(
+      removeField("GUID"),
+      removeField("IGUID"),
+      removeField("IID"),
+    )
 
     for take in item.takes:
       let takePlayrate = take.playrate
@@ -91,149 +84,199 @@ proc relativeCopyItems*(project: Project, positionTime: float) =
 
     relativeCopyInfo.add info
 
-proc adjustUsingTime(project: Project,
-                     item: Item,
-                     itemInfo: ItemCopyInfo,
-                     positionTime: float,
-                     playrate: float) =
-  let itemSnapPositionTime = positionTime + itemInfo.startOffsetTime / playrate
-  let itemLengthTime = itemInfo.lengthTime / playrate
-  let itemSnapOffsetTime = itemInfo.snapOffsetTime / playrate
-  let itemLeftBoundTime = itemSnapPositionTime - itemSnapOffsetTime
-  let itemFadeInTime = itemInfo.fadeInTime / playrate
-  let itemFadeOutTime = itemInfo.fadeOutTime / playrate
-  let itemAutoFadeInTime = itemInfo.autoFadeInTime / playrate
-  let itemAutoFadeOutTime = itemInfo.autoFadeOutTime / playrate
+# proc adjustUsingTime(project: Project,
+#                      item: Item,
+#                      itemInfo: ItemCopyInfo,
+#                      positionTime: float,
+#                      playrate: float) =
+#   let itemSnapPositionTime = positionTime + itemInfo.startOffsetTime / playrate
+#   let itemLengthTime = itemInfo.lengthTime / playrate
+#   let itemSnapOffsetTime = itemInfo.snapOffsetTime / playrate
+#   let itemLeftBoundTime = itemSnapPositionTime - itemSnapOffsetTime
+#   let itemFadeInTime = itemInfo.fadeInTime / playrate
+#   let itemFadeOutTime = itemInfo.fadeOutTime / playrate
+#   let itemAutoFadeInTime = itemInfo.autoFadeInTime / playrate
+#   let itemAutoFadeOutTime = itemInfo.autoFadeOutTime / playrate
 
-  item.positionTime = itemLeftBoundTime
-  item.lengthTime = itemLengthTime
-  item.snapOffsetTime = itemSnapOffsetTime
-  item.fadeInTime = itemFadeInTime
-  item.fadeOutTime = itemFadeOutTime
-  item.autoFadeInTime = itemAutoFadeInTime
-  item.autoFadeOutTime = itemAutoFadeOutTime
+#   item.positionTime = itemLeftBoundTime
+#   item.lengthTime = itemLengthTime
+#   item.snapOffsetTime = itemSnapOffsetTime
+#   item.fadeInTime = itemFadeInTime
+#   item.fadeOutTime = itemFadeOutTime
+#   item.autoFadeInTime = itemAutoFadeInTime
+#   item.autoFadeOutTime = itemAutoFadeOutTime
 
-  var takeId = 0
-  for take in item.takes:
-    let takeInfo = itemInfo.takes[takeId]
-    take.playrate = takeInfo.playrate * playrate
-    inc takeId
+#   var takeId = 0
+#   for take in item.takes:
+#     let takeInfo = itemInfo.takes[takeId]
+#     take.playrate = takeInfo.playrate * playrate
+#     inc takeId
 
-proc adjustUsingBeatsPosition(project: Project,
-                              item: Item,
-                              itemInfo: ItemCopyInfo,
-                              positionTime: float,
-                              positionBeats: float,
-                              playrate: float) =
-  let itemSnapPositionBeats = positionBeats + itemInfo.startOffsetBeats / playrate
-  # No need to scale with playrate since the item doesn't scale
-  let itemSnapOffsetTime = itemInfo.snapOffsetTime
-  let itemLeftBoundTime = project.beatsToTime(itemSnapPositionBeats) - itemSnapOffsetTime
+# proc adjustUsingBeatsPosition(project: Project,
+#                               item: Item,
+#                               itemInfo: ItemCopyInfo,
+#                               positionTime: float,
+#                               positionBeats: float,
+#                               playrate: float) =
+#   let itemSnapPositionBeats = positionBeats + itemInfo.startOffsetBeats / playrate
+#   # No need to scale with playrate since the item doesn't scale
+#   let itemSnapOffsetTime = itemInfo.snapOffsetTime
+#   let itemLeftBoundTime = project.beatsToTime(itemSnapPositionBeats) - itemSnapOffsetTime
 
-  if item.kind == ItemKind.Midi:
-    item.positionTime = itemLeftBoundTime
-    item.lengthTime = itemInfo.lengthTime
-    item.snapOffsetTime = itemSnapOffsetTime
-  else:
-    item.positionTime = itemLeftBoundTime
+#   if item.kind == ItemKind.Midi:
+#     item.positionTime = itemLeftBoundTime
+#     item.lengthTime = itemInfo.lengthTime
+#     item.snapOffsetTime = itemSnapOffsetTime
+#   else:
+#     item.positionTime = itemLeftBoundTime
 
-proc adjustUsingBeatsPositionLengthRate(project: Project,
-                                        item: Item,
-                                        itemInfo: ItemCopyInfo,
-                                        positionTime: float,
-                                        positionBeats: float,
-                                        playrate: float) =
-  let itemSnapPositionBeats = positionBeats + itemInfo.startOffsetBeats / playrate
-  let itemLengthBeats = itemInfo.lengthBeats / playrate
-  let itemSnapOffsetBeats = itemInfo.snapOffsetBeats / playrate
-  let itemLeftBoundBeats = itemSnapPositionBeats - itemSnapOffsetBeats
-  let itemFadeInBeats = itemInfo.fadeInBeats / playrate
-  let itemFadeOutBeats = itemInfo.fadeOutBeats / playrate
-  let itemAutoFadeInBeats = itemInfo.autoFadeInBeats / playrate
-  let itemAutoFadeOutBeats = itemInfo.autoFadeOutBeats / playrate
+# proc adjustUsingBeatsPositionLengthRate(project: Project,
+#                                         item: Item,
+#                                         itemInfo: ItemCopyInfo,
+#                                         positionTime: float,
+#                                         positionBeats: float,
+#                                         playrate: float) =
+#   let itemSnapPositionBeats = positionBeats + itemInfo.startOffsetBeats / playrate
+#   let itemLengthBeats = itemInfo.lengthBeats / playrate
+#   let itemSnapOffsetBeats = itemInfo.snapOffsetBeats / playrate
+#   let itemLeftBoundBeats = itemSnapPositionBeats - itemSnapOffsetBeats
+#   let itemFadeInBeats = itemInfo.fadeInBeats / playrate
+#   let itemFadeOutBeats = itemInfo.fadeOutBeats / playrate
+#   let itemAutoFadeInBeats = itemInfo.autoFadeInBeats / playrate
+#   let itemAutoFadeOutBeats = itemInfo.autoFadeOutBeats / playrate
 
-  item.positionBeats = itemLeftBoundBeats
-  item.lengthBeats = itemLengthBeats
-  item.snapOffsetBeats = itemSnapOffsetBeats
-  item.fadeInBeats = itemFadeInBeats
-  item.fadeOutBeats = itemFadeOutBeats
-  item.autoFadeInBeats = itemAutoFadeInBeats
-  item.autoFadeOutBeats = itemAutoFadeOutBeats
+#   item.positionBeats = itemLeftBoundBeats
+#   item.lengthBeats = itemLengthBeats
+#   item.snapOffsetBeats = itemSnapOffsetBeats
+#   item.fadeInBeats = itemFadeInBeats
+#   item.fadeOutBeats = itemFadeOutBeats
+#   item.autoFadeInBeats = itemAutoFadeInBeats
+#   item.autoFadeOutBeats = itemAutoFadeOutBeats
 
-  let tempoRatio = block:
-    if item.kind in [ItemKind.Empty, ItemKind.Midi]:
-      1.0
-    else:
-      item.averageTempo / itemInfo.averageTempo
+#   let tempoRatio = block:
+#     if item.kind in [ItemKind.Empty, ItemKind.Midi]:
+#       1.0
+#     else:
+#       item.averageTempo / itemInfo.averageTempo
 
-  var takeId = 0
-  for take in item.takes:
-    let takeInfo = itemInfo.takes[takeId]
-    let markerCount = take.stretchMarkerCount
+#   var takeId = 0
+#   for take in item.takes:
+#     let takeInfo = itemInfo.takes[takeId]
+#     let markerCount = take.stretchMarkerCount
 
-    if markerCount <= 0:
-      take.playrate = takeInfo.playrate * tempoRatio * playrate
-    else:
-      let takePlayrate = takeInfo.playrate * playrate
-      take.playrate = takePlayrate
+#     if markerCount <= 0:
+#       take.playrate = takeInfo.playrate * tempoRatio * playrate
+#     else:
+#       let takePlayrate = takeInfo.playrate * playrate
+#       take.playrate = takePlayrate
 
-      # Delete and re-add all stretch markers in the correct positions
-      take.deleteStretchMarker(0, markerCount)
+#       # Delete and re-add all stretch markers in the correct positions
+#       take.deleteStretchMarker(0, markerCount)
 
-      for markerId in 0 ..< takeInfo.stretchMarkers.len:
-        let markerInfo = takeInfo.stretchMarkers[markerId]
-        let positionTime = project.beatsToTime(item.snapPositionBeats + markerInfo.positionBeats / playrate) - item.snapPositionTime
-        let sourceTime = markerInfo.sourcePositionTime
-        take.addStretchMarker(positionTime * takePlayrate, some sourceTime)
+#       for markerId in 0 ..< takeInfo.stretchMarkers.len:
+#         let markerInfo = takeInfo.stretchMarkers[markerId]
+#         let positionTime = project.beatsToTime(item.snapPositionBeats + markerInfo.positionBeats / playrate) - item.snapPositionTime
+#         let sourceTime = markerInfo.sourcePositionTime
+#         take.addStretchMarker(positionTime * takePlayrate, some sourceTime)
 
-    inc takeId
+#     inc takeId
 
 proc relativePasteItems*(project: Project, positionTime, playrate, pitch: float) =
-  let items = block:
-    var res: seq[Item]
-    for info in relativeCopyInfo:
-      let pastedItem = newItem(info.track)
-      pastedItem.stateChunk = info.stateChunk
-      res.add pastedItem
-    res
-
-  if items.len != relativeCopyInfo.len:
-    showMessageBox("Relative Paste Warning:", "The number of items copied does not equal the number of items pasted.")
-    return
-
   let positionBeats = project.timeToBeats(positionTime)
-  let projectTimebase = project.timebase
 
-  for itemId, itemInfo in relativeCopyInfo.pairs:
-    let item = items[itemId]
-    let track = item.track
+  for itemInfo in relativeCopyInfo:
+    let track = itemInfo.track
+    let item = track.newItem()
 
-    let trackTimebase = block:
-      let res = track.timebase
-      if res.isSome:
-        res.get
+    let itemSnapPositionBeats = positionBeats + itemInfo.startOffsetBeats / playrate
+    let itemSnapOffsetBeats = itemInfo.snapOffsetBeats / playrate
+    let itemLeftBoundBeats = itemSnapPositionBeats - itemSnapOffsetBeats
+    let itemLeftBoundTime = project.beatsToTime(itemLeftBoundBeats)
+    let itemLengthBeats = itemInfo.lengthBeats / playrate
+    let itemLengthTime = project.beatsToTime(itemLeftBoundBeats + itemLengthBeats) - itemLeftBoundTime
+    let itemRightBoundTime = itemLeftBoundTime + itemLengthTime
+    let itemSnapOffsetTime = project.beatsToTime(itemLeftBoundBeats + itemSnapOffsetBeats) - itemLeftBoundTime
+
+    let tempoRatio = block:
+      if item.kind in [ItemKind.Empty, ItemKind.Midi]:
+        1.0
       else:
-        projectTimebase
+        project.averageTempoOfTimeRange(itemLeftBoundTime, itemRightBoundTime) / itemInfo.averageTempo
 
-    let itemTimebase = block:
-      let res = item.timebase
-      if res.isSome:
-        res.get
-      else:
-        trackTimebase
+    let itemPlayrate = tempoRatio * playrate
 
-    # Adjust item bounds, playrates, and stretch markers based on timebase
-    case itemTimebase:
-    of Timebase.Time:
-      project.adjustUsingTime(item, itemInfo, positionTime, playrate)
-    of Timebase.BeatsPositionLengthRate:
-      project.adjustUsingBeatsPositionLengthRate(item, itemInfo, positionTime, positionBeats, playrate)
-    of Timebase.BeatsPosition:
-      project.adjustUsingBeatsPosition(item, itemInfo, positionTime, positionBeats, playrate)
+    item.stateChunk = itemInfo.stateChunk.patch(
+      setField("POSITION", formatRppXmlNumber(itemLeftBoundTime)),
+      setField("LENGTH", formatRppXmlNumber(itemLengthTime)),
+      setField("SNAPOFFS", formatRppXmlNumber(itemSnapOffsetTime)),
+    )
 
-    # Adjust take pitches
-    var takeId = 0
-    for take in item.takes:
-      let takeInfo = itemInfo.takes[takeId]
-      take.pitch = takeInfo.pitch + pitch
-      inc takeId
+    # let itemSnapPositionBeats = positionBeats + itemInfo.startOffsetBeats / playrate
+    # let itemLengthBeats = itemInfo.lengthBeats / playrate
+    # let itemSnapOffsetBeats = itemInfo.snapOffsetBeats / playrate
+    # let itemLeftBoundBeats = itemSnapPositionBeats - itemSnapOffsetBeats
+    # let itemFadeInBeats = itemInfo.fadeInBeats / playrate
+    # let itemFadeOutBeats = itemInfo.fadeOutBeats / playrate
+    # let itemAutoFadeInBeats = itemInfo.autoFadeInBeats / playrate
+    # let itemAutoFadeOutBeats = itemInfo.autoFadeOutBeats / playrate
+
+    # item.positionBeats = itemLeftBoundBeats
+    # item.lengthBeats = itemLengthBeats
+    # item.snapOffsetBeats = itemSnapOffsetBeats
+    # item.fadeInBeats = itemFadeInBeats
+    # item.fadeOutBeats = itemFadeOutBeats
+    # item.autoFadeInBeats = itemAutoFadeInBeats
+    # item.autoFadeOutBeats = itemAutoFadeOutBeats
+
+
+
+
+# proc relativePasteItems*(project: Project, positionTime, playrate, pitch: float) =
+#   let items = block:
+#     var res: seq[Item]
+#     for info in relativeCopyInfo:
+#       let pastedItem = newItem(info.track)
+#       pastedItem.stateChunk = info.stateChunk
+#       res.add pastedItem
+#     res
+
+#   if items.len != relativeCopyInfo.len:
+#     showMessageBox("Relative Paste Warning:", "The number of items copied does not equal the number of items pasted.")
+#     return
+
+#   let positionBeats = project.timeToBeats(positionTime)
+#   let projectTimebase = project.timebase
+
+#   for itemId, itemInfo in relativeCopyInfo.pairs:
+#     let item = items[itemId]
+#     let track = item.track
+
+#     let trackTimebase = block:
+#       let res = track.timebase
+#       if res.isSome:
+#         res.get
+#       else:
+#         projectTimebase
+
+#     let itemTimebase = block:
+#       let res = item.timebase
+#       if res.isSome:
+#         res.get
+#       else:
+#         trackTimebase
+
+#     # Adjust item bounds, playrates, and stretch markers based on timebase
+#     case itemTimebase:
+#     of Timebase.Time:
+#       project.adjustUsingTime(item, itemInfo, positionTime, playrate)
+#     of Timebase.BeatsPositionLengthRate:
+#       project.adjustUsingBeatsPositionLengthRate(item, itemInfo, positionTime, positionBeats, playrate)
+#     of Timebase.BeatsPosition:
+#       project.adjustUsingBeatsPosition(item, itemInfo, positionTime, positionBeats, playrate)
+
+#     # Adjust take pitches
+#     var takeId = 0
+#     for take in item.takes:
+#       let takeInfo = itemInfo.takes[takeId]
+#       take.pitch = takeInfo.pitch + pitch
+#       inc takeId

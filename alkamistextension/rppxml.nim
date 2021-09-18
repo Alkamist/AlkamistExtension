@@ -1,9 +1,5 @@
 import std/strutils
 
-# proc formatRppXmlNumber(value: float): string =
-#   result = formatFloat(value)
-#   result.trimZeros()
-
 type
   RpNodeKind* {.pure.} = enum
     Empty, Field, Section, Parameter,
@@ -204,7 +200,7 @@ proc parseSection(parser: RppXmlParser): RpNode =
       result.add n
       continue
 
-const testStr = """
+const testChunk = """
 <ITEM
   POSITION 18.75
   SNAPOFFS 0
@@ -251,7 +247,33 @@ const testStr = """
 >
 """
 
-# var p = RppXmlParser()
-# p.location = 0
-# p.data = testStr
-# echo p.parseSection().toRppXml
+proc patch*(chunk: string, fields: varargs[(string, string)]): string =
+  for line in chunk.splitLines:
+    let unindentedLine = line.unindent
+
+    var addedField = false
+    for field in fields:
+      if unindentedLine.startsWith(field[0]):
+        result.add field[0] & " " & field[1] & '\n'
+        addedField = true
+        break
+
+    if not addedField:
+      result.add unindentedLine & '\n'
+
+import benchmark
+
+timeIt("Chunk"):
+  for i in 0 ..< 10000:
+    var p = RppXmlParser()
+    p.location = 0
+    p.data = testChunk
+    keep p.parseSection().toRppXml
+
+timeIt("Strip"):
+  for i in 0 ..< 10000:
+    keep testChunk.patch(
+      ("POSITION", "300.5"),
+      ("SEL", "0"),
+      ("PLAYRATE", "1 1 0 -1 0 0.03"),
+    )
