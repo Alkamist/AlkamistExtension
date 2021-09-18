@@ -1,18 +1,17 @@
 import std/strutils
 
+# proc formatRppXmlNumber(value: float): string =
+#   result = formatFloat(value)
+#   result.trimZeros()
+
 type
   RpNodeKind* {.pure.} = enum
-    Empty, Identifier, String, Number, BinaryData,
-    Id, Section, Parameter,
+    Empty, Field, Section, Parameter,
 
   RpNode* = ref object
     case kind*: RpNodeKind
     of Empty: discard
-    of Identifier: identifierValue*: string
-    of String: stringValue*: string
-    of Number: numberValue*: float
-    of BinaryData: binaryDataValue*: string
-    of Id: idValue*: string
+    of Field: fieldValue*: string
     else: children*: seq[RpNode]
 
   RppXmlParser* = ref object
@@ -23,11 +22,7 @@ proc add*(n, child: RpNode) =
   n.children.add child
 
 proc rpEmpty*(): RpNode = RpNode(kind: Empty)
-proc rpIdentifier*(value: string): RpNode = RpNode(kind: Identifier, identifierValue: value)
-proc rpString*(value: string): RpNode = RpNode(kind: String, stringValue: value)
-proc rpNumber*(value: float): RpNode = RpNode(kind: Number, numberValue: value)
-proc rpBinaryData*(value: string): RpNode = RpNode(kind: BinaryData, binaryDataValue: value)
-proc rpId*(value: string): RpNode = RpNode(kind: Id, idValue: value)
+proc rpField*(value: string): RpNode = RpNode(kind: Field, fieldValue: value)
 
 template makeRpTree(k, c): untyped =
   result = RpNode(kind: k)
@@ -47,26 +42,14 @@ proc treeRepr*(n: RpNode): string =
 
   case n.kind:
   of Empty: result = "Empty"
-  of Identifier: result = n.identifierValue
-  of String: result = n.stringValue
-  of Number: result = $n.numberValue
-  of BinaryData: result = n.binaryDataValue
-  of Id: result = n.idValue
+  of Field: result = n.fieldValue
   of Section: printContainer("Section")
   of Parameter: printContainer("Parameter")
-
-proc formatRppXmlNumber(value: float): string =
-  result = formatFloat(value)
-  result.trimZeros()
 
 proc toRppXml*(n: RpNode): string =
   case n.kind:
   of Empty: raise newException(IOError, "Empty nodes cannot be translated to RppXml.")
-  of Identifier: result = n.identifierValue
-  of String: result = n.stringValue
-  of Number: result = formatRppXmlNumber(n.numberValue)
-  of BinaryData: result = n.binaryDataValue
-  of Id: result = n.idValue
+  of Field: result = n.fieldValue
   of Section:
     result.add '<'
     let lastId = n.children.len - 1
@@ -120,26 +103,19 @@ proc isSectionEnd*(parser: RppXmlParser, i = parser.location): bool =
 proc isStringEdge*(parser: RppXmlParser, i = parser.location): bool =
   parser.data[i] == '"'
 
-proc parseValue(parser: RppXmlParser): RpNode =
+proc parseField(parser: RppXmlParser): RpNode =
   result = rpEmpty()
   if parser.isAtEnd:
     return
 
-  let valueKind = block:
-    case parser.chr:
-    of '-', '0'..'9': Number
-    of 'A'..'Z', 'a'..'z': Identifier
-    of '{': Id
-    of '"': String
-    else: return
-
   let start = parser.location
-  if valueKind == String:
+
+  let isString = parser.isStringEdge
+  if isString:
     parser.step()
 
   while true:
-    case valueKind:
-    of String:
+    if isString:
       if parser.isStringEdge:
         break
 
@@ -160,24 +136,17 @@ proc parseValue(parser: RppXmlParser): RpNode =
   let valueString = parser.stringFrom(start)
   parser.step()
 
-  case valueKind:
-  of Number: result = rpNumber(parseFloat(valueString))
-  of Id: result = rpId(valueString)
-  of String: result = rpString(valueString)
-  of Identifier: result = rpIdentifier(valueString)
-  else: discard
+  result = rpField(valueString)
 
 proc parseParameter(parser: RppXmlParser): RpNode =
   result = rpEmpty()
   if parser.isAtEnd:
     return
 
-  let title = parser.parseValue()
-  if title.kind != Identifier:
-    return
-
+  let title = parser.parseField()
   result = rpParameter(title)
 
+  var valueId = 0
   while true:
     if parser.isAtEnd:
       return
@@ -187,11 +156,13 @@ proc parseParameter(parser: RppXmlParser): RpNode =
     of '\n': return
     else: discard
 
-    let value = parser.parseValue()
+    let value = parser.parseField()
     if value.kind == Empty:
       return
 
     result.add value
+
+    inc valueId
 
 proc parseSection(parser: RppXmlParser): RpNode =
   result = rpEmpty()
@@ -235,25 +206,47 @@ proc parseSection(parser: RppXmlParser): RpNode =
 
 const testStr = """
 <ITEM
-  POSITION 201.29032258060761
+  POSITION 18.75
   SNAPOFFS 0
-  LENGTH 0.11709634618074
+  LENGTH 1.875
   LOOP 0
   ALLTAKES 0
-  FADEIN 0 0 0 0 0 0
-  FADEOUT 0 0.093363 0 0 0 0
-  MUTE 0
-  SEL 0
-  IGUID {3304A213-BB48-4B96-A8EB-071AFC8A9523}
-  IID 362387
-  NAME OsirisN2hihat2.wav
+  FADEIN 0 0 0 0 0 0 0
+  FADEOUT 0 0 0 0 0 0 0
+  MUTE 0 0
+  SEL 1
+  IGUID {54018701-31CA-47BC-B9E2-B6C80AB43AFE}
+  IID 2
+  NAME "untitled MIDI item-glued"
   VOLPAN 1 0 1 -1
-  SOFFS 0
-  PLAYRATE 1.00000000000058 0 0 -1 0 0.0025
-  CHANMODE 2
-  GUID {D4948180-F4E0-44F1-A507-47561CC5F9DF}
-  <SOURCE WAVE
-    FILE "F:\Music Libraries\Dave40\VinylSoundtrackSamples\VinylNov02 ok\OsirisN2hihat2.wav"
+  SOFFS 0 0
+  PLAYRATE 1 1 0 -1 0 0.0025
+  CHANMODE 0
+  GUID {56799207-6D3F-4C21-8132-83E1CF2CBCA3}
+  <SOURCE MIDI
+    HASDATA 1 5120 QN
+    CCINTERP 32
+    POOLEDEVTS {E429A158-441D-4D4A-93F1-46F913DDEA9A}
+    E 0 90 3c 60
+    E 2560 80 3c 00
+    E 2560 90 3c 60
+    E 2560 80 3c 00
+    E 2560 90 3c 60
+    E 2560 80 3c 00
+    E 2560 90 3c 60
+    E 2560 80 3c 00
+    E 2560 b0 7b 00
+    CCINTERP 32
+    CHASE_CC_TAKEOFFS 1
+    GUID {67CDD837-BB7E-4DCB-B059-DAFDFB4D1A69}
+    IGNTEMPO 0 120 4 4
+    SRCCOLOR 40
+    VELLANE -1 135 6
+    CFGEDITVIEW -3763.339804 0.032302 59 12 0 -1 0 0 0 0.5
+    KEYSNAP 0
+    TRACKSEL 311
+    EVTFILTER 0 -1 -1 -1 -1 0 0 0 0 -1 -1 -1 -1 0 -1 0 -1 -1
+    CFGEDIT 1 1 0 0 0 0 1 0 1 1 1 0.25 550 252 2438 1277 1 0 0 0 0.5 0 0 0 0 0.5 0 0 1 64
   >
 >
 """

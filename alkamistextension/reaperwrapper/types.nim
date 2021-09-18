@@ -42,3 +42,20 @@ type
   MessageBoxKind* {.pure.} = enum
     Ok = 0, OkCancel = 1, AbortRetryIgnore = 2,
     YesNoCancel = 3, YesNo = 4, RetryCancel = 5,
+
+template defineGetStateChunkProc*(chunkApiFunction, pointerType): untyped =
+  proc stateChunk*(p: pointerType): string =
+    result = newString(1024)
+    while true:
+      let chunkLength = result.len
+      discard chunkApiFunction(p, result, chunkLength.cint, false)
+
+      let endPos = result.find('\0')
+      if endpos < chunkLength - 1:
+        result.setLen(endpos)
+        return result
+
+      if chunkLength > 100 shl 20:
+        raise newException(IOError, "The chunk size exceeded the 100 MiB limit.")
+
+      result.setLen(chunkLength * 2)

@@ -2,6 +2,8 @@ import std/options
 import reaper
 import types, project, take
 
+defineGetStateChunkProc(GetItemStateChunk, Item)
+
 proc project*(item: Item): Project = GetItemProjectContext(item)
 proc track*(item: Item): Track = GetMediaItem_Track(item)
 
