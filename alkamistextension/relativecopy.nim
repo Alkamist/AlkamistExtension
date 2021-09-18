@@ -13,6 +13,7 @@ type
 
   ItemCopyInfo = object
     track: Track
+    kind: ItemKind
     startOffsetTime: float
     startOffsetBeats: float
     lengthTime: float
@@ -46,6 +47,7 @@ proc relativeCopyItems*(project: Project, positionTime: float) =
     let itemSnapPositionTime = item.snapPositionTime
     let itemSnapPositionBeats = item.snapPositionBeats
     info.track = item.track
+    info.kind = item.kind
     info.startOffsetTime = itemSnapPositionTime - positionTime
     info.startOffsetBeats = itemSnapPositionBeats - positionBeats
     info.lengthTime = item.lengthTime
@@ -194,42 +196,36 @@ proc relativePasteItems*(project: Project, positionTime, playrate, pitch: float)
     let itemLeftBoundTime = project.beatsToTime(itemLeftBoundBeats)
     let itemLengthBeats = itemInfo.lengthBeats / playrate
     let itemLengthTime = project.beatsToTime(itemLeftBoundBeats + itemLengthBeats) - itemLeftBoundTime
+    let itemRightBoundBeats = itemLeftBoundBeats + itemLengthBeats
     let itemRightBoundTime = itemLeftBoundTime + itemLengthTime
     let itemSnapOffsetTime = project.beatsToTime(itemLeftBoundBeats + itemSnapOffsetBeats) - itemLeftBoundTime
+    let itemFadeInBeats = itemInfo.fadeInBeats / playrate
+    let itemFadeInTime = project.beatsToTime(itemLeftBoundBeats + itemFadeInBeats) - itemLeftBoundTime
+    let itemFadeOutBeats = itemInfo.fadeOutBeats / playrate
+    let itemFadeOutTime = itemRightBoundTime - project.beatsToTime(itemRightBoundBeats - itemFadeOutBeats)
+    # let itemAutoFadeInBeats = itemInfo.autoFadeInBeats / playrate
+    # let itemAutoFadeInTime = project.beatsToTime(itemLeftBoundBeats + itemAutoFadeInBeats) - itemLeftBoundTime
+    # let itemAutoFadeOutBeats = itemInfo.autoFadeOutBeats / playrate
+    # let itemAutoFadeOutTime = itemRightBoundTime - project.beatsToTime(itemRightBoundBeats - itemAutoFadeOutBeats)
 
     let tempoRatio = block:
-      if item.kind in [ItemKind.Empty, ItemKind.Midi]:
+      if itemInfo.kind in [ItemKind.Empty, ItemKind.Midi]:
         1.0
       else:
         project.averageTempoOfTimeRange(itemLeftBoundTime, itemRightBoundTime) / itemInfo.averageTempo
 
     let itemPlayrate = tempoRatio * playrate
 
-    item.stateChunk = itemInfo.stateChunk.patch(
-      setField("POSITION", formatRppXmlNumber(itemLeftBoundTime)),
-      setField("LENGTH", formatRppXmlNumber(itemLengthTime)),
-      setField("SNAPOFFS", formatRppXmlNumber(itemSnapOffsetTime)),
+    let itemStateChunk = itemInfo.stateChunk.patch(
+      updateField("POSITION", itemLeftBoundTime),
+      updateField("LENGTH", itemLengthTime),
+      updateField("SNAPOFFS", itemSnapOffsetTime),
+      updateField("PLAYRATE", (0, itemPlayrate)),
+      updateField("FADEIN", (1, itemFadeInTime)),
+      updateField("FADEOUT", (1, itemFadeOutTime)),
     )
 
-    # let itemSnapPositionBeats = positionBeats + itemInfo.startOffsetBeats / playrate
-    # let itemLengthBeats = itemInfo.lengthBeats / playrate
-    # let itemSnapOffsetBeats = itemInfo.snapOffsetBeats / playrate
-    # let itemLeftBoundBeats = itemSnapPositionBeats - itemSnapOffsetBeats
-    # let itemFadeInBeats = itemInfo.fadeInBeats / playrate
-    # let itemFadeOutBeats = itemInfo.fadeOutBeats / playrate
-    # let itemAutoFadeInBeats = itemInfo.autoFadeInBeats / playrate
-    # let itemAutoFadeOutBeats = itemInfo.autoFadeOutBeats / playrate
-
-    # item.positionBeats = itemLeftBoundBeats
-    # item.lengthBeats = itemLengthBeats
-    # item.snapOffsetBeats = itemSnapOffsetBeats
-    # item.fadeInBeats = itemFadeInBeats
-    # item.fadeOutBeats = itemFadeOutBeats
-    # item.autoFadeInBeats = itemAutoFadeInBeats
-    # item.autoFadeOutBeats = itemAutoFadeOutBeats
-
-
-
+    item.stateChunk = itemStateChunk
 
 # proc relativePasteItems*(project: Project, positionTime, playrate, pitch: float) =
 #   let items = block:
