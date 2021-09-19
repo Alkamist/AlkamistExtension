@@ -21,7 +21,7 @@ import alkamistextension/reaperwrapper
 
 proc relativeCopyAction =
   let project = currentProject()
-  recho project.selectedItem(0).get.stateChunk
+  recho project.selectedTrack(0).get.stateChunk
 
 
 createExtension:

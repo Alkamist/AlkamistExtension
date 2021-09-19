@@ -36,6 +36,8 @@ proc patch*(chunk: string, commands: varargs[ChunkPatch]): string =
   ## Loops through a chunk string line by line a single time, and builds
   ## a new chunk string based on the commands passed in.
 
+  # Keep a stack of section counts to enable patching of
+  # fields in specific section locations.
   var sectionStack = newSectionStack()
 
   for line in chunk.splitLines:
@@ -62,12 +64,33 @@ proc patch*(chunk: string, commands: varargs[ChunkPatch]): string =
         if unindentedLine.startsWith(command.updateFieldName) and
            sectionStack.currentLocation == command.updateFieldLocation:
           # Keep a record of the original fields without the title.
+          # Make sure to count strings with spaces as one field value.
           var originalFields: seq[string]
+          var parsingStringWithSpaces = false
+          var finishedParsingStringWithSpaces = false
+          var stringWithSpaces = ""
           var valueId = 0
           for value in unindentedLine.splitWhitespace:
+            if value.startsWith('"'):
+              stringWithSpaces = ""
+              parsingStringWithSpaces = true
+
+            if parsingStringWithSpaces:
+              stringWithSpaces.add value
+              if value.endsWith('"'):
+                parsingStringWithSpaces = false
+                finishedParsingStringWithSpaces = true
+              else:
+                stringWithSpaces.add ' '
+
             if valueId > 0:
-              originalFields.add value
+              if finishedParsingStringWithSpaces:
+                originalFields.add stringWithSpaces
+              elif not parsingStringWithSpaces:
+                originalFields.add value
+
             inc valueId
+            finishedParsingStringWithSpaces = false
 
           let lastId = originalFields.len - 1
 
@@ -183,8 +206,8 @@ when isMainModule:
     removeAll("IGUID"),
     removeAll("IID"),
     updateField(@[("TRACK", 0), ("ITEM", 2)], "POSITION", 300.5),
-    # updateField("SEL", false),
-    # updateField("PLAYRATE", (1, 10.1), (4, 0.03)),
+    updateField(@[("TRACK", 0), ("ITEM", 2)], "SEL", true),
+    updateField(@[("TRACK", 0), ("ITEM", 2)], "NAME", (0, "\"Test Name\"")),
   )
 
   echo patchedChunk

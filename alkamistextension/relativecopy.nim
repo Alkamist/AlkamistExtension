@@ -64,9 +64,9 @@ proc relativeCopyItems*(project: Project, positionTime: float) =
     info.autoFadeOutBeats = item.autoFadeOutBeats
     info.averageTempo = item.averageTempo
     info.stateChunk = item.stateChunk.patch(
-      removeField("GUID"),
-      removeField("IGUID"),
-      removeField("IID"),
+      removeAll("GUID"),
+      removeAll("IGUID"),
+      removeAll("IID"),
     )
 
     for take in item.takes:
@@ -214,17 +214,26 @@ proc relativePasteItems*(project: Project, positionTime, playrate, pitch: float)
       else:
         project.averageTempoOfTimeRange(itemLeftBoundTime, itemRightBoundTime) / itemInfo.averageTempo
 
-    let itemPlayrate = tempoRatio * playrate
+    var patchCommands = @[
+      updateField(@[("ITEM", 0)], "POSITION", itemLeftBoundTime),
+      updateField(@[("ITEM", 0)], "LENGTH", itemLengthTime),
+      updateField(@[("ITEM", 0)], "SNAPOFFS", itemSnapOffsetTime),
+      updateField(@[("ITEM", 0)], "FADEIN", (1, itemFadeInTime)),
+      updateField(@[("ITEM", 0)], "FADEOUT", (1, itemFadeOutTime)),
+    ]
 
-    let itemStateChunk = itemInfo.stateChunk.patch(
-      updateField("POSITION", itemLeftBoundTime),
-      updateField("LENGTH", itemLengthTime),
-      updateField("SNAPOFFS", itemSnapOffsetTime),
-      updateField("FADEIN", (1, itemFadeInTime)),
-      updateField("FADEOUT", (1, itemFadeOutTime)),
-      updateField("PLAYRATE", (0, itemPlayrate)),
-    )
+    for takeId, takeInfo in itemInfo.takes:
+      let takeLocation = @[("ITEM", 0), ("TAKE", takeId)]
+      let markerCount = takeInfo.stretchMarkers.len
 
+      if markerCount <= 0:
+        let takePlayrate = takeInfo.playrate * tempoRatio * playrate
+        patchCommands.add updateField(takeLocation, "PLAYRATE", takePlayrate)
+      else:
+        let takePlayrate = takeInfo.playrate * playrate
+        patchCommands.add updateField(takeLocation, "PLAYRATE", takePlayrate)
+
+    let itemStateChunk = itemInfo.stateChunk.patch(patchCommands)
     item.stateChunk = itemStateChunk
 
 # proc relativePasteItems*(project: Project, positionTime, playrate, pitch: float) =

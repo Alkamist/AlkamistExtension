@@ -2,6 +2,11 @@ import std/options
 import reaper
 import types
 
+defineGetStateChunkProc(GetTrackStateChunk, Track)
+
+proc `stateChunk=`*(track: Track, chunk: string) =
+  discard SetTrackStateChunk(track, chunk, false)
+
 proc project*(track: Track): Project =
   var retval = GetMediaTrackInfo_Value(track, "P_PROJECT")
   cast[Project](retval)
