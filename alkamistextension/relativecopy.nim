@@ -220,9 +220,9 @@ proc relativePasteItems*(project: Project, positionTime, playrate, pitch: float)
       updateField("POSITION", itemLeftBoundTime),
       updateField("LENGTH", itemLengthTime),
       updateField("SNAPOFFS", itemSnapOffsetTime),
-      updateField("PLAYRATE", (0, itemPlayrate)),
       updateField("FADEIN", (1, itemFadeInTime)),
       updateField("FADEOUT", (1, itemFadeOutTime)),
+      updateField("PLAYRATE", (0, itemPlayrate)),
     )
 
     item.stateChunk = itemStateChunk

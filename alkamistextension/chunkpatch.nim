@@ -1,23 +1,56 @@
-import std/[options, strutils]
+import std/[options, tables, strutils]
 
 type
+  ChunkPatchLocation = seq[(string, int)]
+  ChunkPatchSectionStack = seq[(string, CountTable[string])]
+
   ChunkPatchKind* {.pure.} = enum
-    UpdateField, RemoveField,
+    UpdateField, RemoveField, RemoveAll,
 
   ChunkPatch* = object
     case kind*: ChunkPatchKind
     of ChunkPatchKind.UpdateField:
+      updateFieldLocation*: ChunkPatchLocation
       updateFieldName*: string
       updateFieldValues*: seq[Option[string]]
     of ChunkPatchKind.RemoveField:
+      removeFieldLocation*: ChunkPatchLocation
       removeFieldName*: string
+    of ChunkPatchKind.RemoveAll:
+      removeAllName*: string
+
+proc newSectionStack(): ChunkPatchSectionStack =
+  @[("FINISH", initCountTable[string]())]
+
+proc addSection(stack: var ChunkPatchSectionStack, section: string) =
+  stack.add (section, initCountTable[string]())
+
+proc currentLocation(stack: ChunkPatchSectionStack): ChunkPatchLocation =
+  # Skip the top level "FINISH".
+  for i in 1 ..< stack.len:
+    let sectionName = stack[i][0]
+    let sectionIndex = stack[i - 1][1][sectionName] - 1
+    result.add (sectionName, sectionIndex)
 
 proc patch*(chunk: string, commands: varargs[ChunkPatch]): string =
   ## Loops through a chunk string line by line a single time, and builds
   ## a new chunk string based on the commands passed in.
 
+  var sectionStack = newSectionStack()
+
   for line in chunk.splitLines:
     let unindentedLine = line.unindent
+
+    # Push new sections onto the section stack.
+    if unindentedLine.startsWith('<'):
+      let sectionName = unindentedLine.splitWhitespace[0].strip(true, false, {'<'})
+      sectionStack[^1][1].inc(sectionName)
+      sectionStack.addSection(sectionName)
+
+    # Pop the section off of the section stack when it ends.
+    if unindentedLine.startsWith('>'):
+      discard sectionStack.pop()
+
     var patchedField = false
 
     # Check every command every line to see
@@ -26,7 +59,8 @@ proc patch*(chunk: string, commands: varargs[ChunkPatch]): string =
       case command.kind:
 
       of ChunkPatchKind.UpdateField:
-        if unindentedLine.startsWith(command.updateFieldName):
+        if unindentedLine.startsWith(command.updateFieldName) and
+           sectionStack.currentLocation == command.updateFieldLocation:
           # Keep a record of the original fields without the title.
           var originalFields: seq[string]
           var valueId = 0
@@ -68,7 +102,12 @@ proc patch*(chunk: string, commands: varargs[ChunkPatch]): string =
 
       of ChunkPatchKind.RemoveField:
         # Simply mark the field as having been patched so it isn't re-added.
-        if unindentedLine.startsWith(command.removeFieldName):
+        if unindentedLine.startsWith(command.removeFieldName) and
+           sectionStack.currentLocation == command.removeFieldLocation:
+          patchedField = true
+
+      of ChunkPatchKind.RemoveAll:
+        if unindentedLine.startsWith(command.removeAllName):
           patchedField = true
 
     # Add back any unpatched fields.
@@ -88,21 +127,32 @@ proc toChunkField*(value: bool): Option[string] = some $value.int
 proc toChunkIndexField*[T](value: (int, T)): (int, Option[string]) =
   (value[0], value[1].toChunkField)
 
-proc removeField*(name: string): ChunkPatch =
+proc removeField*(location: ChunkPatchLocation, name: string): ChunkPatch =
   ChunkPatch(kind: ChunkPatchKind.RemoveField,
+    removeFieldLocation: location,
     removeFieldName: name,
   )
 
-proc updateField*(name: string, values: varargs[Option[string], toChunkField]): ChunkPatch =
+proc removeAll*(name: string): ChunkPatch =
+  ChunkPatch(kind: ChunkPatchKind.RemoveAll,
+    removeAllName: name,
+  )
+
+proc updateField*(location: ChunkPatchLocation,
+                  name: string,
+                  values: varargs[Option[string], toChunkField]): ChunkPatch =
   var valuesSeq = newSeq[Option[string]](values.len)
   for i, value in values:
     valuesSeq[i] = value
   ChunkPatch(kind: ChunkPatchKind.UpdateField,
+    updateFieldLocation: location,
     updateFieldName: name,
     updateFieldValues: valuesSeq,
   )
 
-proc updateField*(name: string, indexValues: varargs[(int, Option[string]), toChunkIndexField]): ChunkPatch =
+proc updateField*(location: ChunkPatchLocation,
+                  name: string,
+                  indexValues: varargs[(int, Option[string]), toChunkIndexField]): ChunkPatch =
   var highestId = 0
   for indexValue in indexValues:
     if indexValue[0] > highestId:
@@ -120,65 +170,21 @@ proc updateField*(name: string, indexValues: varargs[(int, Option[string]), toCh
     valuesSeq[i] = value
 
   ChunkPatch(kind: ChunkPatchKind.UpdateField,
+    updateFieldLocation: location,
     updateFieldName: name,
     updateFieldValues: valuesSeq,
   )
 
 when isMainModule:
-  const testChunk = """
-<ITEM
-  POSITION 18.75
-  SNAPOFFS 0
-  LENGTH 1.875
-  LOOP 0
-  ALLTAKES 0
-  FADEIN 0 0 0 0 0 0 0
-  FADEOUT 0 0 0 0 0 0 0
-  MUTE 0 0
-  SEL 1
-  IGUID {54018701-31CA-47BC-B9E2-B6C80AB43AFE}
-  IID 2
-  NAME "untitled MIDI item-glued"
-  VOLPAN 1 0 1 -1
-  SOFFS 0 0
-  PLAYRATE 1 1 0 -1 0 0.0025
-  CHANMODE 0
-  GUID {56799207-6D3F-4C21-8132-83E1CF2CBCA3}
-  <SOURCE MIDI
-    HASDATA 1 5120 QN
-    CCINTERP 32
-    POOLEDEVTS {E429A158-441D-4D4A-93F1-46F913DDEA9A}
-    E 0 90 3c 60
-    E 2560 80 3c 00
-    E 2560 90 3c 60
-    E 2560 80 3c 00
-    E 2560 90 3c 60
-    E 2560 80 3c 00
-    E 2560 90 3c 60
-    E 2560 80 3c 00
-    E 2560 b0 7b 00
-    CCINTERP 32
-    CHASE_CC_TAKEOFFS 1
-    GUID {67CDD837-BB7E-4DCB-B059-DAFDFB4D1A69}
-    IGNTEMPO 0 120 4 4
-    SRCCOLOR 40
-    VELLANE -1 135 6
-    CFGEDITVIEW -3763.339804 0.032302 59 12 0 -1 0 0 0 0.5
-    KEYSNAP 0
-    TRACKSEL 311
-    EVTFILTER 0 -1 -1 -1 -1 0 0 0 0 -1 -1 -1 -1 0 -1 0 -1 -1
-    CFGEDIT 1 1 0 0 0 0 1 0 1 1 1 0.25 550 252 2438 1277 1 0 0 0 0.5 0 0 0 0 0.5 0 0 1 64
-  >
->
-"""
+  const testChunk = readFile("alkamistextension/chunktest.txt")
 
   let patchedChunk = testChunk.patch(
-    removeField("GUID"),
-    removeField("IGUID"),
-    removeField("IID"),
-    updateField("POSITION", 300.5),
-    updateField("SEL", false),
-    updateField("PLAYRATE", (1, 10.1), (4, 0.03)),
+    removeAll("GUID"),
+    removeAll("IGUID"),
+    removeAll("IID"),
+    updateField(@[("TRACK", 0), ("ITEM", 2)], "POSITION", 300.5),
+    # updateField("SEL", false),
+    # updateField("PLAYRATE", (1, 10.1), (4, 0.03)),
   )
 
   echo patchedChunk
